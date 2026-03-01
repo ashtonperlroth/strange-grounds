@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  Waves,
   Sun,
   Mountain,
   PawPrint,
@@ -26,10 +25,13 @@ import { ConditionCard } from './ConditionCard';
 import { WeatherCard } from './cards/WeatherCard';
 import { SnowpackCard } from './cards/SnowpackCard';
 import { AvalancheCard, getAvalancheSortPriority } from './cards/AvalancheCard';
+import { StreamCard } from './cards/StreamCard';
 import { SnotelChart } from '@/components/charts/SnotelChart';
+import { HydrographChart } from '@/components/charts/HydrographChart';
 import type { NWSForecastData } from '@/lib/data-sources/nws';
 import { type SnotelData } from '@/lib/data-sources/snotel';
 import { type AvalancheData } from '@/lib/data-sources/avalanche';
+import { type UsgsData } from '@/lib/data-sources/usgs';
 import { type ReactNode } from 'react';
 
 interface StubCard {
@@ -41,14 +43,6 @@ interface StubCard {
 }
 
 const STUB_CARDS: StubCard[] = [
-  {
-    category: 'Stream Crossings',
-    icon: <Waves className="size-4 text-cyan-600" />,
-    status: 'caution',
-    summary: 'Rising flows on main drainage, knee-deep by afternoon',
-    detail:
-      'Diurnal melt pattern producing peak flows around 3-4 PM. Main creek running at 180 cfs (above seasonal average). Cross early morning when flows are lowest. Trekking poles recommended for stability.',
-  },
   {
     category: 'Daylight',
     icon: <Sun className="size-4 text-amber-500" />,
@@ -238,6 +232,7 @@ function BriefingFullView({
 }: BriefingFullViewProps) {
   const snotelData = conditions?.snowpack as SnotelData | undefined;
   const avalancheData = conditions?.avalanche as AvalancheData | undefined;
+  const usgsData = conditions?.streamFlow as UsgsData | undefined;
   const sortAvyToTop = getAvalancheSortPriority(avalancheData ?? null) > 0;
 
   return (
@@ -282,6 +277,14 @@ function BriefingFullView({
                 />
               )}
             </SnowpackCard>
+            <StreamCard data={usgsData ?? null}>
+              {usgsData?.nearest && usgsData.nearest.history.length > 0 && (
+                <HydrographChart
+                  readings={usgsData.nearest.history}
+                  stationName={usgsData.nearest.station.name}
+                />
+              )}
+            </StreamCard>
             {STUB_CARDS.map((card) => (
               <ConditionCard
                 key={card.category}

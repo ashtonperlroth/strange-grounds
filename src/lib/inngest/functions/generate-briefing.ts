@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchNWS } from "@/lib/data-sources/nws";
 import { fetchSnotel } from "@/lib/data-sources/snotel";
 import { fetchAvalanche } from "@/lib/data-sources/avalanche";
+import { fetchUsgs } from "@/lib/data-sources/usgs";
 
 export const generateBriefing = inngest.createFunction(
   { id: "generate-briefing" },
@@ -24,14 +25,7 @@ export const generateBriefing = inngest.createFunction(
     });
 
     const usgsData = await step.run("fetch-usgs", async () => {
-      return {
-        source: "usgs",
-        stationName: "Mock Creek Gauge",
-        flowRate: 125,
-        flowUnit: "cfs",
-        gageHeight: 2.3,
-        trend: "stable",
-      };
+      return fetchUsgs({ lat, lng });
     });
 
     const daylightData = await step.run("compute-daylight", async () => {
@@ -67,7 +61,7 @@ export const generateBriefing = inngest.createFunction(
         `## Weather Forecast\n${weatherSummary}${alertSection}`,
         avySection,
         `## Snowpack\n${snotelData.nearest ? `Snow depth: ${snotelData.nearest.latest.snowDepthIn ?? "N/A"}" at ${snotelData.nearest.station.name}\nSWE: ${snotelData.nearest.latest.sweIn ?? "N/A"}"\nTrend: ${snotelData.nearest.trend}` : "No SNOTEL stations found within 50 km"}`,
-        `## Stream Crossings\n${usgsData.stationName}: ${usgsData.flowRate} ${usgsData.flowUnit} (${usgsData.trend})\nGage height: ${usgsData.gageHeight} ft`,
+        `## Stream Crossings\n${usgsData.nearest ? `${usgsData.nearest.station.name}: ${usgsData.nearest.current.dischargeCfs ?? "N/A"} cfs (${usgsData.nearest.trend})\nGage height: ${usgsData.nearest.current.gageHeightFt ?? "N/A"} ft${usgsData.nearest.percentOfMedian !== null ? `\n% of median: ${usgsData.nearest.percentOfMedian}%` : ""}` : "No USGS stream gauges found within 30 km"}`,
         `## Daylight\nSunrise: ${daylightData.sunrise} | Sunset: ${daylightData.sunset}\nTotal daylight: ${daylightData.daylightHours} hours`,
       ];
 
