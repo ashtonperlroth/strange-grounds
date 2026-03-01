@@ -14,7 +14,7 @@ export function BriefingSummary({ narrative, isLoading }: BriefingSummaryProps) 
 
   return (
     <div className="max-w-prose space-y-2">
-      <p className="text-sm leading-relaxed text-slate-200">{narrative}</p>
+      <p className="text-sm leading-relaxed text-stone-600">{narrative}</p>
     </div>
   );
 }
@@ -22,10 +22,10 @@ export function BriefingSummary({ narrative, isLoading }: BriefingSummaryProps) 
 function BriefingSummarySkeleton() {
   return (
     <div className="max-w-prose space-y-2.5">
-      <Skeleton className="h-3.5 w-full bg-slate-700/50" />
-      <Skeleton className="h-3.5 w-[92%] bg-slate-700/50" />
-      <Skeleton className="h-3.5 w-[85%] bg-slate-700/50" />
-      <Skeleton className="h-3.5 w-[60%] bg-slate-700/50" />
+      <Skeleton className="h-3.5 w-full bg-stone-200" />
+      <Skeleton className="h-3.5 w-[92%] bg-stone-200" />
+      <Skeleton className="h-3.5 w-[85%] bg-stone-200" />
+      <Skeleton className="h-3.5 w-[60%] bg-stone-200" />
     </div>
   );
 }

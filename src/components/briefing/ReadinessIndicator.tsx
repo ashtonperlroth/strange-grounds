@@ -20,20 +20,20 @@ const CONFIG: Record<Readiness, ReadinessConfig> = {
   green: {
     label: 'GO',
     Icon: CheckCircle,
-    badgeClass: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
-    iconClass: 'text-emerald-400',
+    badgeClass: 'border-emerald-600/20 bg-emerald-50 text-emerald-700',
+    iconClass: 'text-emerald-600',
   },
   yellow: {
     label: 'CAUTION',
     Icon: AlertTriangle,
-    badgeClass: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400',
-    iconClass: 'text-yellow-400',
+    badgeClass: 'border-yellow-600/20 bg-yellow-50 text-yellow-700',
+    iconClass: 'text-yellow-600',
   },
   red: {
     label: 'CONCERN',
     Icon: AlertOctagon,
-    badgeClass: 'border-red-500/30 bg-red-500/10 text-red-400',
-    iconClass: 'text-red-400',
+    badgeClass: 'border-red-600/20 bg-red-50 text-red-700',
+    iconClass: 'text-red-600',
   },
 };
 
@@ -63,9 +63,9 @@ export function ReadinessIndicator({
         {label}
       </Badge>
       {alertCount > 0 && (
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-stone-500">
           {criticalCount > 0 && `${criticalCount} critical`}
-          {criticalCount > 0 && warningCount > 0 && ' · '}
+          {criticalCount > 0 && warningCount > 0 && ' \u00b7 '}
           {warningCount > 0 && `${warningCount} warning${warningCount !== 1 ? 's' : ''}`}
         </span>
       )}

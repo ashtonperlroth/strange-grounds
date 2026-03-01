@@ -39,7 +39,7 @@ interface StubCard {
 const STUB_CARDS: StubCard[] = [
   {
     category: 'Avalanche',
-    icon: <TriangleAlert className="size-4 text-yellow-400" />,
+    icon: <TriangleAlert className="size-4 text-yellow-600" />,
     status: 'caution',
     summary: 'Moderate danger on north-facing slopes above treeline',
     detail:
@@ -47,15 +47,15 @@ const STUB_CARDS: StubCard[] = [
   },
   {
     category: 'Weather',
-    icon: <CloudSun className="size-4 text-sky-400" />,
+    icon: <CloudSun className="size-4 text-sky-600" />,
     status: 'good',
     summary: 'Clear skies through Wednesday, storm arriving Thursday',
     detail:
-      'High pressure dominates through midweek with daytime highs near 45°F at 8,000 ft. A Pacific system arrives Thursday afternoon bringing 4-8" of snow above 7,000 ft with winds gusting to 40 mph.',
+      'High pressure dominates through midweek with daytime highs near 45\u00b0F at 8,000 ft. A Pacific system arrives Thursday afternoon bringing 4-8" of snow above 7,000 ft with winds gusting to 40 mph.',
   },
   {
     category: 'Snowpack',
-    icon: <Snowflake className="size-4 text-blue-300" />,
+    icon: <Snowflake className="size-4 text-blue-500" />,
     status: 'good',
     summary: '82" base depth, settled and supportive',
     detail:
@@ -63,7 +63,7 @@ const STUB_CARDS: StubCard[] = [
   },
   {
     category: 'Stream Crossings',
-    icon: <Waves className="size-4 text-cyan-400" />,
+    icon: <Waves className="size-4 text-cyan-600" />,
     status: 'caution',
     summary: 'Rising flows on main drainage, knee-deep by afternoon',
     detail:
@@ -71,7 +71,7 @@ const STUB_CARDS: StubCard[] = [
   },
   {
     category: 'Daylight',
-    icon: <Sun className="size-4 text-amber-400" />,
+    icon: <Sun className="size-4 text-amber-500" />,
     status: 'good',
     summary: '13h 42m of daylight, sunrise 6:18 AM',
     detail:
@@ -79,7 +79,7 @@ const STUB_CARDS: StubCard[] = [
   },
   {
     category: 'Remoteness',
-    icon: <Mountain className="size-4 text-slate-400" />,
+    icon: <Mountain className="size-4 text-stone-500" />,
     status: 'caution',
     summary: '14 miles to nearest road, no cell coverage',
     detail:
@@ -87,7 +87,7 @@ const STUB_CARDS: StubCard[] = [
   },
   {
     category: 'Wildlife',
-    icon: <PawPrint className="size-4 text-orange-400" />,
+    icon: <PawPrint className="size-4 text-orange-500" />,
     status: 'good',
     summary: 'Bear activity low, no recent sightings reported',
     detail:
@@ -95,17 +95,17 @@ const STUB_CARDS: StubCard[] = [
   },
   {
     category: 'Insects',
-    icon: <Bug className="size-4 text-lime-400" />,
+    icon: <Bug className="size-4 text-lime-600" />,
     status: 'good',
     summary: 'Minimal insect activity, too early for mosquito season',
     detail:
-      'Snow cover and cool temps keep insect populations low. Mosquito season typically begins in late May at this elevation. Ticks may be active in lower-elevation approach trails — do a tick check after hiking through brush.',
+      'Snow cover and cool temps keep insect populations low. Mosquito season typically begins in late May at this elevation. Ticks may be active in lower-elevation approach trails \u2014 do a tick check after hiking through brush.',
   },
   {
     category: 'Footing',
-    icon: <Footprints className="size-4 text-stone-400" />,
+    icon: <Footprints className="size-4 text-stone-500" />,
     status: 'caution',
-    summary: 'Mixed conditions — snow, mud, and exposed rock',
+    summary: 'Mixed conditions \u2014 snow, mud, and exposed rock',
     detail:
       'Expect post-holing in soft afternoon snow above 8,500 ft without snowshoes. Trail is muddy from 6,000-8,000 ft. Microspikes recommended for icy morning conditions on north-facing slopes. Gaiters helpful for mud and slush.',
   },
@@ -114,22 +114,22 @@ const STUB_CARDS: StubCard[] = [
 function BriefingEmptyState() {
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-      <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-slate-800/80">
-        <Compass className="size-8 text-slate-500" />
+      <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-stone-100">
+        <Compass className="size-8 text-stone-400" />
       </div>
-      <h3 className="mb-2 text-base font-semibold text-slate-200">
+      <h3 className="mb-2 text-base font-semibold text-stone-800">
         No Briefing Loaded
       </h3>
-      <p className="mb-6 max-w-[260px] text-sm leading-relaxed text-slate-400">
+      <p className="mb-6 max-w-[260px] text-sm leading-relaxed text-stone-500">
         Select a location on the map and generate a conditions briefing to get started.
       </p>
       <div className="w-full max-w-[280px] space-y-3">
         {['Weather', 'Avalanche', 'Snowpack', 'Stream Flow'].map((section) => (
           <div
             key={section}
-            className="rounded-lg border border-dashed border-slate-700/50 px-4 py-3"
+            className="rounded-lg border border-dashed border-stone-300 px-4 py-3"
           >
-            <span className="text-xs font-medium text-slate-600">
+            <span className="text-xs font-medium text-stone-400">
               {section}
             </span>
           </div>
@@ -143,30 +143,30 @@ function BriefingLoadingSkeleton() {
   return (
     <div className="space-y-6 p-1">
       <div className="space-y-3">
-        <Skeleton className="h-5 w-48 bg-slate-700/50" />
-        <Skeleton className="h-4 w-32 bg-slate-700/50" />
+        <Skeleton className="h-5 w-48 bg-stone-200" />
+        <Skeleton className="h-4 w-32 bg-stone-200" />
       </div>
 
-      <Skeleton className="h-8 w-28 rounded-full bg-slate-700/50" />
+      <Skeleton className="h-8 w-28 rounded-full bg-stone-200" />
 
       <div className="space-y-2.5">
-        <Skeleton className="h-3.5 w-full bg-slate-700/50" />
-        <Skeleton className="h-3.5 w-[92%] bg-slate-700/50" />
-        <Skeleton className="h-3.5 w-[78%] bg-slate-700/50" />
+        <Skeleton className="h-3.5 w-full bg-stone-200" />
+        <Skeleton className="h-3.5 w-[92%] bg-stone-200" />
+        <Skeleton className="h-3.5 w-[78%] bg-stone-200" />
       </div>
 
-      <Separator className="bg-slate-700/50" />
+      <Separator className="bg-stone-200" />
 
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center gap-3 rounded-lg border border-slate-700/30 bg-slate-800/30 p-4"
+            className="flex items-center gap-3 rounded-lg border border-stone-200 bg-white p-4"
           >
-            <Skeleton className="size-8 rounded-md bg-slate-700/50" />
+            <Skeleton className="size-8 rounded-md bg-stone-200" />
             <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-24 bg-slate-700/50" />
-              <Skeleton className="h-3 w-48 bg-slate-700/50" />
+              <Skeleton className="h-4 w-24 bg-stone-200" />
+              <Skeleton className="h-3 w-48 bg-stone-100" />
             </div>
           </div>
         ))}
@@ -188,17 +188,17 @@ function PanelHeader({ locationName, dateRange, activity }: PanelHeaderProps) {
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-2">
-        <MapPin className="size-4 text-slate-400" />
-        <h2 className="text-base font-semibold text-slate-100">
+        <MapPin className="size-4 text-stone-400" />
+        <h2 className="text-base font-semibold text-stone-800">
           {locationName ?? 'Conditions Briefing'}
         </h2>
       </div>
-      <div className="flex items-center gap-2 text-xs text-slate-400">
+      <div className="flex items-center gap-2 text-xs text-stone-500">
         <span>
           {formatDate(dateRange.start)} – {formatDate(dateRange.end)}
         </span>
-        <span className="text-slate-600">·</span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300">
+        <span className="text-stone-300">·</span>
+        <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-600">
           {activity}
         </span>
       </div>
@@ -212,7 +212,7 @@ function PanelFooter() {
       <Button
         variant="outline"
         size="sm"
-        className="flex-1 border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 hover:text-slate-100"
+        className="flex-1 border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-800"
         disabled
       >
         <Bookmark className="size-3.5" />
@@ -221,7 +221,7 @@ function PanelFooter() {
       <Button
         variant="outline"
         size="sm"
-        className="flex-1 border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 hover:text-slate-100"
+        className="flex-1 border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-800"
         disabled
       >
         <Share2 className="size-3.5" />
@@ -272,10 +272,10 @@ function BriefingFullView({
           isLoading={isNarrativeLoading}
         />
 
-        <Separator className="bg-slate-700/50" />
+        <Separator className="bg-stone-200" />
 
         <div className="space-y-1">
-          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400">
             Conditions
           </h3>
           <Accordion type="multiple" className="space-y-2">
@@ -292,7 +292,7 @@ function BriefingFullView({
           </Accordion>
         </div>
 
-        <Separator className="bg-slate-700/50" />
+        <Separator className="bg-stone-200" />
 
         <PanelFooter />
       </div>

@@ -14,19 +14,19 @@ const STATUS_CONFIG: Record<
 > = {
   good: {
     label: 'Good',
-    className: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+    className: 'border-emerald-600/20 bg-emerald-50 text-emerald-700',
   },
   caution: {
     label: 'Caution',
-    className: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400',
+    className: 'border-yellow-600/20 bg-yellow-50 text-yellow-700',
   },
   concern: {
     label: 'Concern',
-    className: 'border-red-500/30 bg-red-500/10 text-red-400',
+    className: 'border-red-600/20 bg-red-50 text-red-700',
   },
   unknown: {
     label: 'N/A',
-    className: 'border-slate-500/30 bg-slate-500/10 text-slate-400',
+    className: 'border-stone-300 bg-stone-50 text-stone-500',
   },
 };
 
@@ -52,16 +52,16 @@ export function ConditionCard({
   return (
     <AccordionItem
       value={category}
-      className="rounded-lg border border-slate-700/50 bg-slate-800/50 px-4 last:border-b"
+      className="rounded-lg border border-stone-200 bg-white px-4 last:border-b"
     >
-      <AccordionTrigger className="gap-3 hover:no-underline [&>svg]:text-slate-500">
+      <AccordionTrigger className="gap-3 hover:no-underline [&>svg]:text-stone-400">
         <div className="flex flex-1 items-center gap-3 overflow-hidden">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-slate-700/50 text-base">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-stone-50 text-base">
             {icon}
           </span>
           <div className="flex flex-1 flex-col items-start gap-1 overflow-hidden">
             <div className="flex w-full items-center gap-2">
-              <span className="text-sm font-medium text-slate-100">
+              <span className="text-sm font-medium text-stone-800">
                 {category}
               </span>
               <Badge
@@ -71,15 +71,15 @@ export function ConditionCard({
                 {statusConfig.label}
               </Badge>
             </div>
-            <p className="w-full truncate text-left text-xs text-slate-400">
+            <p className="w-full truncate text-left text-xs text-stone-500">
               {summary}
             </p>
           </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="text-slate-300">
+      <AccordionContent className="text-stone-600">
         {detail && (
-          <p className="mb-3 text-sm leading-relaxed text-slate-300">
+          <p className="mb-3 text-sm leading-relaxed text-stone-600">
             {detail}
           </p>
         )}
