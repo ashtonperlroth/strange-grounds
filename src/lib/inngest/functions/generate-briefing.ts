@@ -2,6 +2,7 @@ import { inngest } from "../client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchNWS } from "@/lib/data-sources/nws";
 import { fetchSnotel } from "@/lib/data-sources/snotel";
+import { fetchAvalanche } from "@/lib/data-sources/avalanche";
 
 export const generateBriefing = inngest.createFunction(
   { id: "generate-briefing" },
@@ -19,14 +20,7 @@ export const generateBriefing = inngest.createFunction(
     });
 
     const avalancheData = await step.run("fetch-avalanche", async () => {
-      return {
-        source: "avalanche",
-        center: "Mock Avalanche Center",
-        dangerLevel: 2,
-        dangerLabel: "Moderate",
-        problems: ["Wind Slab", "Persistent Slab"],
-        summary: "Moderate avalanche danger exists on wind-loaded slopes above treeline.",
-      };
+      return fetchAvalanche({ lat, lng });
     });
 
     const usgsData = await step.run("fetch-usgs", async () => {
@@ -65,9 +59,13 @@ export const generateBriefing = inngest.createFunction(
           ? `\n**Active Alerts:** ${nwsData.alerts.map((a) => a.event).join(", ")}`
           : "";
 
+      const avySection = avalancheData
+        ? `## Avalanche Conditions\n${avalancheData.discussion || "No discussion available."}\nDanger Level: ${avalancheData.dangerLabel} (${avalancheData.dangerLevel}/5)\nProblems: ${avalancheData.problems.map((p) => p.name).join(", ") || "None identified"}`
+        : "## Avalanche Conditions\nNo avalanche forecast zone found for this location.";
+
       const sections = [
         `## Weather Forecast\n${weatherSummary}${alertSection}`,
-        `## Avalanche Conditions\n${avalancheData.summary}\nDanger Level: ${avalancheData.dangerLabel} (${avalancheData.dangerLevel}/5)\nProblems: ${avalancheData.problems.join(", ")}`,
+        avySection,
         `## Snowpack\n${snotelData.nearest ? `Snow depth: ${snotelData.nearest.latest.snowDepthIn ?? "N/A"}" at ${snotelData.nearest.station.name}\nSWE: ${snotelData.nearest.latest.sweIn ?? "N/A"}"\nTrend: ${snotelData.nearest.trend}` : "No SNOTEL stations found within 50 km"}`,
         `## Stream Crossings\n${usgsData.stationName}: ${usgsData.flowRate} ${usgsData.flowUnit} (${usgsData.trend})\nGage height: ${usgsData.gageHeight} ft`,
         `## Daylight\nSunrise: ${daylightData.sunrise} | Sunset: ${daylightData.sunset}\nTotal daylight: ${daylightData.daylightHours} hours`,

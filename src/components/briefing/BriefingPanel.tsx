@@ -1,8 +1,6 @@
 'use client';
 
 import {
-  TriangleAlert,
-  CloudSun,
   Waves,
   Sun,
   Mountain,
@@ -27,9 +25,11 @@ import { BriefingSummary } from './BriefingSummary';
 import { ConditionCard } from './ConditionCard';
 import { WeatherCard } from './cards/WeatherCard';
 import { SnowpackCard } from './cards/SnowpackCard';
+import { AvalancheCard, getAvalancheSortPriority } from './cards/AvalancheCard';
 import { SnotelChart } from '@/components/charts/SnotelChart';
 import type { NWSForecastData } from '@/lib/data-sources/nws';
 import { type SnotelData } from '@/lib/data-sources/snotel';
+import { type AvalancheData } from '@/lib/data-sources/avalanche';
 import { type ReactNode } from 'react';
 
 interface StubCard {
@@ -41,23 +41,6 @@ interface StubCard {
 }
 
 const STUB_CARDS: StubCard[] = [
-  {
-    category: 'Avalanche',
-    icon: <TriangleAlert className="size-4 text-yellow-600" />,
-    status: 'caution',
-    summary: 'Moderate danger on north-facing slopes above treeline',
-    detail:
-      'Persistent slab problem on north aspects above 9,500 ft. Wind slabs possible on cross-loaded features. Travel with caution in avalanche terrain and check local avalanche center forecast before departure.',
-  },
-  {
-    category: 'Weather',
-    icon: <CloudSun className="size-4 text-sky-600" />,
-    status: 'good',
-    summary: 'Clear skies through Wednesday, storm arriving Thursday',
-    detail:
-      'High pressure dominates through midweek with daytime highs near 45\u00b0F at 8,000 ft. A Pacific system arrives Thursday afternoon bringing 4-8" of snow above 7,000 ft with winds gusting to 40 mph.',
-  },
-  // Snowpack card is rendered separately using SnowpackCard with real SNOTEL data
   {
     category: 'Stream Crossings',
     icon: <Waves className="size-4 text-cyan-600" />,
@@ -254,7 +237,8 @@ function BriefingFullView({
   conditions,
 }: BriefingFullViewProps) {
   const snotelData = conditions?.snowpack as SnotelData | undefined;
-  const nonWeatherStubs = STUB_CARDS.filter((c) => c.category !== 'Weather');
+  const avalancheData = conditions?.avalanche as AvalancheData | undefined;
+  const sortAvyToTop = getAvalancheSortPriority(avalancheData ?? null) > 0;
 
   return (
     <ScrollArea className="h-full">
@@ -283,7 +267,13 @@ function BriefingFullView({
             Conditions
           </h3>
           <Accordion type="multiple" className="space-y-2">
+            {sortAvyToTop && (
+              <AvalancheCard data={avalancheData ?? null} />
+            )}
             <WeatherCard data={weatherData} />
+            {!sortAvyToTop && (
+              <AvalancheCard data={avalancheData ?? null} />
+            )}
             <SnowpackCard data={snotelData ?? null}>
               {snotelData?.nearest && (
                 <SnotelChart
@@ -292,7 +282,7 @@ function BriefingFullView({
                 />
               )}
             </SnowpackCard>
-            {nonWeatherStubs.map((card) => (
+            {STUB_CARDS.map((card) => (
               <ConditionCard
                 key={card.category}
                 category={card.category}
