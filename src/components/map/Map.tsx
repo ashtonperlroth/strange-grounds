@@ -13,7 +13,7 @@ const TERRAIN_SOURCE_ID = 'terrain';
 export function Map() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const { viewport, setViewport } = useMapStore();
+  const { viewport, setViewport, flyToTarget, clearFlyTo } = useMapStore();
 
   const handleStyleChange = useCallback((styleUrl: string) => {
     const map = mapRef.current;
@@ -102,6 +102,16 @@ export function Map() {
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!flyToTarget || !mapRef.current) return;
+    mapRef.current.flyTo({
+      center: flyToTarget.center,
+      zoom: flyToTarget.zoom ?? 11,
+      essential: true,
+    });
+    clearFlyTo();
+  }, [flyToTarget, clearFlyTo]);
 
   return (
     <div className="relative h-full w-full">

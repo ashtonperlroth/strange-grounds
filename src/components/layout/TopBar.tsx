@@ -1,6 +1,10 @@
 'use client';
 
-import { Mountain, Search, CalendarDays, User } from 'lucide-react';
+import { Mountain, User } from 'lucide-react';
+import { LocationSearch } from '@/components/planning/LocationSearch';
+import { DateRangePicker } from '@/components/planning/DateRangePicker';
+import { ActivitySelector } from '@/components/planning/ActivitySelector';
+import { GenerateButton } from '@/components/planning/GenerateButton';
 
 export function TopBar() {
   return (
@@ -12,30 +16,20 @@ export function TopBar() {
         </span>
       </div>
 
-      <div className="flex w-full max-w-md items-center gap-2 px-4">
-        <div className="flex h-8 flex-1 items-center gap-2 rounded-md border border-slate-600 bg-slate-700/50 px-3 text-sm text-slate-400">
-          <Search className="h-3.5 w-3.5 shrink-0" />
-          <span>Search location&hellip;</span>
-        </div>
+      <div className="flex items-center gap-2 px-4">
+        <LocationSearch />
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-slate-300 hover:bg-slate-700"
-        >
-          <CalendarDays className="h-3.5 w-3.5" />
-          <span>Mar 1 – 3</span>
-        </button>
+        <DateRangePicker />
 
         <div className="h-4 w-px bg-slate-700" />
 
-        <button
-          type="button"
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-slate-300 hover:bg-slate-700"
-        >
-          <span>Backpacking</span>
-        </button>
+        <ActivitySelector />
+
+        <div className="h-4 w-px bg-slate-700" />
+
+        <GenerateButton />
 
         <div className="h-4 w-px bg-slate-700" />
 
