@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, protectedProcedure } from "../init";
+import { inngest } from "@/lib/inngest/client";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const briefingsRouter = router({
   getByTripId: protectedProcedure
@@ -60,7 +62,7 @@ export const briefingsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { data: trip } = await ctx.supabase
         .from("trips")
-        .select("id")
+        .select("id, location, start_date, end_date, activity")
         .eq("id", input.tripId)
         .eq("user_id", ctx.user.id)
         .single();
@@ -72,9 +74,9 @@ export const briefingsRouter = router({
         });
       }
 
-      // TODO: Trigger Inngest event for briefing generation
-      // For now, create a placeholder briefing record
-      const { data, error } = await ctx.supabase
+      const admin = createAdminClient();
+
+      const { data, error } = await admin
         .from("briefings")
         .insert({
           trip_id: input.tripId,
@@ -92,6 +94,26 @@ export const briefingsRouter = router({
           message: error.message,
         });
       }
+
+      const locationStr = trip.location as string;
+      const coordMatch = locationStr.match(
+        /POINT\(([-\d.]+)\s+([-\d.]+)\)/,
+      );
+      const lng = coordMatch ? parseFloat(coordMatch[1]) : 0;
+      const lat = coordMatch ? parseFloat(coordMatch[2]) : 0;
+
+      await inngest.send({
+        name: "briefing/requested",
+        data: {
+          tripId: input.tripId,
+          briefingId: data.id,
+          lat,
+          lng,
+          startDate: trip.start_date,
+          endDate: trip.end_date,
+          activity: trip.activity,
+        },
+      });
 
       return data;
     }),
