@@ -11,9 +11,10 @@ import { BottomDrawer } from './BottomDrawer';
 interface DashboardShellProps {
   mapSlot: ReactNode;
   briefingSlot: ReactNode;
+  drawerSlot?: ReactNode;
 }
 
-export function DashboardShell({ mapSlot, briefingSlot }: DashboardShellProps) {
+export function DashboardShell({ mapSlot, briefingSlot, drawerSlot }: DashboardShellProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1 bg-white">
@@ -30,7 +31,7 @@ export function DashboardShell({ mapSlot, briefingSlot }: DashboardShellProps) {
         </ResizablePanel>
       </ResizablePanelGroup>
 
-      <BottomDrawer />
+      <BottomDrawer>{drawerSlot}</BottomDrawer>
     </div>
   );
 }
