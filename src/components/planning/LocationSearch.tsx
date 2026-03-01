@@ -131,7 +131,7 @@ export function LocationSearch() {
                 setTimeout(() => inputRef.current?.focus(), 0);
               }}
             >
-              {location.name}
+              {location.name ?? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`}
             </button>
             <X
               className="h-3 w-3 shrink-0 cursor-pointer text-stone-400 hover:text-stone-600"

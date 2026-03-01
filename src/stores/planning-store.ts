@@ -4,7 +4,7 @@ import { addDays, startOfDay } from 'date-fns';
 export interface PlanningLocation {
   lat: number;
   lng: number;
-  name: string;
+  name: string | null;
 }
 
 export interface DateRange {

@@ -41,7 +41,7 @@ export function GenerateButton() {
 
     try {
       const trip = await createTrip.mutateAsync({
-        location_name: location.name,
+        location_name: location.name ?? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
         latitude: location.lat,
         longitude: location.lng,
         start_date: format(dateRange.start, 'yyyy-MM-dd'),
