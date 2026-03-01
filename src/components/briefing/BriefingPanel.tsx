@@ -26,6 +26,8 @@ import { useBriefingStore, type ConditionStatus } from '@/stores/briefing-store'
 import { ReadinessIndicator } from './ReadinessIndicator';
 import { BriefingSummary } from './BriefingSummary';
 import { ConditionCard } from './ConditionCard';
+import { WeatherCard } from './cards/WeatherCard';
+import type { NWSForecastData } from '@/lib/data-sources/nws';
 import { type ReactNode } from 'react';
 
 interface StubCard {
@@ -237,6 +239,7 @@ interface BriefingFullViewProps {
   activity: string;
   readiness: 'green' | 'yellow' | 'red' | null;
   narrative: string | null;
+  weatherData: NWSForecastData | null;
   warningCount?: number;
   criticalCount?: number;
   isNarrativeLoading?: boolean;
@@ -248,10 +251,13 @@ function BriefingFullView({
   activity,
   readiness,
   narrative,
+  weatherData,
   warningCount = 0,
   criticalCount = 0,
   isNarrativeLoading = false,
 }: BriefingFullViewProps) {
+  const nonWeatherStubs = STUB_CARDS.filter((c) => c.category !== 'Weather');
+
   return (
     <ScrollArea className="h-full">
       <div className="space-y-5 p-1">
@@ -279,7 +285,8 @@ function BriefingFullView({
             Conditions
           </h3>
           <Accordion type="multiple" className="space-y-2">
-            {STUB_CARDS.map((card) => (
+            <WeatherCard data={weatherData} />
+            {nonWeatherStubs.map((card) => (
               <ConditionCard
                 key={card.category}
                 category={card.category}
@@ -321,6 +328,7 @@ export function BriefingPanel() {
   }
 
   const readiness = briefing?.readiness as 'green' | 'yellow' | 'red' | null;
+  const weatherData = (briefing?.conditions?.weather as NWSForecastData) ?? null;
 
   return (
     <BriefingFullView
@@ -329,6 +337,7 @@ export function BriefingPanel() {
       activity={activity}
       readiness={readiness}
       narrative={briefing?.narrative ?? null}
+      weatherData={weatherData}
       warningCount={getWarningCount()}
       criticalCount={getCriticalCount()}
       isNarrativeLoading={isLoading}
