@@ -21,10 +21,10 @@ export function DashboardShell({ mapSlot, briefingSlot }: DashboardShellProps) {
           <div className="h-full w-full">{mapSlot}</div>
         </ResizablePanel>
 
-        <ResizableHandle withHandle className="bg-stone-200" />
+        <ResizableHandle withHandle className="bg-slate-800" />
 
         <ResizablePanel defaultSize={35} minSize={25}>
-          <div className="h-full overflow-y-auto bg-white p-4">
+          <div className="h-full overflow-y-auto bg-slate-900 p-4">
             {briefingSlot}
           </div>
         </ResizablePanel>
