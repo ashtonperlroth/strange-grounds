@@ -1,5 +1,6 @@
 import { inngest } from "../client";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchNWS } from "@/lib/data-sources/nws";
 import { fetchSnotel } from "@/lib/data-sources/snotel";
 
 export const generateBriefing = inngest.createFunction(
@@ -10,15 +11,7 @@ export const generateBriefing = inngest.createFunction(
       event.data;
 
     const nwsData = await step.run("fetch-nws", async () => {
-      return {
-        source: "nws",
-        forecast: `Mock NWS forecast for ${lat.toFixed(2)}, ${lng.toFixed(2)}`,
-        periods: [
-          { name: "Today", temperature: 42, windSpeed: "10 mph", shortForecast: "Partly Cloudy" },
-          { name: "Tonight", temperature: 28, windSpeed: "5 mph", shortForecast: "Clear" },
-          { name: "Tomorrow", temperature: 45, windSpeed: "15 mph", shortForecast: "Sunny" },
-        ],
-      };
+      return fetchNWS({ lat, lng });
     });
 
     const snotelData = await step.run("fetch-snotel", async () => {
@@ -59,8 +52,21 @@ export const generateBriefing = inngest.createFunction(
     });
 
     const narrative = await step.run("synthesize", async () => {
+      const firstPeriod = nwsData.periods[0];
+      const temps = nwsData.periods.slice(0, 4).map((p) => p.temperature);
+      const high = Math.max(...temps);
+      const low = Math.min(...temps);
+      const weatherSummary = firstPeriod
+        ? `Expect temperatures between ${low}°F and ${high}°F with ${firstPeriod.shortForecast.toLowerCase()} conditions.`
+        : "Weather data unavailable.";
+
+      const alertSection =
+        nwsData.alerts.length > 0
+          ? `\n**Active Alerts:** ${nwsData.alerts.map((a) => a.event).join(", ")}`
+          : "";
+
       const sections = [
-        `## Weather Forecast\n${nwsData.forecast}\nExpect temperatures between ${nwsData.periods[1].temperature}°F and ${nwsData.periods[0].temperature}°F with ${nwsData.periods[0].shortForecast.toLowerCase()} skies.`,
+        `## Weather Forecast\n${weatherSummary}${alertSection}`,
         `## Avalanche Conditions\n${avalancheData.summary}\nDanger Level: ${avalancheData.dangerLabel} (${avalancheData.dangerLevel}/5)\nProblems: ${avalancheData.problems.join(", ")}`,
         `## Snowpack\n${snotelData.nearest ? `Snow depth: ${snotelData.nearest.latest.snowDepthIn ?? "N/A"}" at ${snotelData.nearest.station.name}\nSWE: ${snotelData.nearest.latest.sweIn ?? "N/A"}"\nTrend: ${snotelData.nearest.trend}` : "No SNOTEL stations found within 50 km"}`,
         `## Stream Crossings\n${usgsData.stationName}: ${usgsData.flowRate} ${usgsData.flowUnit} (${usgsData.trend})\nGage height: ${usgsData.gageHeight} ft`,
