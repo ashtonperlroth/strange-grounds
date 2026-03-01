@@ -1,5 +1,6 @@
 import { inngest } from "../client";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchSnotel } from "@/lib/data-sources/snotel";
 
 export const generateBriefing = inngest.createFunction(
   { id: "generate-briefing" },
@@ -21,14 +22,7 @@ export const generateBriefing = inngest.createFunction(
     });
 
     const snotelData = await step.run("fetch-snotel", async () => {
-      return {
-        source: "snotel",
-        stationName: "Mock SNOTEL Station",
-        snowDepth: 48,
-        swe: 18.5,
-        temperature: 30,
-        snowfall24h: 3,
-      };
+      return fetchSnotel({ lat, lng });
     });
 
     const avalancheData = await step.run("fetch-avalanche", async () => {
@@ -68,7 +62,7 @@ export const generateBriefing = inngest.createFunction(
       const sections = [
         `## Weather Forecast\n${nwsData.forecast}\nExpect temperatures between ${nwsData.periods[1].temperature}°F and ${nwsData.periods[0].temperature}°F with ${nwsData.periods[0].shortForecast.toLowerCase()} skies.`,
         `## Avalanche Conditions\n${avalancheData.summary}\nDanger Level: ${avalancheData.dangerLabel} (${avalancheData.dangerLevel}/5)\nProblems: ${avalancheData.problems.join(", ")}`,
-        `## Snowpack\nSnow depth: ${snotelData.snowDepth}" at ${snotelData.stationName}\nSWE: ${snotelData.swe}"\n24hr snowfall: ${snotelData.snowfall24h}"`,
+        `## Snowpack\n${snotelData.nearest ? `Snow depth: ${snotelData.nearest.latest.snowDepthIn ?? "N/A"}" at ${snotelData.nearest.station.name}\nSWE: ${snotelData.nearest.latest.sweIn ?? "N/A"}"\nTrend: ${snotelData.nearest.trend}` : "No SNOTEL stations found within 50 km"}`,
         `## Stream Crossings\n${usgsData.stationName}: ${usgsData.flowRate} ${usgsData.flowUnit} (${usgsData.trend})\nGage height: ${usgsData.gageHeight} ft`,
         `## Daylight\nSunrise: ${daylightData.sunrise} | Sunset: ${daylightData.sunset}\nTotal daylight: ${daylightData.daylightHours} hours`,
       ];

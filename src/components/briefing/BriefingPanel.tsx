@@ -3,7 +3,6 @@
 import {
   TriangleAlert,
   CloudSun,
-  Snowflake,
   Waves,
   Sun,
   Mountain,
@@ -26,6 +25,9 @@ import { useBriefingStore, type ConditionStatus } from '@/stores/briefing-store'
 import { ReadinessIndicator } from './ReadinessIndicator';
 import { BriefingSummary } from './BriefingSummary';
 import { ConditionCard } from './ConditionCard';
+import { SnowpackCard } from './cards/SnowpackCard';
+import { SnotelChart } from '@/components/charts/SnotelChart';
+import { type SnotelData } from '@/lib/data-sources/snotel';
 import { type ReactNode } from 'react';
 
 interface StubCard {
@@ -53,14 +55,7 @@ const STUB_CARDS: StubCard[] = [
     detail:
       'High pressure dominates through midweek with daytime highs near 45\u00b0F at 8,000 ft. A Pacific system arrives Thursday afternoon bringing 4-8" of snow above 7,000 ft with winds gusting to 40 mph.',
   },
-  {
-    category: 'Snowpack',
-    icon: <Snowflake className="size-4 text-blue-500" />,
-    status: 'good',
-    summary: '82" base depth, settled and supportive',
-    detail:
-      'SNOTEL reports 82" snow depth with 28" SWE at the nearest station (9,200 ft). Snowpack is well-settled with a supportive crust from recent warm temps. Expect firm morning conditions softening to corn by midday on south aspects.',
-  },
+  // Snowpack card is rendered separately using SnowpackCard with real SNOTEL data
   {
     category: 'Stream Crossings',
     icon: <Waves className="size-4 text-cyan-600" />,
@@ -240,6 +235,7 @@ interface BriefingFullViewProps {
   warningCount?: number;
   criticalCount?: number;
   isNarrativeLoading?: boolean;
+  conditions?: Record<string, unknown>;
 }
 
 function BriefingFullView({
@@ -251,7 +247,9 @@ function BriefingFullView({
   warningCount = 0,
   criticalCount = 0,
   isNarrativeLoading = false,
+  conditions,
 }: BriefingFullViewProps) {
+  const snotelData = conditions?.snowpack as SnotelData | undefined;
   return (
     <ScrollArea className="h-full">
       <div className="space-y-5 p-1">
@@ -279,7 +277,25 @@ function BriefingFullView({
             Conditions
           </h3>
           <Accordion type="multiple" className="space-y-2">
-            {STUB_CARDS.map((card) => (
+            {STUB_CARDS.slice(0, 2).map((card) => (
+              <ConditionCard
+                key={card.category}
+                category={card.category}
+                icon={card.icon}
+                status={card.status}
+                summary={card.summary}
+                detail={card.detail}
+              />
+            ))}
+            <SnowpackCard data={snotelData ?? null}>
+              {snotelData?.nearest && (
+                <SnotelChart
+                  readings={snotelData.nearest.readings}
+                  stationName={snotelData.nearest.station.name}
+                />
+              )}
+            </SnowpackCard>
+            {STUB_CARDS.slice(2).map((card) => (
               <ConditionCard
                 key={card.category}
                 category={card.category}
@@ -332,6 +348,7 @@ export function BriefingPanel() {
       warningCount={getWarningCount()}
       criticalCount={getCriticalCount()}
       isNarrativeLoading={isLoading}
+      conditions={briefing?.conditions as Record<string, unknown> | undefined}
     />
   );
 }
