@@ -108,6 +108,8 @@ export function Map() {
     mapRef.current.flyTo({
       center: flyToTarget.center,
       zoom: flyToTarget.zoom ?? 11,
+      pitch: 0,
+      bearing: 0,
       essential: true,
     });
     clearFlyTo();

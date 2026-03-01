@@ -4,10 +4,10 @@ import { DashboardShell } from '@/components/layout/DashboardShell';
 function BriefingPlaceholder() {
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-slate-100">
+      <h2 className="text-lg font-semibold text-stone-800">
         Conditions Briefing
       </h2>
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-stone-500">
         Select a location on the map to generate a conditions briefing.
       </p>
 
@@ -16,10 +16,10 @@ function BriefingPlaceholder() {
           (section) => (
             <div
               key={section}
-              className="rounded-lg border border-dashed border-slate-700 p-4"
+              className="rounded-lg border border-dashed border-stone-200 p-4"
             >
-              <h3 className="text-sm font-medium text-slate-300">{section}</h3>
-              <div className="mt-2 h-16 rounded bg-slate-800/50" />
+              <h3 className="text-sm font-medium text-stone-600">{section}</h3>
+              <div className="mt-2 h-16 rounded bg-stone-50" />
             </div>
           ),
         )}

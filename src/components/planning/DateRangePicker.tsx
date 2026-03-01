@@ -12,10 +12,9 @@ export function DateRangePicker() {
   const [open, setOpen] = useState(false);
   const { dateRange, setDateRange } = usePlanningStore();
 
-  const selected: RdpDateRange = {
-    from: dateRange.start,
-    to: dateRange.end,
-  };
+  const selected: RdpDateRange | undefined = dateRange
+    ? { from: dateRange.start, to: dateRange.end }
+    : undefined;
 
   const handleSelect = (range: RdpDateRange | undefined) => {
     if (!range?.from) return;
@@ -23,10 +22,13 @@ export function DateRangePicker() {
       start: range.from,
       end: range.to ?? range.from,
     });
+    if (range.from && range.to) {
+      setOpen(false);
+    }
   };
 
   const label =
-    dateRange.start && dateRange.end
+    dateRange?.start && dateRange?.end
       ? `${format(dateRange.start, 'MMM d')} – ${format(dateRange.end, 'MMM d')}`
       : 'Pick dates';
 
@@ -35,14 +37,14 @@ export function DateRangePicker() {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-700"
+          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-stone-600 transition-colors hover:bg-stone-100"
         >
           <CalendarDays className="h-3.5 w-3.5" />
           <span>{label}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-auto border-slate-600 bg-slate-800 p-0"
+        className="w-auto p-0"
         align="end"
       >
         <Calendar
@@ -50,8 +52,7 @@ export function DateRangePicker() {
           selected={selected}
           onSelect={handleSelect}
           numberOfMonths={2}
-          defaultMonth={dateRange.start}
-          disabled={{ before: new Date() }}
+          defaultMonth={dateRange?.start ?? new Date()}
         />
       </PopoverContent>
     </Popover>

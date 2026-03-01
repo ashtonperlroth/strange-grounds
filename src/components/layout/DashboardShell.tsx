@@ -24,7 +24,7 @@ export function DashboardShell({ mapSlot, briefingSlot }: DashboardShellProps) {
         <ResizableHandle withHandle />
 
         <ResizablePanel defaultSize={40} minSize={25}>
-          <div className="h-full overflow-y-auto bg-slate-900 p-4">
+          <div className="h-full overflow-y-auto bg-white p-4">
             {briefingSlot}
           </div>
         </ResizablePanel>

@@ -16,17 +16,17 @@ export function ActivitySelector() {
   return (
     <Select value={activity} onValueChange={(v) => setActivity(v as Activity)}>
       <SelectTrigger
-        className="h-7 w-auto gap-1 border-0 bg-transparent px-2 text-xs text-slate-300 shadow-none hover:bg-slate-700 focus:ring-0 focus-visible:ring-0"
+        className="h-7 w-auto gap-1 border-0 bg-transparent px-2 text-xs text-stone-600 shadow-none hover:bg-stone-100 focus:ring-0 focus-visible:ring-0"
         size="sm"
       >
         <SelectValue />
       </SelectTrigger>
-      <SelectContent className="border-slate-600 bg-slate-800">
+      <SelectContent>
         {ACTIVITIES.map((a) => (
           <SelectItem
             key={a}
             value={a}
-            className="text-sm text-slate-200 focus:bg-slate-700 focus:text-slate-100"
+            className="text-sm"
           >
             {a}
           </SelectItem>

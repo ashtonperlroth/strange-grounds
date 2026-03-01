@@ -1,16 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Search, X } from 'lucide-react';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { MapPin, Search, X, Loader2 } from 'lucide-react';
 import { usePlanningStore } from '@/stores/planning-store';
 import { useMapStore } from '@/stores/map-store';
 
@@ -22,15 +13,20 @@ interface NominatimResult {
 }
 
 export function LocationSearch() {
-  const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<NominatimResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const abortRef = useRef<AbortController>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const { location, setLocation } = usePlanningStore();
   const flyTo = useMapStore((s) => s.flyTo);
+
+  const showDropdown = focused && query.length >= 2;
 
   const searchNominatim = useCallback(async (q: string) => {
     if (q.length < 2) {
@@ -56,6 +52,7 @@ export function LocationSearch() {
       );
       const data: NominatimResult[] = await res.json();
       setResults(data);
+      setHighlightIndex(-1);
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       setResults([]);
@@ -72,6 +69,16 @@ export function LocationSearch() {
     };
   }, [query, searchNominatim]);
 
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setFocused(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleSelect = (result: NominatimResult) => {
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
@@ -79,7 +86,7 @@ export function LocationSearch() {
 
     setLocation({ lat, lng, name });
     flyTo({ center: [lng, lat], zoom: 11 });
-    setOpen(false);
+    setFocused(false);
     setQuery('');
     setResults([]);
   };
@@ -87,75 +94,101 @@ export function LocationSearch() {
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     setLocation(null);
+    setQuery('');
+    setResults([]);
+    inputRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showDropdown || results.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIndex((i) => (i < results.length - 1 ? i + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIndex((i) => (i > 0 ? i - 1 : results.length - 1));
+    } else if (e.key === 'Enter' && highlightIndex >= 0) {
+      e.preventDefault();
+      handleSelect(results[highlightIndex]);
+    } else if (e.key === 'Escape') {
+      setFocused(false);
+    }
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="flex h-8 min-w-[180px] max-w-[260px] flex-1 items-center gap-2 rounded-md border border-slate-600 bg-slate-700/50 px-3 text-sm transition-colors hover:border-slate-500 hover:bg-slate-700"
-        >
-          {location ? (
-            <>
-              <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-              <span className="truncate text-slate-200">{location.name}</span>
-              <X
-                className="ml-auto h-3 w-3 shrink-0 text-slate-400 hover:text-slate-200"
-                onClick={handleClear}
-              />
-            </>
-          ) : (
-            <>
-              <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-              <span className="text-slate-400">Search location&hellip;</span>
-            </>
+    <div ref={containerRef} className="relative min-w-[400px]">
+      <div className="flex h-8 items-center gap-2 rounded-md border border-stone-300 bg-white px-3 transition-colors focus-within:border-stone-400 focus-within:ring-1 focus-within:ring-stone-300">
+        {location && !focused ? (
+          <>
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+            <button
+              type="button"
+              className="flex-1 truncate text-left text-sm text-stone-700"
+              onClick={() => {
+                setFocused(true);
+                setQuery('');
+                setTimeout(() => inputRef.current?.focus(), 0);
+              }}
+            >
+              {location.name}
+            </button>
+            <X
+              className="h-3 w-3 shrink-0 cursor-pointer text-stone-400 hover:text-stone-600"
+              onClick={handleClear}
+            />
+          </>
+        ) : (
+          <>
+            <Search className="h-3.5 w-3.5 shrink-0 text-stone-400" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onKeyDown={handleKeyDown}
+              placeholder="Search location…"
+              className="flex-1 bg-transparent text-sm text-stone-700 placeholder:text-stone-400 focus:outline-none"
+            />
+            {loading && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-stone-400" />}
+          </>
+        )}
+      </div>
+
+      {showDropdown && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-stone-200 bg-white shadow-lg">
+          {loading && results.length === 0 && (
+            <div className="px-3 py-3 text-center text-sm text-stone-400">
+              Searching…
+            </div>
           )}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[320px] border-slate-600 bg-slate-800 p-0"
-        align="start"
-      >
-        <Command
-          className="bg-transparent"
-          shouldFilter={false}
-        >
-          <CommandInput
-            placeholder="Search US locations..."
-            value={query}
-            onValueChange={setQuery}
-            className="text-slate-200"
-          />
-          <CommandList>
-            {loading && (
-              <div className="px-4 py-3 text-center text-sm text-slate-400">
-                Searching...
-              </div>
-            )}
-            {!loading && query.length >= 2 && results.length === 0 && (
-              <CommandEmpty className="text-slate-400">
-                No locations found.
-              </CommandEmpty>
-            )}
-            {results.length > 0 && (
-              <CommandGroup>
-                {results.map((result) => (
-                  <CommandItem
-                    key={result.place_id}
-                    value={String(result.place_id)}
-                    onSelect={() => handleSelect(result)}
-                    className="cursor-pointer text-slate-200 aria-selected:bg-slate-700"
-                  >
-                    <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                    <span className="truncate">{result.display_name}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+          {!loading && results.length === 0 && (
+            <div className="px-3 py-3 text-center text-sm text-stone-400">
+              No locations found.
+            </div>
+          )}
+          {results.map((result, i) => (
+            <button
+              key={result.place_id}
+              type="button"
+              className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                i === highlightIndex
+                  ? 'bg-stone-100 text-stone-800'
+                  : 'text-stone-600 hover:bg-stone-50'
+              }`}
+              onMouseEnter={() => setHighlightIndex(i)}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelect(result);
+              }}
+            >
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-stone-400" />
+              <span className="truncate">{result.display_name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

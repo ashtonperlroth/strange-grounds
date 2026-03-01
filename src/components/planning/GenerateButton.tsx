@@ -31,7 +31,7 @@ export function GenerateButton() {
       size="sm"
       disabled={!ready}
       onClick={handleClick}
-      className="h-7 gap-1.5 bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500"
+      className="h-7 gap-1.5 bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-500 disabled:bg-stone-200 disabled:text-stone-400"
     >
       <Sparkles className="h-3.5 w-3.5" />
       Generate
@@ -46,7 +46,7 @@ export function GenerateButton() {
         <TooltipTrigger asChild>
           <span tabIndex={0}>{button}</span>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="bg-slate-700 text-slate-200">
+        <TooltipContent side="bottom">
           Missing: {missingItems.join(', ')}
         </TooltipContent>
       </Tooltip>
