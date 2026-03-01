@@ -12,18 +12,26 @@ export function DateRangePicker() {
   const [open, setOpen] = useState(false);
   const { dateRange, setDateRange } = usePlanningStore();
 
-  const selected: RdpDateRange | undefined = dateRange
-    ? { from: dateRange.start, to: dateRange.end }
-    : undefined;
+  const [localRange, setLocalRange] = useState<RdpDateRange | undefined>(
+    dateRange ? { from: dateRange.start, to: dateRange.end } : undefined,
+  );
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setLocalRange(
+        dateRange ? { from: dateRange.start, to: dateRange.end } : undefined,
+      );
+    }
+    setOpen(nextOpen);
+  };
 
   const handleSelect = (range: RdpDateRange | undefined) => {
-    if (!range?.from) return;
-    setDateRange({
-      start: range.from,
-      end: range.to ?? range.from,
-    });
-    if (range.from && range.to) {
-      setOpen(false);
+    setLocalRange(range);
+    if (range?.from) {
+      setDateRange({
+        start: range.from,
+        end: range.to ?? range.from,
+      });
     }
   };
 
@@ -33,7 +41,7 @@ export function DateRangePicker() {
       : 'Pick dates';
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -49,7 +57,7 @@ export function DateRangePicker() {
       >
         <Calendar
           mode="range"
-          selected={selected}
+          selected={localRange}
           onSelect={handleSelect}
           numberOfMonths={2}
           defaultMonth={dateRange?.start ?? new Date()}
