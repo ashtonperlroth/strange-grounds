@@ -10,39 +10,30 @@ import { generateBriefing as synthesize } from "@/lib/synthesis/briefing";
 import { buildConditionCards, computeReadiness } from "@/lib/synthesis/conditions";
 import type { ConditionsBundle } from "@/lib/synthesis/conditions";
 import type { NWSForecastData } from "@/lib/data-sources/nws";
-import type { SnotelData } from "@/lib/data-sources/snotel";
-import type { AvalancheData } from "@/lib/data-sources/avalanche";
-import type { UsgsData } from "@/lib/data-sources/usgs";
-import type { FireData } from "@/lib/data-sources/fires";
-import type { DaylightData } from "@/lib/synthesis/conditions";
 import type { Activity } from "@/stores/planning-store";
 
-const ADAPTER_LABELS = ["nws", "snotel", "avalanche", "usgs", "fires", "daylight"] as const;
-const ADAPTER_TIMEOUT_MS = 15_000;
+const DEFAULT_TIMEOUT_MS = 8_000;
+const AVALANCHE_TIMEOUT_MS = 10_000;
 
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error(`${label} timed out after ${ms}ms`)),
-      ms,
-    );
-    promise.then(
-      (val) => { clearTimeout(timer); resolve(val); },
-      (err) => { clearTimeout(timer); reject(err); },
-    );
-  });
-}
-
-function extractSettled<T>(
-  result: PromiseSettledResult<T>,
+async function safeAdapterCall<T>(
+  fn: () => Promise<T>,
   label: string,
-): T | null {
-  if (result.status === "fulfilled") return result.value;
-  console.error(
-    `[briefing] ${label} adapter failed:`,
-    result.reason instanceof Error ? result.reason.message : result.reason,
-  );
-  return null;
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<T | null> {
+  try {
+    return await Promise.race([
+      fn(),
+      new Promise<null>((resolve) =>
+        setTimeout(() => {
+          console.warn(`[${label}] timed out after ${timeoutMs}ms`);
+          resolve(null);
+        }, timeoutMs),
+      ),
+    ]);
+  } catch (err) {
+    console.error(`[${label}] failed:`, err);
+    return null;
+  }
 }
 
 function stripHourlyData(nws: NWSForecastData | null): NWSForecastData | null {
@@ -65,40 +56,54 @@ export const generateBriefing = inngest.createFunction(
     const fetchResults = await step.run("fetch-all-data", async () => {
       const stepStart = Date.now();
 
-      const settled = await Promise.allSettled([
-        withTimeout(fetchNWS({ lat, lng }), ADAPTER_TIMEOUT_MS, "nws"),
-        withTimeout(fetchSnotel({ lat, lng }), ADAPTER_TIMEOUT_MS, "snotel"),
-        withTimeout(fetchAvalanche({ lat, lng }), ADAPTER_TIMEOUT_MS, "avalanche"),
-        withTimeout(fetchUsgs({ lat, lng }), ADAPTER_TIMEOUT_MS, "usgs"),
-        withTimeout(fetchFires({ lat, lng }), ADAPTER_TIMEOUT_MS, "fires"),
-        Promise.resolve().then(() => computeDaylight({ lat, lng, date: tripDate })),
-      ]);
+      const [nws, snotel, avalanche, usgs, fires, daylight] =
+        await Promise.all([
+          safeAdapterCall(() => fetchNWS({ lat, lng }), "NWS"),
+          safeAdapterCall(() => fetchSnotel({ lat, lng }), "SNOTEL"),
+          safeAdapterCall(
+            () => fetchAvalanche({ lat, lng }),
+            "Avalanche",
+            AVALANCHE_TIMEOUT_MS,
+          ),
+          safeAdapterCall(() => fetchUsgs({ lat, lng }), "USGS"),
+          safeAdapterCall(() => fetchFires({ lat, lng }), "Fires"),
+          safeAdapterCall(
+            () => Promise.resolve(computeDaylight({ lat, lng, date: tripDate })),
+            "Daylight",
+          ),
+        ]);
 
-      const errors: string[] = [];
-      settled.forEach((r, i) => {
-        if (r.status === "rejected") {
-          const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
-          errors.push(`${ADAPTER_LABELS[i]}: ${msg}`);
-        }
-      });
+      const unavailableSources: string[] = [];
+      if (!nws) unavailableSources.push("NWS");
+      if (!snotel) unavailableSources.push("SNOTEL");
+      if (!avalanche) unavailableSources.push("Avalanche");
+      if (!usgs) unavailableSources.push("USGS");
+      if (!fires) unavailableSources.push("Fires");
+      if (!daylight) unavailableSources.push("Daylight");
 
-      if (errors.length > 0) {
-        console.error("[briefing] Partial adapter failures:", errors.join("; "));
+      if (unavailableSources.length > 0) {
+        console.warn(
+          `[briefing] Unavailable sources: ${unavailableSources.join(", ")}`,
+        );
       }
 
       const elapsed = Date.now() - stepStart;
-      console.log(`[briefing] fetch-all-data completed in ${elapsed}ms (errors: ${errors.length})`);
+      console.log(
+        `[briefing] fetch-all-data completed in ${elapsed}ms (unavailable: ${unavailableSources.length})`,
+      );
 
       return {
-        nws: extractSettled<NWSForecastData>(settled[0], ADAPTER_LABELS[0]),
-        snotel: extractSettled<SnotelData>(settled[1], ADAPTER_LABELS[1]),
-        avalanche: extractSettled<AvalancheData | null>(settled[2], ADAPTER_LABELS[2]),
-        usgs: extractSettled<UsgsData>(settled[3], ADAPTER_LABELS[3]),
-        fires: extractSettled<FireData>(settled[4], ADAPTER_LABELS[4]),
-        daylight: extractSettled<DaylightData>(settled[5], ADAPTER_LABELS[5]),
-        adapterErrors: errors,
+        nws,
+        snotel,
+        avalanche,
+        usgs,
+        fires,
+        daylight,
+        unavailableSources,
       };
     });
+
+    const unavailableSources = fetchResults.unavailableSources;
 
     const fullConditions: ConditionsBundle = {
       weather: fetchResults.nws,
@@ -114,7 +119,7 @@ export const generateBriefing = inngest.createFunction(
       weather: stripHourlyData(fetchResults.nws),
     };
 
-    const conditionCards = buildConditionCards(fullConditions);
+    const conditionCards = buildConditionCards(fullConditions, unavailableSources);
     const readiness = computeReadiness(fullConditions);
 
     const briefingResult = await step.run("synthesize", async () => {
@@ -124,6 +129,7 @@ export const generateBriefing = inngest.createFunction(
         activity as Activity,
         { lat, lng, name: null },
         { start: startDate, end: endDate },
+        unavailableSources,
       );
       const elapsed = Date.now() - stepStart;
       console.log(`[briefing] synthesize completed in ${elapsed}ms (narrative length: ${result.narrative.length})`);
@@ -143,10 +149,11 @@ export const generateBriefing = inngest.createFunction(
           conditions: {
             ...fullConditions,
             conditionCards,
+            unavailableSources,
           },
           raw_data: {
             ...fullConditions,
-            adapterErrors: fetchResults.adapterErrors,
+            unavailableSources,
           },
           readiness: briefingResult.readiness ?? readiness,
         })

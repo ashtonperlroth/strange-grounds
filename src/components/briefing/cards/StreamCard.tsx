@@ -7,6 +7,7 @@ import { type UsgsData, type UsgsStationData } from '@/lib/data-sources/usgs';
 
 interface StreamCardProps {
   data: UsgsData | null;
+  unavailable?: boolean;
   children?: React.ReactNode;
 }
 
@@ -172,15 +173,15 @@ function GaugeDetail({ station }: { station: UsgsStationData }) {
   );
 }
 
-export function StreamCard({ data, children }: StreamCardProps) {
+export function StreamCard({ data, unavailable, children }: StreamCardProps) {
   if (!data) {
     return (
       <ConditionCard
         category="Stream Crossings"
         icon={<Waves className="size-4 text-cyan-600" />}
-        status="unknown"
-        summary="Stream flow data unavailable"
-        detail="No USGS data could be retrieved for this location."
+        status={unavailable ? 'unavailable' : 'unknown'}
+        summary={unavailable ? 'Data temporarily unavailable' : 'Stream flow data unavailable'}
+        detail={unavailable ? 'This data source did not respond. Try regenerating the briefing.' : 'No USGS data could be retrieved for this location.'}
       />
     );
   }

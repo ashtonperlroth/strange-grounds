@@ -7,6 +7,7 @@ import { type SnotelData, type SnotelStationData } from '@/lib/data-sources/snot
 
 interface SnowpackCardProps {
   data: SnotelData | null;
+  unavailable?: boolean;
   children?: React.ReactNode;
 }
 
@@ -127,15 +128,15 @@ function StationDetail({ station }: { station: SnotelStationData }) {
   );
 }
 
-export function SnowpackCard({ data, children }: SnowpackCardProps) {
+export function SnowpackCard({ data, unavailable, children }: SnowpackCardProps) {
   if (!data) {
     return (
       <ConditionCard
         category="Snowpack"
         icon={<Snowflake className="size-4 text-blue-500" />}
-        status="unknown"
-        summary="Snowpack data unavailable"
-        detail="No SNOTEL data could be retrieved for this location."
+        status={unavailable ? 'unavailable' : 'unknown'}
+        summary={unavailable ? 'Data temporarily unavailable' : 'Snowpack data unavailable'}
+        detail={unavailable ? 'This data source did not respond. Try regenerating the briefing.' : 'No SNOTEL data could be retrieved for this location.'}
       />
     );
   }

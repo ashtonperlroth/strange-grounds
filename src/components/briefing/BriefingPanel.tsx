@@ -44,6 +44,10 @@ import { type AvalancheData } from '@/lib/data-sources/avalanche';
 import { type UsgsData } from '@/lib/data-sources/usgs';
 import { type DaylightData } from '@/lib/synthesis/conditions';
 import { type ReactNode } from 'react';
+import {
+  ErrorBoundary,
+  ConditionCardErrorFallback,
+} from '@/components/ErrorBoundary';
 
 interface StubCard {
   category: string;
@@ -392,7 +396,11 @@ function BriefingFullView({
   const usgsData = conditions?.streamFlow as UsgsData | undefined;
   const daylightData = conditions?.daylight as DaylightData | undefined;
   const fireData = conditions?.fires as FireData | undefined;
+  const unavailableSources = (conditions?.unavailableSources as string[] | undefined) ?? [];
   const sortAvyToTop = getAvalancheSortPriority(avalancheData ?? null) > 0;
+
+  const isSourceUnavailable = (source: string) =>
+    unavailableSources.includes(source);
 
   return (
     <ScrollArea className="h-full">
@@ -424,48 +432,127 @@ function BriefingFullView({
           </h3>
           <Accordion type="multiple" className="space-y-2">
             {sortAvyToTop && (
-              <AvalancheCard data={avalancheData ?? null} />
+              <ErrorBoundary
+                fallback={(reset) => (
+                  <ConditionCardErrorFallback category="Avalanche" reset={reset} />
+                )}
+              >
+                <AvalancheCard
+                  data={avalancheData ?? null}
+                  unavailable={isSourceUnavailable('Avalanche')}
+                />
+              </ErrorBoundary>
             )}
-            <WeatherCard data={weatherData}>
-              {weatherData?.hourly && weatherData.hourly.length > 0 && (
-                <TempChart hourly={weatherData.hourly} />
+            <ErrorBoundary
+              fallback={(reset) => (
+                <ConditionCardErrorFallback category="Weather" reset={reset} />
               )}
-            </WeatherCard>
+            >
+              <WeatherCard
+                data={weatherData}
+                unavailable={isSourceUnavailable('NWS')}
+              >
+                {weatherData?.hourly && weatherData.hourly.length > 0 && (
+                  <TempChart hourly={weatherData.hourly} />
+                )}
+              </WeatherCard>
+            </ErrorBoundary>
             {!sortAvyToTop && (
-              <AvalancheCard data={avalancheData ?? null} />
+              <ErrorBoundary
+                fallback={(reset) => (
+                  <ConditionCardErrorFallback category="Avalanche" reset={reset} />
+                )}
+              >
+                <AvalancheCard
+                  data={avalancheData ?? null}
+                  unavailable={isSourceUnavailable('Avalanche')}
+                />
+              </ErrorBoundary>
             )}
-            <SnowpackCard data={snotelData ?? null}>
-              {snotelData?.nearest && (
-                <SnotelChart
-                  readings={snotelData.nearest.readings}
-                  stationName={snotelData.nearest.station.name}
-                />
+            <ErrorBoundary
+              fallback={(reset) => (
+                <ConditionCardErrorFallback category="Snowpack" reset={reset} />
               )}
-            </SnowpackCard>
-            <StreamCard data={usgsData ?? null}>
-              {usgsData?.nearest && usgsData.nearest.history.length > 0 && (
-                <HydrographChart
-                  readings={usgsData.nearest.history}
-                  stationName={usgsData.nearest.station.name}
-                />
+            >
+              <SnowpackCard
+                data={snotelData ?? null}
+                unavailable={isSourceUnavailable('SNOTEL')}
+              >
+                {snotelData?.nearest && (
+                  <SnotelChart
+                    readings={snotelData.nearest.readings}
+                    stationName={snotelData.nearest.station.name}
+                  />
+                )}
+              </SnowpackCard>
+            </ErrorBoundary>
+            <ErrorBoundary
+              fallback={(reset) => (
+                <ConditionCardErrorFallback category="Stream Crossings" reset={reset} />
               )}
-            </StreamCard>
-            <ConditionCard
-              category="Fires"
-              icon={<Flame className="size-4 text-orange-500" />}
-              status={fireCardStatus(fireData ?? null)}
-              summary={fireStatusSummary(fireData ?? null)}
-            />
-            <DaylightCard data={daylightData ?? null} />
-            {STUB_CARDS.map((card) => (
+            >
+              <StreamCard
+                data={usgsData ?? null}
+                unavailable={isSourceUnavailable('USGS')}
+              >
+                {usgsData?.nearest && usgsData.nearest.history.length > 0 && (
+                  <HydrographChart
+                    readings={usgsData.nearest.history}
+                    stationName={usgsData.nearest.station.name}
+                  />
+                )}
+              </StreamCard>
+            </ErrorBoundary>
+            <ErrorBoundary
+              fallback={(reset) => (
+                <ConditionCardErrorFallback category="Fires" reset={reset} />
+              )}
+            >
               <ConditionCard
-                key={card.category}
-                category={card.category}
-                icon={card.icon}
-                status={card.status}
-                summary={card.summary}
-                detail={card.detail}
+                category="Fires"
+                icon={<Flame className="size-4 text-orange-500" />}
+                status={
+                  !fireData && isSourceUnavailable('Fires')
+                    ? 'unavailable'
+                    : fireCardStatus(fireData ?? null)
+                }
+                summary={
+                  !fireData && isSourceUnavailable('Fires')
+                    ? 'Data temporarily unavailable'
+                    : fireStatusSummary(fireData ?? null)
+                }
+                detail={
+                  !fireData && isSourceUnavailable('Fires')
+                    ? 'This data source did not respond. Try regenerating the briefing.'
+                    : undefined
+                }
               />
+            </ErrorBoundary>
+            <ErrorBoundary
+              fallback={(reset) => (
+                <ConditionCardErrorFallback category="Daylight" reset={reset} />
+              )}
+            >
+              <DaylightCard
+                data={daylightData ?? null}
+                unavailable={isSourceUnavailable('Daylight')}
+              />
+            </ErrorBoundary>
+            {STUB_CARDS.map((card) => (
+              <ErrorBoundary
+                key={card.category}
+                fallback={(reset) => (
+                  <ConditionCardErrorFallback category={card.category} reset={reset} />
+                )}
+              >
+                <ConditionCard
+                  category={card.category}
+                  icon={card.icon}
+                  status={card.status}
+                  summary={card.summary}
+                  detail={card.detail}
+                />
+              </ErrorBoundary>
             ))}
           </Accordion>
         </div>

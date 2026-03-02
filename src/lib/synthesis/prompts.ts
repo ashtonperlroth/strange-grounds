@@ -242,9 +242,10 @@ export function promptForActivity(
   conditions: ConditionsBundle,
   location: PromptLocation,
   dates: PromptDates,
+  unavailableSources: string[] = [],
 ): AssembledPrompt {
   const emphasis = ACTIVITY_EMPHASIS[activity];
-  const cards = buildConditionCards(conditions);
+  const cards = buildConditionCards(conditions, unavailableSources);
 
   const statusSummary = cards
     .map((c) => `  ${c.category}: ${c.status.toUpperCase()} — ${c.summary}`)
@@ -255,6 +256,11 @@ export function promptForActivity(
   const locationLabel = location.name
     ? `${location.name} (${location.lat.toFixed(4)}, ${location.lng.toFixed(4)})`
     : `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`;
+
+  const unavailableNote =
+    unavailableSources.length > 0
+      ? `\nNote: The following data sources were unavailable for this briefing: [${unavailableSources.join(", ")}].\nThe briefing is based on available data only. Do NOT fabricate or guess data for unavailable sources.\n`
+      : "";
 
   const user = `Write a conditions briefing for a ${activity.toLowerCase()} trip.
 
@@ -273,7 +279,7 @@ ${statusSummary}
 
 RAW CONDITIONS DATA:
 ${conditionsText}
-
+${unavailableNote}
 Remember: respond with ONLY a valid JSON object, no markdown, no preamble.`;
 
   return {

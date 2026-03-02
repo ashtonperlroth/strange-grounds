@@ -8,6 +8,7 @@ import { DangerRose } from '@/components/charts/DangerRose';
 
 interface AvalancheCardProps {
   data: AvalancheData | null;
+  unavailable?: boolean;
 }
 
 const DANGER_BADGE_COLORS: Record<DangerLevel, string> = {
@@ -83,8 +84,19 @@ function ProblemRow({
   );
 }
 
-export function AvalancheCard({ data }: AvalancheCardProps) {
+export function AvalancheCard({ data, unavailable }: AvalancheCardProps) {
   if (!data) {
+    if (unavailable) {
+      return (
+        <ConditionCard
+          category="Avalanche"
+          icon={<TriangleAlert className="size-4 text-yellow-600" />}
+          status="unavailable"
+          summary="Data temporarily unavailable"
+          detail="This data source did not respond. Try regenerating the briefing."
+        />
+      );
+    }
     return null;
   }
 
