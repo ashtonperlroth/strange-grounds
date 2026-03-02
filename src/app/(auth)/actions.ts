@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -17,23 +18,34 @@ export async function login(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect("/");
 }
 
 export async function signup(formData: FormData) {
-  const supabase = await createClient();
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
 
-  const { error } = await supabase.auth.signUp({
-    email: formData.get("email") as string,
-    password: formData.get("password") as string,
+  const admin = createAdminClient();
+  const { error: createError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
   });
 
-  if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+  if (createError) {
+    redirect(`/signup?error=${encodeURIComponent(createError.message)}`);
+  }
+
+  const supabase = await createClient();
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (signInError) {
+    redirect(`/login?error=${encodeURIComponent(signInError.message)}`);
   }
 
   revalidatePath("/", "layout");
-  redirect(
-    `/login?message=${encodeURIComponent("Check your email to confirm your account")}`,
-  );
+  redirect("/");
 }
