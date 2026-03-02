@@ -4,6 +4,7 @@ import { fetchNWS } from "@/lib/data-sources/nws";
 import { fetchSnotel } from "@/lib/data-sources/snotel";
 import { fetchAvalanche } from "@/lib/data-sources/avalanche";
 import { fetchUsgs } from "@/lib/data-sources/usgs";
+import { fetchClimateNormals } from "@/lib/data-sources/open-meteo";
 
 export const generateBriefing = inngest.createFunction(
   { id: "generate-briefing" },
@@ -28,6 +29,13 @@ export const generateBriefing = inngest.createFunction(
       return fetchUsgs({ lat, lng });
     });
 
+    const climateNormalsData = await step.run(
+      "fetch-climate-normals",
+      async () => {
+        return fetchClimateNormals({ lat, lng, startDate, endDate });
+      },
+    );
+
     const daylightData = await step.run("compute-daylight", async () => {
       return {
         source: "suncalc",
@@ -44,9 +52,21 @@ export const generateBriefing = inngest.createFunction(
       const temps = nwsData.periods.slice(0, 4).map((p) => p.temperature);
       const high = Math.max(...temps);
       const low = Math.min(...temps);
-      const weatherSummary = firstPeriod
+
+      let weatherSummary = firstPeriod
         ? `Expect temperatures between ${low}°F and ${high}°F with ${firstPeriod.shortForecast.toLowerCase()} conditions.`
         : "Weather data unavailable.";
+
+      if (climateNormalsData.yearsOfData > 0) {
+        const highDiff = high - climateNormalsData.normalHighF;
+        if (highDiff !== 0) {
+          const abs = Math.abs(highDiff);
+          const dir = highDiff > 0 ? "above" : "below";
+          weatherSummary += ` Highs are ${abs}°F ${dir} the ${climateNormalsData.yearsOfData}-year average of ${climateNormalsData.normalHighF}°F for ${climateNormalsData.periodLabel}.`;
+        } else {
+          weatherSummary += ` Highs are right at the ${climateNormalsData.yearsOfData}-year average of ${climateNormalsData.normalHighF}°F for ${climateNormalsData.periodLabel}.`;
+        }
+      }
 
       const alertSection =
         nwsData.alerts.length > 0
@@ -77,6 +97,7 @@ export const generateBriefing = inngest.createFunction(
         avalanche: avalancheData,
         streamFlow: usgsData,
         daylight: daylightData,
+        climateNormals: climateNormalsData,
       };
 
       const { error } = await supabase

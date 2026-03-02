@@ -32,6 +32,7 @@ import type { NWSForecastData } from '@/lib/data-sources/nws';
 import { type SnotelData } from '@/lib/data-sources/snotel';
 import { type AvalancheData } from '@/lib/data-sources/avalanche';
 import { type UsgsData } from '@/lib/data-sources/usgs';
+import { type ClimateNormalsData } from '@/lib/data-sources/open-meteo';
 import { type ReactNode } from 'react';
 
 interface StubCard {
@@ -233,6 +234,7 @@ function BriefingFullView({
   const snotelData = conditions?.snowpack as SnotelData | undefined;
   const avalancheData = conditions?.avalanche as AvalancheData | undefined;
   const usgsData = conditions?.streamFlow as UsgsData | undefined;
+  const climateNormals = conditions?.climateNormals as ClimateNormalsData | undefined;
   const sortAvyToTop = getAvalancheSortPriority(avalancheData ?? null) > 0;
 
   return (
@@ -265,7 +267,7 @@ function BriefingFullView({
             {sortAvyToTop && (
               <AvalancheCard data={avalancheData ?? null} />
             )}
-            <WeatherCard data={weatherData} />
+            <WeatherCard data={weatherData} climateNormals={climateNormals ?? null} />
             {!sortAvyToTop && (
               <AvalancheCard data={avalancheData ?? null} />
             )}
