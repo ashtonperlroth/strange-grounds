@@ -54,34 +54,34 @@ const STUB_CARDS: StubCard[] = [
   {
     category: 'Remoteness',
     icon: <Mountain className="size-4 text-stone-500" />,
-    status: 'caution',
-    summary: '14 miles to nearest road, no cell coverage',
+    status: 'unknown',
+    summary: 'No data available',
     detail:
-      'This route is 14 miles from the nearest trailhead with 4,200 ft of elevation gain. No cell service expected beyond mile 2. Nearest SAR staging area is the trailhead parking lot. Carry a satellite communicator.',
+      'No data source available for this category yet. This will be added in a future update.',
   },
   {
     category: 'Wildlife',
     icon: <PawPrint className="size-4 text-orange-500" />,
-    status: 'good',
-    summary: 'Bear activity low, no recent sightings reported',
+    status: 'unknown',
+    summary: 'No data available',
     detail:
-      'Black bears are emerging from dens in the area. No recent sightings on this route. Carry bear spray and hang food at least 200 ft from camp. Mountain lion presence is year-round but encounters are rare.',
+      'No data source available for this category yet. This will be added in a future update.',
   },
   {
     category: 'Insects',
     icon: <Bug className="size-4 text-lime-600" />,
-    status: 'good',
-    summary: 'Minimal insect activity, too early for mosquito season',
+    status: 'unknown',
+    summary: 'No data available',
     detail:
-      'Snow cover and cool temps keep insect populations low. Mosquito season typically begins in late May at this elevation. Ticks may be active in lower-elevation approach trails \u2014 do a tick check after hiking through brush.',
+      'No data source available for this category yet. This will be added in a future update.',
   },
   {
     category: 'Footing',
     icon: <Footprints className="size-4 text-stone-500" />,
-    status: 'caution',
-    summary: 'Mixed conditions \u2014 snow, mud, and exposed rock',
+    status: 'unknown',
+    summary: 'No data available',
     detail:
-      'Expect post-holing in soft afternoon snow above 8,500 ft without snowshoes. Trail is muddy from 6,000-8,000 ft. Microspikes recommended for icy morning conditions on north-facing slopes. Gaiters helpful for mud and slush.',
+      'No data source available for this category yet. This will be added in a future update.',
   },
 ];
 
