@@ -53,6 +53,10 @@ export const tripsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      await ctx.adminSupabase
+        .from("profiles")
+        .upsert({ id: ctx.user.id }, { onConflict: "id" });
+
       const { latitude, longitude, ...rest } = input;
       const point = `POINT(${longitude} ${latitude})`;
 
