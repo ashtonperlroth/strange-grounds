@@ -491,7 +491,6 @@ export function BriefingPanel() {
     location,
     dateRange,
     activity,
-    sessionToken,
     setActiveBriefingId,
     setIsGenerating,
     setGenerationError,
@@ -520,7 +519,6 @@ export function BriefingPanel() {
     try {
       const briefingResult = await generateBriefing.mutateAsync({
         tripId: activeTripId,
-        sessionToken: sessionToken ?? undefined,
         lat: location.lat,
         lng: location.lng,
       });
@@ -538,7 +536,6 @@ export function BriefingPanel() {
     activeTripId,
     location,
     isRegenerating,
-    sessionToken,
     generateBriefing,
     setActiveBriefingId,
     setIsGenerating,

@@ -9,47 +9,10 @@ export const briefingsRouter = router({
     .input(
       z.object({
         tripId: z.string().uuid(),
-        sessionToken: z.string().uuid().optional(),
       }),
     )
-    .query(async ({ ctx, input }) => {
+    .query(async ({ input }) => {
       const admin = createAdminClient();
-
-      if (ctx.user) {
-        const { data: trip } = await admin
-          .from("trips")
-          .select("id")
-          .eq("id", input.tripId)
-          .eq("user_id", ctx.user.id)
-          .single();
-
-        if (!trip) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Trip not found",
-          });
-        }
-      } else if (input.sessionToken) {
-        const { data: trip } = await admin
-          .from("trips")
-          .select("id")
-          .eq("id", input.tripId)
-          .eq("session_token", input.sessionToken)
-          .is("user_id", null)
-          .single();
-
-        if (!trip) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Trip not found",
-          });
-        }
-      } else {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Authentication or session token required",
-        });
-      }
 
       const { data, error } = await admin
         .from("briefings")
@@ -90,34 +53,18 @@ export const briefingsRouter = router({
     .input(
       z.object({
         tripId: z.string().uuid(),
-        sessionToken: z.string().uuid().optional(),
         lat: z.number().min(-90).max(90),
         lng: z.number().min(-180).max(180),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       const admin = createAdminClient();
 
-      let trip;
-
-      if (ctx.user) {
-        const { data } = await admin
-          .from("trips")
-          .select("id, start_date, end_date, activity")
-          .eq("id", input.tripId)
-          .eq("user_id", ctx.user.id)
-          .single();
-        trip = data;
-      } else if (input.sessionToken) {
-        const { data } = await admin
-          .from("trips")
-          .select("id, start_date, end_date, activity")
-          .eq("id", input.tripId)
-          .eq("session_token", input.sessionToken)
-          .is("user_id", null)
-          .single();
-        trip = data;
-      }
+      const { data: trip } = await admin
+        .from("trips")
+        .select("id, start_date, end_date, activity")
+        .eq("id", input.tripId)
+        .single();
 
       if (!trip) {
         throw new TRPCError({
