@@ -34,6 +34,7 @@ import { SnowpackCard } from './cards/SnowpackCard';
 import { AvalancheCard, getAvalancheSortPriority } from './cards/AvalancheCard';
 import { StreamCard } from './cards/StreamCard';
 import { DaylightCard } from './cards/DaylightCard';
+import { TempChart } from '@/components/charts/TempChart';
 import { SnotelChart } from '@/components/charts/SnotelChart';
 import { HydrographChart } from '@/components/charts/HydrographChart';
 import type { NWSForecastData } from '@/lib/data-sources/nws';
@@ -425,7 +426,11 @@ function BriefingFullView({
             {sortAvyToTop && (
               <AvalancheCard data={avalancheData ?? null} />
             )}
-            <WeatherCard data={weatherData} />
+            <WeatherCard data={weatherData}>
+              {weatherData?.hourly && weatherData.hourly.length > 0 && (
+                <TempChart hourly={weatherData.hourly} />
+              )}
+            </WeatherCard>
             {!sortAvyToTop && (
               <AvalancheCard data={avalancheData ?? null} />
             )}

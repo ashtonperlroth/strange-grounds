@@ -100,8 +100,8 @@ export const generateBriefing = inngest.createFunction(
       };
     });
 
-    const conditions: ConditionsBundle = {
-      weather: stripHourlyData(fetchResults.nws),
+    const fullConditions: ConditionsBundle = {
+      weather: fetchResults.nws,
       snowpack: fetchResults.snotel,
       avalanche: fetchResults.avalanche ?? null,
       streamFlow: fetchResults.usgs,
@@ -109,13 +109,18 @@ export const generateBriefing = inngest.createFunction(
       daylight: fetchResults.daylight,
     };
 
-    const conditionCards = buildConditionCards(conditions);
-    const readiness = computeReadiness(conditions);
+    const synthesisConditions: ConditionsBundle = {
+      ...fullConditions,
+      weather: stripHourlyData(fetchResults.nws),
+    };
+
+    const conditionCards = buildConditionCards(fullConditions);
+    const readiness = computeReadiness(fullConditions);
 
     const briefingResult = await step.run("synthesize", async () => {
       const stepStart = Date.now();
       const result = await synthesize(
-        conditions,
+        synthesisConditions,
         activity as Activity,
         { lat, lng, name: null },
         { start: startDate, end: endDate },
@@ -129,15 +134,6 @@ export const generateBriefing = inngest.createFunction(
       const stepStart = Date.now();
       const supabase = createAdminClient();
 
-      const fullConditions: ConditionsBundle = {
-        weather: fetchResults.nws,
-        snowpack: fetchResults.snotel,
-        avalanche: fetchResults.avalanche ?? null,
-        streamFlow: fetchResults.usgs,
-        fires: fetchResults.fires,
-        daylight: fetchResults.daylight,
-      };
-
       const { data, error } = await supabase
         .from("briefings")
         .update({
@@ -145,7 +141,7 @@ export const generateBriefing = inngest.createFunction(
           bottom_line: briefingResult.bottomLine,
           readiness_rationale: briefingResult.readinessRationale,
           conditions: {
-            ...conditions,
+            ...fullConditions,
             conditionCards,
           },
           raw_data: {

@@ -13,6 +13,7 @@ import type { NWSForecastData, NWSForecastPeriod } from '@/lib/data-sources/nws'
 
 interface WeatherCardProps {
   data: NWSForecastData | null;
+  children?: React.ReactNode;
 }
 
 function parseWindMph(windSpeed: string): number {
@@ -113,7 +114,7 @@ function PeriodRow({ period }: { period: NWSForecastPeriod }) {
   );
 }
 
-export function WeatherCard({ data }: WeatherCardProps) {
+export function WeatherCard({ data, children }: WeatherCardProps) {
   if (!data || !data.periods.length) {
     return (
       <ConditionCard
@@ -153,6 +154,8 @@ export function WeatherCard({ data }: WeatherCardProps) {
             <PeriodRow key={period.number} period={period} />
           ))}
         </div>
+
+        {children}
       </div>
     </ConditionCard>
   );
