@@ -23,9 +23,18 @@ export async function POST() {
     const files = ["001_initial_schema.sql", "002_usgs_station_rpc.sql"];
 
     for (const file of files) {
-      const migration = readFileSync(join(migrationsDir, file), "utf-8");
-      await sql.unsafe(migration);
-      results.push(`✓ ${file}`);
+      try {
+        const migration = readFileSync(join(migrationsDir, file), "utf-8");
+        await sql.unsafe(migration);
+        results.push(`✓ ${file}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("already exists")) {
+          results.push(`⊘ ${file} (already applied)`);
+        } else {
+          throw err;
+        }
+      }
     }
 
     const triggerSql = `
@@ -49,6 +58,13 @@ export async function POST() {
     `;
     await sql.unsafe(triggerSql);
     results.push("✓ Profile auto-creation trigger");
+
+    const backfill = await sql`
+      INSERT INTO public.profiles (id)
+      SELECT id FROM auth.users
+      WHERE id NOT IN (SELECT id FROM public.profiles)
+    `;
+    results.push(`✓ Backfilled ${backfill.count} missing profile(s)`);
 
     return NextResponse.json({ success: true, results });
   } catch (error) {
