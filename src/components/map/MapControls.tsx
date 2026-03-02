@@ -38,6 +38,7 @@ interface OverlayDef {
 
 const OVERLAY_LAYERS: OverlayDef[] = [
   { id: 'fire-perimeters', label: 'Active Fires', color: '#f97316' },
+  { id: 'slope-angle', label: 'Slope Angle', color: '#ef4444' },
 ];
 
 interface MapControlsProps {

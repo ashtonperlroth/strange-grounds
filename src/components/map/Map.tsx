@@ -7,6 +7,7 @@ import { useMapStore } from '@/stores/map-store';
 import { usePlanningStore } from '@/stores/planning-store';
 import { MapControls } from './MapControls';
 import { FirePerimeters } from './layers/FirePerimeters';
+import { SlopeAngleShading } from './layers/SlopeAngleShading';
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY ?? '';
 
@@ -217,6 +218,10 @@ export function Map() {
       <FirePerimeters
         map={mapInstance}
         visible={activeOverlays.has('fire-perimeters')}
+      />
+      <SlopeAngleShading
+        map={mapInstance}
+        visible={activeOverlays.has('slope-angle')}
       />
     </div>
   );
