@@ -18,6 +18,9 @@ export interface DaylightData {
   daylightHours: number;
   goldenHourStart: string;
   goldenHourEnd: string;
+  civilDawn?: string;
+  civilDusk?: string;
+  timeZone?: string;
 }
 
 export interface ConditionsBundle {
@@ -171,8 +174,14 @@ function streamSummary(data: UsgsData): string {
   return `${flow} · ${gaugeCount} gauge${gaugeCount !== 1 ? "s" : ""}`;
 }
 
+function formatDaylightDuration(hours: number): string {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 function daylightSummary(data: DaylightData): string {
-  return `${data.daylightHours}h daylight · Sunrise ${data.sunrise} · Sunset ${data.sunset}`;
+  return `${formatDaylightDuration(data.daylightHours)} daylight · Sunrise ${data.sunrise} · Sunset ${data.sunset}`;
 }
 
 export function buildConditionCards(conditions: ConditionsBundle): ConditionCardData[] {
