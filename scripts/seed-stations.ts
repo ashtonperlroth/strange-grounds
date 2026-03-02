@@ -8,7 +8,13 @@ const SNOTEL_URL =
 const USGS_BASE =
   "https://waterservices.usgs.gov/nwis/iv/?format=json&parameterCd=00060&siteStatus=active&stateCd=";
 
-const USGS_STATES = ["UT", "CO", "WA", "OR", "CA", "MT", "WY", "ID"];
+const USGS_STATES = [
+  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+  "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+  "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+  "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
+];
 
 const FT_TO_M = 0.3048;
 const BATCH_SIZE = 50;
