@@ -1,4 +1,8 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface BriefingSummaryProps {
   narrative: string | null;
@@ -32,6 +36,14 @@ function renderNarrativeBlock(block: string, index: number) {
 }
 
 export function BriefingSummary({ narrative, isLoading }: BriefingSummaryProps) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const show = !!narrative && !isLoading;
+    const raf = requestAnimationFrame(() => setVisible(show));
+    return () => cancelAnimationFrame(raf);
+  }, [narrative, isLoading]);
+
   if (isLoading) {
     return <BriefingSummarySkeleton />;
   }
@@ -41,7 +53,12 @@ export function BriefingSummary({ narrative, isLoading }: BriefingSummaryProps) 
   const blocks = narrative.split(/\n(?=##\s)|\n\n/);
 
   return (
-    <div className="max-w-prose space-y-3">
+    <div
+      className={cn(
+        'max-w-prose space-y-3 transition-all duration-700 ease-out',
+        visible ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0',
+      )}
+    >
       {blocks.map((block, i) => renderNarrativeBlock(block, i))}
     </div>
   );

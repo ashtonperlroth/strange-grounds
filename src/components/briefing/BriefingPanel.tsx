@@ -10,16 +10,20 @@ import {
   Share2,
   Compass,
   Flame,
+  RefreshCw,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Accordion } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { usePlanningStore } from '@/stores/planning-store';
-import { useBriefingPolling } from '@/hooks/useBriefingPolling';
+import { useBriefingPolling, resetBriefingPolling } from '@/hooks/useBriefingPolling';
 import { useBriefingStore, type ConditionStatus, type ConditionCardData } from '@/stores/briefing-store';
+import { trpc } from '@/lib/trpc/client';
 import { ReadinessIndicator } from './ReadinessIndicator';
 import { BriefingSummary } from './BriefingSummary';
 import { ConditionCard } from './ConditionCard';
@@ -109,9 +113,32 @@ function BriefingEmptyState() {
   );
 }
 
-function BriefingLoadingSkeleton() {
+interface BriefingLoadingSkeletonProps {
+  elapsedSeconds: number;
+}
+
+function BriefingLoadingSkeleton({ elapsedSeconds }: BriefingLoadingSkeletonProps) {
   return (
     <div className="space-y-6 p-1">
+      <div className="flex items-center gap-3">
+        <Loader2 className="size-4 animate-spin text-emerald-600" />
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-stone-700">
+            Analyzing conditions&hellip;{' '}
+            <span className="tabular-nums text-stone-400">
+              {elapsedSeconds}s
+            </span>
+          </p>
+          <p className="text-xs text-stone-400">
+            {elapsedSeconds < 5
+              ? 'Fetching data sources...'
+              : elapsedSeconds < 15
+                ? 'Processing weather, snow, and avalanche data...'
+                : 'Synthesizing briefing...'}
+          </p>
+        </div>
+      </div>
+
       <div className="space-y-3">
         <Skeleton className="h-5 w-48 bg-stone-200" />
         <Skeleton className="h-4 w-32 bg-stone-200" />
@@ -141,6 +168,50 @@ function BriefingLoadingSkeleton() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+interface BriefingErrorStateProps {
+  error: string;
+  elapsedSeconds: number;
+  onRetry: () => void;
+  isRetrying: boolean;
+}
+
+function BriefingErrorState({
+  error,
+  elapsedSeconds,
+  onRetry,
+  isRetrying,
+}: BriefingErrorStateProps) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+      <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-red-50">
+        <AlertCircle className="size-8 text-red-400" />
+      </div>
+      <h3 className="mb-2 text-base font-semibold text-stone-800">
+        Generation Failed
+      </h3>
+      <p className="mb-1 max-w-[280px] text-sm leading-relaxed text-stone-500">
+        {error}
+      </p>
+      <p className="mb-6 text-xs text-stone-400">
+        Elapsed: {elapsedSeconds}s
+      </p>
+      <Button
+        size="sm"
+        onClick={onRetry}
+        disabled={isRetrying}
+        className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
+      >
+        {isRetrying ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <RefreshCw className="size-3.5" />
+        )}
+        {isRetrying ? 'Retrying...' : 'Retry'}
+      </Button>
     </div>
   );
 }
@@ -176,9 +247,28 @@ function PanelHeader({ locationName, dateRange, activity }: PanelHeaderProps) {
   );
 }
 
-function PanelFooter() {
+interface PanelFooterProps {
+  onRegenerate?: () => void;
+  isRegenerating?: boolean;
+}
+
+function PanelFooter({ onRegenerate, isRegenerating }: PanelFooterProps) {
   return (
     <div className="flex items-center gap-2 pt-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="flex-1 border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-800"
+        onClick={onRegenerate}
+        disabled={isRegenerating}
+      >
+        {isRegenerating ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <RefreshCw className="size-3.5" />
+        )}
+        {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+      </Button>
       <Button
         variant="outline"
         size="sm"
@@ -212,6 +302,8 @@ interface BriefingFullViewProps {
   criticalCount?: number;
   isNarrativeLoading?: boolean;
   conditions?: Record<string, unknown>;
+  onRegenerate?: () => void;
+  isRegenerating?: boolean;
 }
 
 function fireStatusSummary(data: FireData | null): string {
@@ -238,6 +330,8 @@ function BriefingFullView({
   criticalCount = 0,
   isNarrativeLoading = false,
   conditions,
+  onRegenerate,
+  isRegenerating,
 }: BriefingFullViewProps) {
   const snotelData = conditions?.snowpack as SnotelData | undefined;
   const avalancheData = conditions?.avalanche as AvalancheData | undefined;
@@ -318,17 +412,68 @@ function BriefingFullView({
 
         <Separator className="bg-stone-200" />
 
-        <PanelFooter />
+        <PanelFooter
+          onRegenerate={onRegenerate}
+          isRegenerating={isRegenerating}
+        />
       </div>
     </ScrollArea>
   );
 }
 
 export function BriefingPanel() {
-  const { activeBriefingId, isGenerating, location, dateRange, activity } =
-    usePlanningStore();
-  const { briefing, isLoading } = useBriefingPolling(activeBriefingId);
+  const {
+    activeBriefingId,
+    activeTripId,
+    isGenerating,
+    location,
+    dateRange,
+    activity,
+    setActiveBriefingId,
+    setIsGenerating,
+  } = usePlanningStore();
+
+  const { briefing, isLoading, error, elapsedSeconds, isTimedOut } =
+    useBriefingPolling(activeBriefingId);
   const { setConditionCards, getWarningCount, getCriticalCount } = useBriefingStore();
+
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const generateBriefing = trpc.briefings.generate.useMutation();
+
+  const handleRegenerate = useCallback(async () => {
+    if (!activeTripId || !location || isRegenerating) return;
+
+    setIsRegenerating(true);
+    resetBriefingPolling();
+
+    try {
+      const briefingResult = await generateBriefing.mutateAsync({
+        tripId: activeTripId,
+        lat: location.lat,
+        lng: location.lng,
+      });
+
+      setActiveBriefingId(briefingResult.id);
+      setIsGenerating(true);
+    } catch (err) {
+      console.error('Failed to regenerate briefing:', err);
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [
+    activeTripId,
+    location,
+    isRegenerating,
+    generateBriefing,
+    setActiveBriefingId,
+    setIsGenerating,
+  ]);
+
+  useEffect(() => {
+    if (briefing?.narrative && isGenerating) {
+      setIsGenerating(false);
+    }
+  }, [briefing?.narrative, isGenerating, setIsGenerating]);
 
   useEffect(() => {
     if (!briefing?.narrative) return;
@@ -342,11 +487,22 @@ export function BriefingPanel() {
     return <BriefingEmptyState />;
   }
 
+  if (isTimedOut || error) {
+    return (
+      <BriefingErrorState
+        error={error ?? 'An unknown error occurred'}
+        elapsedSeconds={elapsedSeconds}
+        onRetry={handleRegenerate}
+        isRetrying={isRegenerating}
+      />
+    );
+  }
+
   if ((isGenerating && !briefing?.narrative) || isLoading) {
     return (
       <ScrollArea className="h-full">
         <div className="p-1">
-          <BriefingLoadingSkeleton />
+          <BriefingLoadingSkeleton elapsedSeconds={elapsedSeconds} />
         </div>
       </ScrollArea>
     );
@@ -367,6 +523,8 @@ export function BriefingPanel() {
       criticalCount={getCriticalCount()}
       isNarrativeLoading={isLoading}
       conditions={briefing?.conditions as Record<string, unknown> | undefined}
+      onRegenerate={handleRegenerate}
+      isRegenerating={isRegenerating}
     />
   );
 }
