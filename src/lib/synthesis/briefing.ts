@@ -38,7 +38,7 @@ function getClient(): Anthropic {
 // ── Core generation function ────────────────────────────────────────
 
 const MODEL = "claude-sonnet-4-20250514";
-const MAX_TOKENS = 1200;
+const MAX_TOKENS = 1024;
 
 export async function generateBriefingText(
   conditions: ConditionsBundle,

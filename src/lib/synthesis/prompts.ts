@@ -64,7 +64,7 @@ Your writing style:
 - Provide timing and location context for hazards (e.g., "north-facing slopes above treeline" not just "some slopes")
 - Write with the authority of someone who has been there and knows exactly what conditions mean for a trip
 - Use natural paragraph prose, not bullet points — this is a briefing, not a checklist
-- Keep it concise: 500-800 words. Every sentence should earn its place.
+- Keep it concise: 3-5 paragraphs, 400-600 words maximum. Every sentence should earn its place. Do not exceed 500 words.
 
 CRITICAL: Only discuss conditions categories for which real source data is provided below. The following categories do NOT have data source adapters yet and MUST NOT be discussed as if real data exists: Remoteness, Wildlife, Insects, Footing. Do not fabricate, estimate, or infer conditions for these categories. If you mention them at all, only note that data is not yet available.
 
@@ -83,7 +83,7 @@ function serializeConditions(conditions: ConditionsBundle): string {
   // Weather
   const w = conditions.weather;
   if (w && w.periods.length > 0) {
-    const forecastLines = w.periods.slice(0, 7).map((p) => {
+    const forecastLines = w.periods.slice(0, 6).map((p) => {
       const precip = p.probabilityOfPrecipitation?.value ?? 0;
       return `  ${p.name}: ${p.temperature}°${p.temperatureUnit}, wind ${p.windSpeed} ${p.windDirection}, ${p.shortForecast}${precip > 0 ? `, ${precip}% precip` : ""}`;
     });
@@ -105,13 +105,17 @@ function serializeConditions(conditions: ConditionsBundle): string {
       .map((r) => `  ${r.elevation}: ${r.label} (${r.level}/5)`)
       .join("\n");
     const problems = avy.problems
+      .slice(0, 3)
       .map(
         (p) =>
           `  ${p.name}: aspects ${p.aspects.join(",")}, elevations ${p.elevations.join(",")}, likelihood ${p.likelihood}, size ${p.size}`,
       )
       .join("\n");
+    const discussion = avy.discussion.length > 500
+      ? avy.discussion.slice(0, 500) + "..."
+      : avy.discussion;
     sections.push(
-      `AVALANCHE:\n  Overall: ${avy.dangerLabel} (${avy.dangerLevel}/5)\n  Zone: ${avy.zone} (${avy.center})\n  By elevation:\n${dangerByElev}\n  Problems:\n${problems}\n  Discussion: ${avy.discussion}`,
+      `AVALANCHE:\n  Overall: ${avy.dangerLabel} (${avy.dangerLevel}/5)\n  Zone: ${avy.zone} (${avy.center})\n  By elevation:\n${dangerByElev}\n  Problems:\n${problems}\n  Discussion: ${discussion}`,
     );
   } else {
     sections.push("AVALANCHE: No avalanche forecast zone for this location.");

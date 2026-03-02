@@ -33,7 +33,7 @@ interface PollingState {
   isTimedOut: boolean;
 }
 
-const TIMEOUT_SECONDS = 30;
+const TIMEOUT_SECONDS = 90;
 
 let pollingState: PollingState = {
   briefing: null,
