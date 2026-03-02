@@ -24,6 +24,7 @@ export async function POST() {
       "001_initial_schema.sql",
       "002_usgs_station_rpc.sql",
       "003_snotel_avalanche_rpcs.sql",
+      "004_avalanche_zones_geojson.sql",
     ];
 
     for (const file of files) {

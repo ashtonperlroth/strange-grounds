@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  AVALANCHE_ZONES,
+  buildZoneGeoJSON,
+  type AvalancheZoneDef,
+} from "@/lib/data-sources/avalanche-zones";
 
-interface ForecastCache {
+interface ZoneDanger {
   dangerLevel: number;
   dangerLabel: string;
   problems: { name: string; likelihood: string }[];
-  fetchedAt: number;
 }
 
 const DANGER_LABELS: Record<number, string> = {
@@ -17,8 +20,19 @@ const DANGER_LABELS: Record<number, string> = {
   5: "Extreme",
 };
 
-const forecastCache = new Map<string, ForecastCache>();
-const FORECAST_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const NO_RATING: ZoneDanger = {
+  dangerLevel: 0,
+  dangerLabel: "No Rating",
+  problems: [],
+};
+
+interface CenterCache {
+  dangers: Map<string, ZoneDanger>;
+  fetchedAt: number;
+}
+
+const centerCache = new Map<string, CenterCache>();
+const CACHE_TTL_MS = 30 * 60 * 1000;
 
 function clampDanger(raw: unknown): number {
   const n = typeof raw === "number" ? raw : parseInt(String(raw), 10);
@@ -26,74 +40,77 @@ function clampDanger(raw: unknown): number {
   return Math.max(0, Math.min(5, Math.round(n)));
 }
 
-async function fetchDangerForZone(
-  centerId: string,
-  zoneId: string,
-  apiUrl: string | null,
-): Promise<ForecastCache> {
-  const cacheKey = `${centerId}:${zoneId}`;
-  const cached = forecastCache.get(cacheKey);
-  if (cached && Date.now() - cached.fetchedAt < FORECAST_TTL_MS) {
-    return cached;
+async function fetchDangerForCenter(centerId: string): Promise<Map<string, ZoneDanger>> {
+  const cached = centerCache.get(centerId);
+  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+    return cached.dangers;
   }
 
-  if (!apiUrl) {
-    return { dangerLevel: 0, dangerLabel: "No Rating", problems: [], fetchedAt: Date.now() };
-  }
+  const dangers = new Map<string, ZoneDanger>();
 
   try {
-    const res = await fetch(apiUrl, {
+    const url = `https://api.avalanche.org/v2/public/products?avalanche_center_id=${centerId}&page=1&per_page=50`;
+    const res = await fetch(url, {
       headers: {
         Accept: "application/json",
         "User-Agent": "(backcountry-app, contact@example.com)",
       },
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!res.ok) throw new Error(`${res.status}`);
-    const json = await res.json();
+    const products = await res.json();
 
-    const forecast = Array.isArray(json) ? json[0] : json;
-    const rawDanger = forecast?.danger ?? forecast?.forecast?.danger ?? [];
+    if (!Array.isArray(products)) throw new Error("unexpected response shape");
 
-    let maxDanger = 0;
-    if (Array.isArray(rawDanger)) {
-      for (const d of rawDanger) {
-        const level = clampDanger(d.danger ?? d.level ?? d.danger_level ?? 0);
-        if (level > maxDanger) maxDanger = level;
+    const seen = new Set<string>();
+    for (const product of products) {
+      const zones = product.forecast_zone ?? [];
+      const zoneId: string = zones[0]?.zone_id ?? "";
+      if (!zoneId || seen.has(zoneId)) continue;
+      seen.add(zoneId);
+
+      const level = clampDanger(product.danger_rating ?? 0);
+      const label = product.danger_level_text
+        ? String(product.danger_level_text).charAt(0).toUpperCase() +
+          String(product.danger_level_text).slice(1)
+        : DANGER_LABELS[level] ?? "No Rating";
+
+      const rawProblems = product.forecast_avalanche_problems ?? [];
+      const problems: { name: string; likelihood: string }[] = [];
+      if (Array.isArray(rawProblems)) {
+        for (const p of rawProblems) {
+          problems.push({
+            name: p.name ?? p.type ?? "Unknown",
+            likelihood: p.likelihood ?? "",
+          });
+        }
       }
+
+      dangers.set(zoneId, { dangerLevel: level, dangerLabel: label, problems });
     }
 
-    const rawProblems =
-      forecast?.avalanche_problems ?? forecast?.forecast?.avalanche_problems ?? [];
-    const problems: { name: string; likelihood: string }[] = [];
-    if (Array.isArray(rawProblems)) {
-      for (const p of rawProblems) {
-        problems.push({
-          name: p.name ?? p.type ?? "Unknown",
-          likelihood: p.likelihood ?? p.likelihood_label ?? "",
-        });
-      }
-    }
-
-    const entry: ForecastCache = {
-      dangerLevel: maxDanger,
-      dangerLabel: DANGER_LABELS[maxDanger] ?? "No Rating",
-      problems,
-      fetchedAt: Date.now(),
-    };
-    forecastCache.set(cacheKey, entry);
-    return entry;
-  } catch {
-    const fallback: ForecastCache = {
-      dangerLevel: 0,
-      dangerLabel: "No Rating",
-      problems: [],
-      fetchedAt: Date.now(),
-    };
-    forecastCache.set(cacheKey, fallback);
-    return fallback;
+    centerCache.set(centerId, { dangers, fetchedAt: Date.now() });
+  } catch (err) {
+    console.warn(`Avalanche danger fetch failed for ${centerId}:`, err);
   }
+
+  return dangers;
+}
+
+function matchZoneDanger(
+  zone: AvalancheZoneDef,
+  centerDangers: Map<string, ZoneDanger>,
+): ZoneDanger {
+  const direct = centerDangers.get(zone.zoneId);
+  if (direct) return direct;
+
+  const normalized = zone.zoneId.replace(/-/g, "");
+  for (const [key, val] of centerDangers) {
+    if (key.replace(/-/g, "") === normalized) return val;
+  }
+
+  return NO_RATING;
 }
 
 export async function GET(request: NextRequest) {
@@ -103,67 +120,41 @@ export async function GET(request: NextRequest) {
   const east = parseFloat(searchParams.get("east") ?? "180");
   const north = parseFloat(searchParams.get("north") ?? "90");
 
-  try {
-    const supabase = createAdminClient();
+  const geojson = buildZoneGeoJSON(AVALANCHE_ZONES, { west, south, east, north });
 
-    const { data, error } = await supabase.rpc("get_avalanche_zones_geojson", {
-      p_west: west,
-      p_south: south,
-      p_east: east,
-      p_north: north,
-    });
+  const centerIds = [...new Set(geojson.features.map((f) => f.properties!.center_id as string))];
+  const centerResults = await Promise.allSettled(
+    centerIds.map((id) => fetchDangerForCenter(id)),
+  );
 
-    if (error) throw error;
+  const centerDangers = new Map<string, Map<string, ZoneDanger>>();
+  centerIds.forEach((id, i) => {
+    const result = centerResults[i];
+    centerDangers.set(
+      id,
+      result.status === "fulfilled" ? result.value : new Map(),
+    );
+  });
 
-    const geojson = data as {
-      type: string;
-      features: {
-        type: string;
-        geometry: Record<string, unknown>;
-        properties: {
-          id: string;
-          center_id: string;
-          zone_id: string;
-          name: string;
-          api_url: string | null;
-          metadata: Record<string, unknown>;
-        };
-      }[];
+  for (const feature of geojson.features) {
+    const props = feature.properties!;
+    const dangers = centerDangers.get(props.center_id as string) ?? new Map();
+    const zone = AVALANCHE_ZONES.find(
+      (z) => z.centerId === props.center_id && z.zoneId === props.zone_id,
+    );
+    const danger = zone ? matchZoneDanger(zone, dangers) : NO_RATING;
+
+    feature.properties = {
+      ...props,
+      dangerLevel: danger.dangerLevel,
+      dangerLabel: danger.dangerLabel,
+      problems: danger.problems,
     };
-
-    const dangerResults = await Promise.allSettled(
-      geojson.features.map((f) =>
-        fetchDangerForZone(
-          f.properties.center_id,
-          f.properties.zone_id,
-          f.properties.api_url,
-        ),
-      ),
-    );
-
-    for (let i = 0; i < geojson.features.length; i++) {
-      const result = dangerResults[i];
-      const forecast =
-        result.status === "fulfilled"
-          ? result.value
-          : { dangerLevel: 0, dangerLabel: "No Rating", problems: [] };
-
-      geojson.features[i].properties = {
-        ...geojson.features[i].properties,
-        ...forecast,
-      } as typeof geojson.features[number]["properties"];
-    }
-
-    return NextResponse.json(geojson, {
-      headers: {
-        "Cache-Control": "public, max-age=300, s-maxage=600",
-      },
-    });
-  } catch (err) {
-    console.error("Avalanche zones fetch failed:", err);
-    return NextResponse.json(
-      { type: "FeatureCollection", features: [] },
-      { status: 200 },
-    );
   }
+
+  return NextResponse.json(geojson, {
+    headers: {
+      "Cache-Control": "public, max-age=300, s-maxage=600",
+    },
+  });
 }

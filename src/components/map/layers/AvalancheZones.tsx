@@ -177,10 +177,7 @@ export function AvalancheZones({ map, visible }: AvalancheZonesProps) {
       const name = props.name ?? 'Unknown Zone';
       const dangerLevel = props.dangerLevel ?? 0;
       const dangerLabel = props.dangerLabel ?? 'No Rating';
-      const centerName =
-        typeof props.metadata === 'string'
-          ? JSON.parse(props.metadata)?.center_name
-          : props.metadata?.center_name;
+      const centerName = props.centerName ?? null;
 
       let problemsArr: { name: string; likelihood: string }[] = [];
       try {
