@@ -13,6 +13,7 @@ import type { NWSForecastData, NWSForecastPeriod } from '@/lib/data-sources/nws'
 
 interface WeatherCardProps {
   data: NWSForecastData | null;
+  unavailable?: boolean;
   children?: React.ReactNode;
 }
 
@@ -114,14 +115,15 @@ function PeriodRow({ period }: { period: NWSForecastPeriod }) {
   );
 }
 
-export function WeatherCard({ data, children }: WeatherCardProps) {
+export function WeatherCard({ data, unavailable, children }: WeatherCardProps) {
   if (!data || !data.periods.length) {
     return (
       <ConditionCard
         category="Weather"
         icon={<CloudSun className="size-4 text-sky-600" />}
-        status="unknown"
-        summary="Weather data unavailable"
+        status={unavailable ? 'unavailable' : 'unknown'}
+        summary={unavailable ? 'Data temporarily unavailable' : 'Weather data unavailable'}
+        detail={unavailable ? 'This data source did not respond. Try regenerating the briefing.' : undefined}
       />
     );
   }

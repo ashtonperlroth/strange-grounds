@@ -7,6 +7,7 @@ import type { DaylightData } from '@/lib/synthesis/conditions';
 
 interface DaylightCardProps {
   data: DaylightData | null;
+  unavailable?: boolean;
 }
 
 function getStatus(data: DaylightData): ConditionStatus {
@@ -45,14 +46,15 @@ function TimeRow({
   );
 }
 
-export function DaylightCard({ data }: DaylightCardProps) {
+export function DaylightCard({ data, unavailable }: DaylightCardProps) {
   if (!data) {
     return (
       <ConditionCard
         category="Daylight"
         icon={<Sun className="size-4 text-amber-500" />}
-        status="unknown"
-        summary="Daylight data unavailable"
+        status={unavailable ? 'unavailable' : 'unknown'}
+        summary={unavailable ? 'Data temporarily unavailable' : 'Daylight data unavailable'}
+        detail={unavailable ? 'This data source did not respond. Try regenerating the briefing.' : undefined}
       />
     );
   }
