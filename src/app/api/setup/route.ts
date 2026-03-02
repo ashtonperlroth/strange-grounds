@@ -20,7 +20,11 @@ export async function POST() {
 
   try {
     const migrationsDir = join(process.cwd(), "supabase", "migrations");
-    const files = ["001_initial_schema.sql", "002_usgs_station_rpc.sql"];
+    const files = [
+      "001_initial_schema.sql",
+      "002_usgs_station_rpc.sql",
+      "003_snotel_avalanche_rpcs.sql",
+    ];
 
     for (const file of files) {
       try {
