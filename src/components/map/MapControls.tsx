@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useMapStore } from '@/stores/map-store';
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY ?? '';
 
@@ -29,12 +30,24 @@ const MAP_STYLES: MapStyle[] = [
   },
 ];
 
+interface OverlayDef {
+  id: string;
+  label: string;
+  color: string;
+}
+
+const OVERLAY_LAYERS: OverlayDef[] = [
+  { id: 'fire-perimeters', label: 'Active Fires', color: '#f97316' },
+];
+
 interface MapControlsProps {
   onStyleChange: (styleUrl: string) => void;
 }
 
 export function MapControls({ onStyleChange }: MapControlsProps) {
   const [activeStyle, setActiveStyle] = useState('outdoor');
+  const activeOverlays = useMapStore((s) => s.activeOverlays);
+  const toggleOverlay = useMapStore((s) => s.toggleOverlay);
 
   const handleStyleSelect = (style: MapStyle) => {
     if (style.id === activeStyle) return;
@@ -59,6 +72,36 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
             {style.label}
           </button>
         ))}
+      </div>
+
+      <div className="rounded-lg border border-white/20 bg-black/70 p-1 shadow-lg backdrop-blur-sm">
+        <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/50">
+          Layers
+        </div>
+        {OVERLAY_LAYERS.map((layer) => {
+          const isActive = activeOverlays.has(layer.id);
+          return (
+            <button
+              key={layer.id}
+              onClick={() => toggleOverlay(layer.id)}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-left text-xs font-medium transition-colors',
+                isActive
+                  ? 'bg-white/20 text-white'
+                  : 'text-white/70 hover:bg-white/10 hover:text-white',
+              )}
+            >
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full"
+                style={{
+                  backgroundColor: isActive ? layer.color : 'transparent',
+                  border: `2px solid ${layer.color}`,
+                }}
+              />
+              {layer.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

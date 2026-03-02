@@ -1,11 +1,12 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore } from '@/stores/map-store';
 import { usePlanningStore } from '@/stores/planning-store';
 import { MapControls } from './MapControls';
+import { FirePerimeters } from './layers/FirePerimeters';
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY ?? '';
 
@@ -60,7 +61,9 @@ export function Map() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
+  const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
   const { viewport, setViewport, flyToTarget, clearFlyTo } = useMapStore();
+  const activeOverlays = useMapStore((s) => s.activeOverlays);
   const location = usePlanningStore((s) => s.location);
 
   const handleStyleChange = useCallback((styleUrl: string) => {
@@ -106,6 +109,7 @@ export function Map() {
     });
 
     mapRef.current = map;
+    setMapInstance(map);
 
     map.addControl(new maplibregl.NavigationControl(), 'top-left');
     map.addControl(
@@ -168,6 +172,7 @@ export function Map() {
       ro.disconnect();
       map.remove();
       mapRef.current = null;
+      setMapInstance(null);
     };
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -209,6 +214,10 @@ export function Map() {
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
       <MapControls onStyleChange={handleStyleChange} />
+      <FirePerimeters
+        map={mapInstance}
+        visible={activeOverlays.has('fire-perimeters')}
+      />
     </div>
   );
 }
