@@ -93,8 +93,15 @@ export async function generateBriefingText(
   activity: Activity,
   location: BriefingLocation,
   dates: BriefingDates,
+  unavailableSources: string[] = [],
 ): Promise<SynthesisResult> {
-  const { system, user } = promptForActivity(activity, conditions, location, dates);
+  const { system, user } = promptForActivity(
+    activity,
+    conditions,
+    location,
+    dates,
+    unavailableSources,
+  );
 
   const client = getClient();
   const response = await client.messages.create({
@@ -119,10 +126,17 @@ export async function generateBriefing(
   activity: Activity,
   location: BriefingLocation,
   dates: BriefingDates,
+  unavailableSources: string[] = [],
 ): Promise<BriefingResult> {
   const fallbackReadiness = computeReadiness(conditions);
-  const conditionCards = buildConditionCards(conditions);
-  const synthesis = await generateBriefingText(conditions, activity, location, dates);
+  const conditionCards = buildConditionCards(conditions, unavailableSources);
+  const synthesis = await generateBriefingText(
+    conditions,
+    activity,
+    location,
+    dates,
+    unavailableSources,
+  );
 
   const readinessMap: Record<string, "green" | "yellow" | "red"> = {
     GREEN: "green",
