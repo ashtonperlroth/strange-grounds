@@ -1,5 +1,5 @@
-import { TopBar } from '@/components/layout/TopBar';
 import { TRPCProvider } from '@/components/providers/TRPCProvider';
+import { DashboardLayoutShell } from '@/components/layout/DashboardLayoutShell';
 
 export default function DashboardLayout({
   children,
@@ -8,10 +8,7 @@ export default function DashboardLayout({
 }) {
   return (
     <TRPCProvider>
-      <div className="flex h-screen flex-col bg-[#FAF7F2] text-stone-800">
-        <TopBar />
-        {children}
-      </div>
+      <DashboardLayoutShell>{children}</DashboardLayoutShell>
     </TRPCProvider>
   );
 }
