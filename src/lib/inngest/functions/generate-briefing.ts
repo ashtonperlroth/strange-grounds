@@ -5,8 +5,9 @@ import { fetchSnotel } from "@/lib/data-sources/snotel";
 import { fetchAvalanche } from "@/lib/data-sources/avalanche";
 import { fetchUsgs } from "@/lib/data-sources/usgs";
 import { fetchFires } from "@/lib/data-sources/fires";
+import { computeDaylight } from "@/lib/data-sources/daylight";
 import { generateBriefing as synthesize } from "@/lib/synthesis/briefing";
-import type { ConditionsBundle, DaylightData } from "@/lib/synthesis/conditions";
+import type { ConditionsBundle } from "@/lib/synthesis/conditions";
 import type { Activity } from "@/stores/planning-store";
 
 export const generateBriefing = inngest.createFunction(
@@ -36,15 +37,10 @@ export const generateBriefing = inngest.createFunction(
       return fetchFires({ lat, lng });
     });
 
-    const daylightData: DaylightData = await step.run("compute-daylight", async () => {
-      return {
-        source: "suncalc" as const,
-        sunrise: "07:15",
-        sunset: "17:45",
-        daylightHours: 10.5,
-        goldenHourStart: "16:55",
-        goldenHourEnd: "17:45",
-      };
+    const daylightData = await step.run("compute-daylight", async () => {
+      const tripDate = new Date(startDate);
+      tripDate.setUTCHours(12, 0, 0, 0);
+      return computeDaylight({ lat, lng, date: tripDate });
     });
 
     const conditions: ConditionsBundle = {

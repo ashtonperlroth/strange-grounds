@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  Sun,
   Mountain,
   PawPrint,
   Bug,
@@ -26,12 +25,14 @@ import { WeatherCard } from './cards/WeatherCard';
 import { SnowpackCard } from './cards/SnowpackCard';
 import { AvalancheCard, getAvalancheSortPriority } from './cards/AvalancheCard';
 import { StreamCard } from './cards/StreamCard';
+import { DaylightCard } from './cards/DaylightCard';
 import { SnotelChart } from '@/components/charts/SnotelChart';
 import { HydrographChart } from '@/components/charts/HydrographChart';
 import type { NWSForecastData } from '@/lib/data-sources/nws';
 import { type SnotelData } from '@/lib/data-sources/snotel';
 import { type AvalancheData } from '@/lib/data-sources/avalanche';
 import { type UsgsData } from '@/lib/data-sources/usgs';
+import { type DaylightData } from '@/lib/synthesis/conditions';
 import { type ReactNode } from 'react';
 
 interface StubCard {
@@ -43,14 +44,6 @@ interface StubCard {
 }
 
 const STUB_CARDS: StubCard[] = [
-  {
-    category: 'Daylight',
-    icon: <Sun className="size-4 text-amber-500" />,
-    status: 'good',
-    summary: '13h 42m of daylight, sunrise 6:18 AM',
-    detail:
-      'Sunrise at 6:18 AM, sunset at 7:57 PM. Civil twilight begins at 5:48 AM. Golden hour starts at 7:12 PM. Ample daylight for a full day in the backcountry.',
-  },
   {
     category: 'Remoteness',
     icon: <Mountain className="size-4 text-stone-500" />,
@@ -233,6 +226,7 @@ function BriefingFullView({
   const snotelData = conditions?.snowpack as SnotelData | undefined;
   const avalancheData = conditions?.avalanche as AvalancheData | undefined;
   const usgsData = conditions?.streamFlow as UsgsData | undefined;
+  const daylightData = conditions?.daylight as DaylightData | undefined;
   const sortAvyToTop = getAvalancheSortPriority(avalancheData ?? null) > 0;
 
   return (
@@ -285,6 +279,7 @@ function BriefingFullView({
                 />
               )}
             </StreamCard>
+            <DaylightCard data={daylightData ?? null} />
             {STUB_CARDS.map((card) => (
               <ConditionCard
                 key={card.category}
