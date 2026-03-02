@@ -55,7 +55,6 @@ export const tripsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user?.id ?? null;
-      let sessionToken: string | null = null;
 
       if (userId) {
         await ctx.adminSupabase
@@ -63,7 +62,6 @@ export const tripsRouter = router({
           .upsert({ id: userId }, { onConflict: "id" });
       } else {
         await checkAnonymousRateLimit(ctx.adminSupabase, ctx.ip);
-        sessionToken = crypto.randomUUID();
       }
 
       const { latitude, longitude, ...rest } = input;
@@ -74,7 +72,6 @@ export const tripsRouter = router({
         .insert({
           ...rest,
           user_id: userId,
-          session_token: sessionToken,
           location: point,
         })
         .select()
@@ -87,7 +84,7 @@ export const tripsRouter = router({
         });
       }
 
-      return { ...data, sessionToken };
+      return data;
     }),
 
   update: protectedProcedure

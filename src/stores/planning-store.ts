@@ -30,7 +30,6 @@ interface PlanningState {
   activeBriefingId: string | null;
   isGenerating: boolean;
   generationError: string | null;
-  sessionToken: string | null;
 
   setLocation: (location: PlanningLocation | null) => void;
   setDateRange: (dateRange: DateRange) => void;
@@ -40,7 +39,6 @@ interface PlanningState {
   setActiveBriefingId: (id: string | null) => void;
   setIsGenerating: (generating: boolean) => void;
   setGenerationError: (error: string | null) => void;
-  setSessionToken: (token: string | null) => void;
 }
 
 const today = startOfDay(new Date());
@@ -53,7 +51,6 @@ export const usePlanningStore = create<PlanningState>((set, get) => ({
   activeBriefingId: null,
   isGenerating: false,
   generationError: null,
-  sessionToken: null,
 
   setLocation: (location) => set({ location }),
   setDateRange: (dateRange) => set({ dateRange }),
@@ -66,5 +63,4 @@ export const usePlanningStore = create<PlanningState>((set, get) => ({
   setActiveBriefingId: (id) => set({ activeBriefingId: id }),
   setIsGenerating: (generating) => set({ isGenerating: generating }),
   setGenerationError: (error) => set({ generationError: error }),
-  setSessionToken: (token) => set({ sessionToken: token }),
 }));

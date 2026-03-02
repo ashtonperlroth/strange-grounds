@@ -27,7 +27,6 @@ export function GenerateButton() {
     setActiveBriefingId,
     setIsGenerating,
     setGenerationError,
-    setSessionToken,
   } = usePlanningStore();
 
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -83,14 +82,8 @@ export function GenerateButton() {
 
       setActiveTripId(trip.id);
 
-      const returnedSessionToken = trip.sessionToken as string | null;
-      if (returnedSessionToken) {
-        setSessionToken(returnedSessionToken);
-      }
-
       const briefing = await generateBriefing.mutateAsync({
         tripId: trip.id,
-        sessionToken: returnedSessionToken ?? undefined,
         lat: location.lat,
         lng: location.lng,
       });
