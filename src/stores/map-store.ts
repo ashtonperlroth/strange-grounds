@@ -31,9 +31,9 @@ interface MapState {
 }
 
 const DEFAULT_VIEWPORT: Viewport = {
-  center: [-110.5, 40.5],
-  zoom: 5,
-  pitch: 50,
+  center: [-110.5, 42.5],
+  zoom: 5.5,
+  pitch: 45,
   bearing: -15,
 };
 

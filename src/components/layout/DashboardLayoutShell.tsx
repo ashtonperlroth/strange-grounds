@@ -19,7 +19,7 @@ export function DashboardLayoutShell({ children }: { children: ReactNode }) {
         <TopBar />
       </div>
 
-      <div className="relative min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1 flex-col">
         {children}
         <HeroOverlay />
       </div>
