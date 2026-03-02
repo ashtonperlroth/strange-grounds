@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import {
   CheckCircle,
   AlertTriangle,
@@ -48,13 +51,27 @@ export function ReadinessIndicator({
   warningCount = 0,
   criticalCount = 0,
 }: ReadinessIndicatorProps) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setVisible(!!readiness));
+    return () => cancelAnimationFrame(raf);
+  }, [readiness]);
+
   if (!readiness) return null;
 
   const { label, Icon, badgeClass, iconClass } = CONFIG[readiness];
   const alertCount = warningCount + criticalCount;
 
   return (
-    <div className="flex items-center gap-2">
+    <div
+      className={cn(
+        'flex items-center gap-2 transition-all duration-500 ease-out',
+        visible
+          ? 'translate-y-0 opacity-100'
+          : '-translate-y-2 opacity-0',
+      )}
+    >
       <Badge
         variant="outline"
         className={cn('gap-1.5 px-3 py-1 text-sm font-semibold', badgeClass)}
