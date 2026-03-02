@@ -6,6 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore } from '@/stores/map-store';
 import { usePlanningStore } from '@/stores/planning-store';
 import { MapControls } from './MapControls';
+import { AvalancheZones } from './layers/AvalancheZones';
 import { FirePerimeters } from './layers/FirePerimeters';
 import { SlopeAngleShading } from './layers/SlopeAngleShading';
 
@@ -215,6 +216,10 @@ export function Map() {
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
       <MapControls onStyleChange={handleStyleChange} />
+      <AvalancheZones
+        map={mapInstance}
+        visible={activeOverlays.has('avalanche-zones')}
+      />
       <FirePerimeters
         map={mapInstance}
         visible={activeOverlays.has('fire-perimeters')}
