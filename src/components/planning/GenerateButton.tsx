@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import { Loader2, Sparkles, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -12,6 +12,7 @@ import {
 import { usePlanningStore } from '@/stores/planning-store';
 import { trpc } from '@/lib/trpc/client';
 import { format } from 'date-fns';
+import { resetBriefingPolling } from '@/hooks/useBriefingPolling';
 
 export function GenerateButton() {
   const {
@@ -20,12 +21,14 @@ export function GenerateButton() {
     activity,
     isReadyToGenerate,
     isGenerating,
+    generationError,
     setActiveTripId,
     setActiveBriefingId,
     setIsGenerating,
+    setGenerationError,
   } = usePlanningStore();
 
-  const [error, setError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const ready = isReadyToGenerate();
 
@@ -37,13 +40,19 @@ export function GenerateButton() {
   if (!dateRange) missingItems.push('date range');
   if (!activity) missingItems.push('activity');
 
+  const displayError = mutationError || generationError;
+  const hasError = !!displayError;
+
   const handleClick = async () => {
     if (!ready || !location || !dateRange || isGenerating) return;
 
     setIsGenerating(true);
-    setError(null);
+    setMutationError(null);
+    setGenerationError(null);
 
     try {
+      resetBriefingPolling();
+
       const trip = await createTrip.mutateAsync({
         location_name: location.name ?? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
         latitude: location.lat,
@@ -68,15 +77,15 @@ export function GenerateButton() {
         err instanceof Error ? err.message : 'Failed to generate briefing';
       const isAuthError =
         message.includes('UNAUTHORIZED') || message.includes('401');
-      setError(isAuthError ? 'Please sign in to generate briefings' : message);
+      setMutationError(isAuthError ? 'Please sign in to generate briefings' : message);
       setIsGenerating(false);
     }
   };
 
-  const buttonLabel = error
-    ? 'Retry'
-    : isGenerating
-      ? 'Generating...'
+  const buttonLabel = isGenerating
+    ? 'Generating...'
+    : hasError
+      ? 'Retry'
       : 'Generate';
 
   const button = (
@@ -85,15 +94,15 @@ export function GenerateButton() {
       disabled={!ready || isGenerating}
       onClick={handleClick}
       className={
-        error
+        hasError && !isGenerating
           ? 'h-7 gap-1.5 bg-red-600 px-3 text-xs font-medium text-white hover:bg-red-500 disabled:bg-stone-200 disabled:text-stone-400'
           : 'h-7 gap-1.5 bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-500 disabled:bg-stone-200 disabled:text-stone-400'
       }
     >
       {isGenerating ? (
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-      ) : error ? (
-        <AlertCircle className="h-3.5 w-3.5" />
+      ) : hasError ? (
+        <RotateCcw className="h-3.5 w-3.5" />
       ) : (
         <Sparkles className="h-3.5 w-3.5" />
       )}
@@ -101,8 +110,8 @@ export function GenerateButton() {
     </Button>
   );
 
-  const tooltipMessage = error
-    ? error
+  const tooltipMessage = hasError && !isGenerating
+    ? displayError
     : !ready
       ? `Missing: ${missingItems.join(', ')}`
       : null;
@@ -115,7 +124,9 @@ export function GenerateButton() {
         <TooltipTrigger asChild>
           <span tabIndex={0}>{button}</span>
         </TooltipTrigger>
-        <TooltipContent side="bottom">{tooltipMessage}</TooltipContent>
+        <TooltipContent side="bottom" className="max-w-[280px]">
+          {tooltipMessage}
+        </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

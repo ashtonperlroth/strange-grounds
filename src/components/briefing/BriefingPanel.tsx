@@ -11,8 +11,9 @@ import {
   Compass,
   Flame,
   RefreshCw,
-  AlertCircle,
+  Clock,
   Loader2,
+  WifiOff,
 } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 import { Accordion } from '@/components/ui/accordion';
@@ -118,6 +119,8 @@ interface BriefingLoadingSkeletonProps {
 }
 
 function BriefingLoadingSkeleton({ elapsedSeconds }: BriefingLoadingSkeletonProps) {
+  const progressPct = Math.min((elapsedSeconds / 90) * 100, 95);
+
   return (
     <div className="space-y-6 p-1">
       <div className="flex items-center gap-3">
@@ -134,9 +137,18 @@ function BriefingLoadingSkeleton({ elapsedSeconds }: BriefingLoadingSkeletonProp
               ? 'Fetching data sources...'
               : elapsedSeconds < 15
                 ? 'Processing weather, snow, and avalanche data...'
-                : 'Synthesizing briefing...'}
+                : elapsedSeconds < 40
+                  ? 'Synthesizing briefing with AI...'
+                  : 'Almost there — finalizing briefing...'}
           </p>
         </div>
+      </div>
+
+      <div className="h-1 w-full overflow-hidden rounded-full bg-stone-200">
+        <div
+          className="h-full rounded-full bg-emerald-500 transition-all duration-1000 ease-out"
+          style={{ width: `${progressPct}%` }}
+        />
       </div>
 
       <div className="space-y-3">
@@ -175,6 +187,7 @@ function BriefingLoadingSkeleton({ elapsedSeconds }: BriefingLoadingSkeletonProp
 interface BriefingErrorStateProps {
   error: string;
   elapsedSeconds: number;
+  isTimedOut: boolean;
   onRetry: () => void;
   isRetrying: boolean;
 }
@@ -182,23 +195,52 @@ interface BriefingErrorStateProps {
 function BriefingErrorState({
   error,
   elapsedSeconds,
+  isTimedOut,
   onRetry,
   isRetrying,
 }: BriefingErrorStateProps) {
+  const icon = isTimedOut
+    ? <Clock className="size-8 text-amber-500" />
+    : <WifiOff className="size-8 text-red-400" />;
+
+  const bgColor = isTimedOut ? 'bg-amber-50' : 'bg-red-50';
+
+  const title = isTimedOut
+    ? 'Generation Timed Out'
+    : 'Generation Failed';
+
+  const description = isTimedOut
+    ? 'The briefing pipeline took longer than expected. This can happen with high server load or slow data sources.'
+    : error;
+
+  const suggestion = isTimedOut
+    ? 'The pipeline may still be running in the background. You can wait a moment and retry, or try a different location.'
+    : 'Check your connection and try again. If the problem persists, try a different location or date range.';
+
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-      <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-red-50">
-        <AlertCircle className="size-8 text-red-400" />
+      <div className={`mb-4 flex size-16 items-center justify-center rounded-2xl ${bgColor}`}>
+        {icon}
       </div>
       <h3 className="mb-2 text-base font-semibold text-stone-800">
-        Generation Failed
+        {title}
       </h3>
-      <p className="mb-1 max-w-[280px] text-sm leading-relaxed text-stone-500">
-        {error}
+      <p className="mb-2 max-w-[300px] text-sm leading-relaxed text-stone-600">
+        {description}
       </p>
-      <p className="mb-6 text-xs text-stone-400">
-        Elapsed: {elapsedSeconds}s
+      <p className="mb-6 max-w-[300px] text-xs leading-relaxed text-stone-400">
+        {suggestion}
       </p>
+
+      {elapsedSeconds > 0 && (
+        <div className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1">
+          <Clock className="size-3 text-stone-400" />
+          <span className="text-xs tabular-nums text-stone-500">
+            {elapsedSeconds}s elapsed
+          </span>
+        </div>
+      )}
+
       <Button
         size="sm"
         onClick={onRetry}
@@ -210,7 +252,7 @@ function BriefingErrorState({
         ) : (
           <RefreshCw className="size-3.5" />
         )}
-        {isRetrying ? 'Retrying...' : 'Retry'}
+        {isRetrying ? 'Retrying...' : 'Try Again'}
       </Button>
     </div>
   );
@@ -431,6 +473,7 @@ export function BriefingPanel() {
     activity,
     setActiveBriefingId,
     setIsGenerating,
+    setGenerationError,
   } = usePlanningStore();
 
   const { briefing, isLoading, error, elapsedSeconds, isTimedOut } =
@@ -440,10 +483,12 @@ export function BriefingPanel() {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const generateBriefing = trpc.briefings.generate.useMutation();
 
-  const handleRegenerate = useCallback(async () => {
+  const handleRetry = useCallback(async () => {
     if (!activeTripId || !location || isRegenerating) return;
 
     setIsRegenerating(true);
+    setGenerationError(null);
+    setIsGenerating(true);
     resetBriefingPolling();
 
     try {
@@ -454,9 +499,11 @@ export function BriefingPanel() {
       });
 
       setActiveBriefingId(briefingResult.id);
-      setIsGenerating(true);
     } catch (err) {
       console.error('Failed to regenerate briefing:', err);
+      const message = err instanceof Error ? err.message : 'Failed to regenerate briefing';
+      setIsGenerating(false);
+      setGenerationError(message);
     } finally {
       setIsRegenerating(false);
     }
@@ -467,13 +514,24 @@ export function BriefingPanel() {
     generateBriefing,
     setActiveBriefingId,
     setIsGenerating,
+    setGenerationError,
   ]);
 
+  // Clear isGenerating and propagate error when pipeline fails or times out
   useEffect(() => {
-    if (briefing?.narrative && isGenerating) {
+    if ((isTimedOut || error) && isGenerating) {
       setIsGenerating(false);
+      setGenerationError(error ?? 'Briefing generation failed');
     }
-  }, [briefing?.narrative, isGenerating, setIsGenerating]);
+  }, [isTimedOut, error, isGenerating, setIsGenerating, setGenerationError]);
+
+  // Clear isGenerating and generationError when briefing arrives successfully
+  useEffect(() => {
+    if (briefing?.narrative) {
+      if (isGenerating) setIsGenerating(false);
+      setGenerationError(null);
+    }
+  }, [briefing?.narrative, isGenerating, setIsGenerating, setGenerationError]);
 
   useEffect(() => {
     if (!briefing?.narrative) return;
@@ -492,7 +550,8 @@ export function BriefingPanel() {
       <BriefingErrorState
         error={error ?? 'An unknown error occurred'}
         elapsedSeconds={elapsedSeconds}
-        onRetry={handleRegenerate}
+        isTimedOut={isTimedOut}
+        onRetry={handleRetry}
         isRetrying={isRegenerating}
       />
     );
@@ -523,7 +582,7 @@ export function BriefingPanel() {
       criticalCount={getCriticalCount()}
       isNarrativeLoading={isLoading}
       conditions={briefing?.conditions as Record<string, unknown> | undefined}
-      onRegenerate={handleRegenerate}
+      onRegenerate={handleRetry}
       isRegenerating={isRegenerating}
     />
   );

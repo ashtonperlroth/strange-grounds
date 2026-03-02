@@ -29,6 +29,7 @@ interface PlanningState {
   activeTripId: string | null;
   activeBriefingId: string | null;
   isGenerating: boolean;
+  generationError: string | null;
 
   setLocation: (location: PlanningLocation | null) => void;
   setDateRange: (dateRange: DateRange) => void;
@@ -37,6 +38,7 @@ interface PlanningState {
   setActiveTripId: (id: string | null) => void;
   setActiveBriefingId: (id: string | null) => void;
   setIsGenerating: (generating: boolean) => void;
+  setGenerationError: (error: string | null) => void;
 }
 
 const today = startOfDay(new Date());
@@ -48,6 +50,7 @@ export const usePlanningStore = create<PlanningState>((set, get) => ({
   activeTripId: null,
   activeBriefingId: null,
   isGenerating: false,
+  generationError: null,
 
   setLocation: (location) => set({ location }),
   setDateRange: (dateRange) => set({ dateRange }),
@@ -59,4 +62,5 @@ export const usePlanningStore = create<PlanningState>((set, get) => ({
   setActiveTripId: (id) => set({ activeTripId: id }),
   setActiveBriefingId: (id) => set({ activeBriefingId: id }),
   setIsGenerating: (generating) => set({ isGenerating: generating }),
+  setGenerationError: (error) => set({ generationError: error }),
 }));
