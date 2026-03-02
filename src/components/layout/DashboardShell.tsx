@@ -7,6 +7,7 @@ import {
   ResizableHandle,
 } from '@/components/ui/resizable';
 import { BottomDrawer } from './BottomDrawer';
+import { usePlanningStore } from '@/stores/planning-store';
 
 interface DashboardShellProps {
   mapSlot: ReactNode;
@@ -15,6 +16,18 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ mapSlot, briefingSlot, drawerSlot }: DashboardShellProps) {
+  const activeBriefingId = usePlanningStore((s) => s.activeBriefingId);
+  const isGenerating = usePlanningStore((s) => s.isGenerating);
+  const showBriefing = activeBriefingId !== null || isGenerating;
+
+  if (!showBriefing) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1">{mapSlot}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1 bg-white">

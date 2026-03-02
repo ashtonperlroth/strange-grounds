@@ -31,10 +31,10 @@ interface MapState {
 }
 
 const DEFAULT_VIEWPORT: Viewport = {
-  center: [-109.7, 43.6],
-  zoom: 8,
-  pitch: 0,
-  bearing: 0,
+  center: [-110.5, 40.5],
+  zoom: 5,
+  pitch: 50,
+  bearing: -15,
 };
 
 export const useMapStore = create<MapState>((set) => ({
