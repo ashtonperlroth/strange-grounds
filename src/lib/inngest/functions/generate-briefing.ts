@@ -142,6 +142,8 @@ export const generateBriefing = inngest.createFunction(
         .from("briefings")
         .update({
           narrative: briefingResult.narrative,
+          bottom_line: briefingResult.bottomLine,
+          readiness_rationale: briefingResult.readinessRationale,
           conditions: {
             ...conditions,
             conditionCards,

@@ -1,79 +1,94 @@
 import type { Activity } from "@/stores/planning-store";
-import type { ConditionsBundle, Readiness } from "./conditions";
-import { buildConditionCards, computeReadiness } from "./conditions";
+import type { ConditionsBundle } from "./conditions";
+import { buildConditionCards } from "./conditions";
 
 // ── Activity-specific emphasis ──────────────────────────────────────
 
 interface ActivityEmphasis {
   primaryHazards: string;
   secondaryFocus: string;
-  gearPriorities: string;
+  crossReferenceHints: string;
 }
 
 const ACTIVITY_EMPHASIS: Record<Activity, ActivityEmphasis> = {
   "Ski Touring": {
     primaryHazards:
-      "Avalanche conditions are the PRIMARY concern. Lead with avalanche danger, snowpack stability, and terrain choices. Evaluate danger ratings by elevation band and aspect.",
+      "Avalanche conditions are the PRIMARY concern. Lead with danger level, the specific avalanche problems (persistent slab, wind slab, storm slab, wet loose), and which aspects/elevations are affected.",
     secondaryFocus:
-      "Weather windows for safe travel, wind loading, recent precipitation amounts, and temperature trends affecting snow stability.",
-    gearPriorities:
-      "Avalanche safety gear (beacon/shovel/probe), skins, ski crampons, layering for variable conditions.",
+      "Weather windows for safe travel, wind loading patterns, recent and forecasted precipitation amounts, and temperature trends.",
+    crossReferenceHints:
+      "Connect NWS wind forecast to avalanche wind slab loading. Connect NWS temperature trends to wet loose avalanche timing (warming above freezing = afternoon wet slides). Connect SNOTEL new SWE loading to storm slab danger. If SNOTEL shows rapid accumulation AND avalanche danger is Considerable+, emphasize this correlation. Connect freezing level from NWS to where rain-snow transition will affect snowpack.",
   },
   Backpacking: {
     primaryHazards:
-      "Water availability and stream crossing safety are PRIMARY concerns. Evaluate stream flow levels, crossing feasibility, and water source reliability.",
+      "Stream crossing safety based on actual USGS flow data and seasonal trends. Water availability along the route.",
     secondaryFocus:
-      "Wildlife activity (bears, mountain lions), wildfire proximity and smoke, trail conditions including mud and snow coverage at elevation.",
-    gearPriorities:
-      "Water filtration, bear canister/hang, river crossing shoes, rain gear, traction devices if snow expected.",
+      "Wildfire proximity and smoke impacts on air quality and trail access. Weather exposure and thunderstorm timing.",
+    crossReferenceHints:
+      "Connect USGS flow percentages to crossing difficulty (>150% median = potentially dangerous crossings, >200% = impassable without gear). Connect NWS temperature forecast to snowmelt timing — warm days followed by warm nights drive higher flows the next afternoon. If fires exist within 50mi, connect NWS wind direction to likely smoke impacts at the trip location.",
   },
   "Day Hike": {
     primaryHazards:
-      "Weather exposure and afternoon thunderstorm risk are PRIMARY concerns. Evaluate turnaround times and escape routes.",
+      "Weather exposure and afternoon thunderstorm risk. Turnaround time relative to daylight and storm timing.",
     secondaryFocus:
-      "Trail conditions, footing hazards, daylight available for the planned route, and any active fire/smoke impacts.",
-    gearPriorities:
-      "Rain layer, sun protection, adequate water, traction devices if icy, headlamp as backup.",
+      "Trail conditions, active fire/smoke impacts.",
+    crossReferenceHints:
+      "Connect daylight hours to route feasibility — if sunset is 6:15 PM and the route takes 8 hours, they need to start by 10 AM latest. Connect NWS afternoon precipitation probability to summit timing — if >40% chance of afternoon storms, recommend summiting before noon. If temperatures span freezing at different elevations, note where the rain/snow line will be.",
   },
   Mountaineering: {
     primaryHazards:
-      "Weather windows and altitude-related hazards are PRIMARY concerns. Evaluate summit weather, wind speeds at elevation, and storm timing for safe ascent/descent windows.",
+      "Summit weather windows and altitude-related hazards. Wind speeds at elevation. Storm timing for safe ascent/descent.",
     secondaryFocus:
-      "Avalanche conditions on approach and descent routes, snowpack stability, route conditions (ice, rock, mixed), and freezing levels.",
-    gearPriorities:
-      "Mountaineering boots, crampons, ice axe, helmet, rope team gear, emergency bivy, altitude medication if applicable.",
+      "Avalanche conditions on approach/descent routes, freezing levels, route conditions.",
+    crossReferenceHints:
+      "Connect NWS wind speeds to elevation using typical increase (~2x surface winds at ridgeline). Connect temperature lapse rate to freezing level and precipitation type at summit vs basecamp. Connect avalanche danger by elevation band to the specific elevations the route traverses. If SNOTEL shows recent loading + high winds, emphasize wind slab danger on the approach.",
   },
   "Trail Running": {
     primaryHazards:
-      "Heat exposure, hydration needs, and footing conditions are PRIMARY concerns. Evaluate temperatures, sun exposure, and trail surface conditions.",
+      "Heat exposure, hydration needs relative to distance, and footing/trail conditions.",
     secondaryFocus:
-      "Afternoon thunderstorm risk with limited shelter, stream crossing water levels, daylight constraints for longer routes.",
-    gearPriorities:
-      "Adequate hydration (carry capacity vs. resupply), electrolytes, sun protection, traction devices if mixed conditions.",
+      "Afternoon thunderstorm risk with limited shelter options. Daylight constraints for longer routes.",
+    crossReferenceHints:
+      "Connect NWS high temperature + humidity to heat risk and hydration needs. Connect daylight hours to pace requirements — if they have 12 hours of light and a 30-mile route, note the required pace. Connect NWS precipitation timing to whether they'll be exposed above treeline when storms hit.",
   },
 };
 
 // ── System prompt ───────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are an experienced backcountry guide writing a conditions assessment in the style of Andrew Skurka — direct, opinionated, data-driven, and focused on actionable decision-making. You have decades of experience across all backcountry activities and an encyclopedic knowledge of mountain weather, snowpack, hydrology, and wilderness hazards.
+const SYSTEM_PROMPT = `You are writing a backcountry conditions briefing. Your reader is an experienced outdoor recreationist who knows their activity — they don't need generic safety advice or gear checklists. They need to know what's different, what's dangerous, and what to do about it.
 
-Your writing style:
-- Lead with what matters most for the specific activity and current conditions
-- Be direct and specific — no hedging or generic advice
-- Reference specific data points (temperatures, danger levels, flow rates) to support your assessment
-- Provide timing and location context for hazards (e.g., "north-facing slopes above treeline" not just "some slopes")
-- Write with the authority of someone who has been there and knows exactly what conditions mean for a trip
-- Use natural paragraph prose, not bullet points — this is a briefing, not a checklist
-- Keep it concise: 3-5 paragraphs, 400-600 words maximum. Every sentence should earn its place. Do not exceed 500 words.
+VOICE:
+- Write like a local guide briefing a client the morning of the trip
+- Be prescriptive: "descend the south ridge, not the east face" not "use caution on exposed terrain"
+- Cite specific data: station names, elevations, percentages — not "snow levels are above average"
+- Cross-reference conditions: connect weather trends to snowpack stability, flow rates to crossing feasibility, wind to avalanche loading
+- Scale detail to risk: spend 3 sentences on the biggest hazard, 1 sentence on things that are fine
+- If conditions are straightforward, the briefing should be SHORT. Don't pad.
 
-CRITICAL: Only discuss conditions categories for which real source data is provided below. The following categories do NOT have data source adapters yet and MUST NOT be discussed as if real data exists: Remoteness, Wildlife, Insects, Footing. Do not fabricate, estimate, or infer conditions for these categories. If you mention them at all, only note that data is not yet available.
+BAD example (generic, passive, restates data):
+"Avalanche danger is rated Considerable. Travelers should exercise caution in avalanche terrain. Temperatures will be in the 20s with some wind. Snow depth is above average at nearby SNOTEL stations."
 
-Output structure (use as ## headings):
-1. **Assessment** — Lead with the single most important thing the user needs to know. What's the go/no-go calculus?
-2. **Weather Window** — When is the best window to be out? What's the timing of incoming systems?
-3. **Primary Hazards** — The top 2-3 hazards with specific locations, elevations, aspects, and timing
-4. **Notable Conditions** — Anything else worth knowing (snowpack, water, wildlife, fires)
-5. **Gear & Logistics** — Specific gear recommendations driven by the conditions data, not generic lists`;
+GOOD example (specific, prescriptive, cross-references data):
+"The persistent slab on the Feb 14 interface is the problem today. SNOTEL at Banner Summit shows 8 inches of new snow in 72 hours loading a weak layer that's been failing in tests all month. Stick to slopes under 30 degrees or south aspects below treeline where the solar crust has bonded. The warming trend Thursday (high 38°F at 7,500 ft) will increase wet loose activity on sun-exposed terrain by early afternoon — plan to be in the trees by 1 PM."
+
+OUTPUT FORMAT:
+You MUST respond with ONLY a JSON object (no markdown fences, no preamble). The JSON must have these fields:
+
+{
+  "bottomLine": "1-3 sentences. The single most important thing. Go/no-go guidance. What an experienced partner would text you the night before.",
+  "narrative": "3-4 paragraphs, 300-450 words. Starts with the primary hazard and works down. Cross-references data sources. Ends with timing and logistics recommendations. Use natural paragraph prose, no markdown headings, no bullet points.",
+  "readiness": "GREEN | YELLOW | RED",
+  "readinessRationale": "1 sentence explaining why this rating, citing the specific data point that drove it."
+}
+
+RULES:
+- If avalanche danger >= 3 (Considerable) for a snow activity, readiness MUST be YELLOW or RED
+- If avalanche danger >= 4 (High), readiness MUST be RED and bottomLine must clearly say "do not go" or "postpone"
+- If NWS has active warnings (Winter Storm Warning, Red Flag Warning, etc), lead the bottomLine with them
+- Do NOT discuss Remoteness, Wildlife, Insects, or Footing — no data adapters exist for these yet. Do not fabricate data for any category.
+- Do NOT include generic gear lists. Only mention gear driven by specific anomalous conditions (e.g., "microspikes for the icy traverse above 10,000 ft" or "extra insulation layer for the -15°F wind chill on the ridge")
+- Do NOT use markdown headings (##) or bullet points in the narrative. Write in natural prose paragraphs.
+- If the trip dates are more than 5 days out, note that conditions will change and the briefing reflects current snapshots, not a reliable forecast for that date.`;
 
 // ── Conditions data serialization ───────────────────────────────────
 
@@ -203,8 +218,6 @@ export function promptForActivity(
 ): AssembledPrompt {
   const emphasis = ACTIVITY_EMPHASIS[activity];
   const cards = buildConditionCards(conditions);
-  const readiness = computeReadiness(conditions);
-  const readinessLabel = readinessToLabel(readiness);
 
   const statusSummary = cards
     .map((c) => `  ${c.category}: ${c.status.toUpperCase()} — ${c.summary}`)
@@ -222,32 +235,22 @@ TRIP DETAILS:
   Location: ${locationLabel}
   Dates: ${dates.start} to ${dates.end}
   Activity: ${activity}
-  Overall readiness: ${readinessLabel}
 
 ACTIVITY-SPECIFIC GUIDANCE:
   ${emphasis.primaryHazards}
   ${emphasis.secondaryFocus}
-  Gear priorities: ${emphasis.gearPriorities}
+  Cross-reference: ${emphasis.crossReferenceHints}
 
 CONDITIONS STATUS:
 ${statusSummary}
 
 RAW CONDITIONS DATA:
-${conditionsText}`;
+${conditionsText}
+
+Remember: respond with ONLY a valid JSON object, no markdown, no preamble.`;
 
   return {
     system: SYSTEM_PROMPT,
     user,
   };
-}
-
-function readinessToLabel(readiness: Readiness): string {
-  switch (readiness) {
-    case "green":
-      return "GREEN — conditions are generally favorable";
-    case "yellow":
-      return "YELLOW — conditions require caution and preparation";
-    case "red":
-      return "RED — significant concerns, trip may need modification";
-  }
 }
