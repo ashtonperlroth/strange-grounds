@@ -16,9 +16,18 @@ function formatTime(date: Date, timeZone: string): string {
   });
 }
 
+function resolveTimezone(lat: number, lng: number): string {
+  try {
+    return findTimezone(lat, lng)[0] ?? "UTC";
+  } catch {
+    console.warn("[daylight] geo-tz lookup failed, falling back to UTC");
+    return "UTC";
+  }
+}
+
 export function computeDaylight({ lat, lng, date }: DaylightOptions): DaylightData {
   const times = SunCalc.getTimes(date, lat, lng);
-  const timeZone = findTimezone(lat, lng)[0] ?? "UTC";
+  const timeZone = resolveTimezone(lat, lng);
 
   const daylightMs = times.sunset.getTime() - times.sunrise.getTime();
   const daylightHours = Math.round((daylightMs / (1000 * 60 * 60)) * 100) / 100;

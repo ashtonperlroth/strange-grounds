@@ -48,7 +48,7 @@ export const generateBriefing = inngest.createFunction(
         fetchAvalanche({ lat, lng }),
         fetchUsgs({ lat, lng }),
         fetchFires({ lat, lng }),
-        computeDaylight({ lat, lng, date: tripDate }),
+        Promise.resolve().then(() => computeDaylight({ lat, lng, date: tripDate })),
       ]);
 
       const errors: string[] = [];
