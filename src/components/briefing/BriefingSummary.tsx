@@ -5,6 +5,32 @@ interface BriefingSummaryProps {
   isLoading?: boolean;
 }
 
+function renderNarrativeBlock(block: string, index: number) {
+  const trimmed = block.trim();
+  if (!trimmed) return null;
+
+  const headingMatch = trimmed.match(/^##\s+(.+)/);
+  if (headingMatch) {
+    const rest = trimmed.slice(headingMatch[0].length).trim();
+    return (
+      <div key={index}>
+        <h4 className="mb-1 text-sm font-semibold text-stone-800">
+          {headingMatch[1]}
+        </h4>
+        {rest && (
+          <p className="text-sm leading-relaxed text-stone-600">{rest}</p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <p key={index} className="text-sm leading-relaxed text-stone-600">
+      {trimmed}
+    </p>
+  );
+}
+
 export function BriefingSummary({ narrative, isLoading }: BriefingSummaryProps) {
   if (isLoading) {
     return <BriefingSummarySkeleton />;
@@ -12,9 +38,11 @@ export function BriefingSummary({ narrative, isLoading }: BriefingSummaryProps) 
 
   if (!narrative) return null;
 
+  const blocks = narrative.split(/\n(?=##\s)|\n\n/);
+
   return (
-    <div className="max-w-prose space-y-2">
-      <p className="text-sm leading-relaxed text-stone-600">{narrative}</p>
+    <div className="max-w-prose space-y-3">
+      {blocks.map((block, i) => renderNarrativeBlock(block, i))}
     </div>
   );
 }

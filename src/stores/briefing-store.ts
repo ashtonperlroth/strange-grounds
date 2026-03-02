@@ -7,6 +7,7 @@ export type ConditionCategory =
   | 'weather'
   | 'snowpack'
   | 'stream_crossings'
+  | 'fires'
   | 'daylight'
   | 'remoteness'
   | 'wildlife'

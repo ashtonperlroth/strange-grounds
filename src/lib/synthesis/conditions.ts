@@ -24,12 +24,12 @@ export interface DaylightData {
 }
 
 export interface ConditionsBundle {
-  weather: NWSForecastData;
-  snowpack: SnotelData;
+  weather: NWSForecastData | null;
+  snowpack: SnotelData | null;
   avalanche: AvalancheData | null;
-  streamFlow: UsgsData;
-  fires: FireData;
-  daylight: DaylightData;
+  streamFlow: UsgsData | null;
+  fires: FireData | null;
+  daylight: DaylightData | null;
 }
 
 export type Readiness = "green" | "yellow" | "red";
@@ -123,6 +123,8 @@ export function computeCardStatus(
       return computeSnowpackStatus(conditions.snowpack);
     case "stream_crossings":
       return computeStreamStatus(conditions.streamFlow);
+    case "fires":
+      return computeFireStatus(conditions.fires);
     case "daylight":
       return computeDaylightStatus(conditions.daylight);
     default:
@@ -184,13 +186,24 @@ function daylightSummary(data: DaylightData): string {
   return `${formatDaylightDuration(data.daylightHours)} daylight · Sunrise ${data.sunrise} · Sunset ${data.sunset}`;
 }
 
+function fireSummary(data: FireData): string {
+  if (data.nearbyCount === 0) return "No active fires within 50 miles";
+  const fireNames = data.fires.slice(0, 3).map((f) => {
+    const acres = f.acres !== null ? `${Math.round(f.acres).toLocaleString()} acres` : "size unknown";
+    return `${f.name} (${acres})`;
+  });
+  return `${data.nearbyCount} fire${data.nearbyCount !== 1 ? "s" : ""} nearby · ${fireNames.join(", ")}`;
+}
+
+const NO_DATA = "No data available";
+
 export function buildConditionCards(conditions: ConditionsBundle): ConditionCardData[] {
   const cards: ConditionCardData[] = [];
 
   cards.push({
     category: "weather",
     status: computeWeatherStatus(conditions.weather),
-    summary: weatherSummary(conditions.weather),
+    summary: conditions.weather ? weatherSummary(conditions.weather) : NO_DATA,
   });
 
   if (conditions.avalanche) {
@@ -204,19 +217,25 @@ export function buildConditionCards(conditions: ConditionsBundle): ConditionCard
   cards.push({
     category: "snowpack",
     status: computeSnowpackStatus(conditions.snowpack),
-    summary: snowpackSummary(conditions.snowpack),
+    summary: conditions.snowpack ? snowpackSummary(conditions.snowpack) : NO_DATA,
   });
 
   cards.push({
     category: "stream_crossings",
     status: computeStreamStatus(conditions.streamFlow),
-    summary: streamSummary(conditions.streamFlow),
+    summary: conditions.streamFlow ? streamSummary(conditions.streamFlow) : NO_DATA,
+  });
+
+  cards.push({
+    category: "fires",
+    status: computeFireStatus(conditions.fires),
+    summary: conditions.fires ? fireSummary(conditions.fires) : NO_DATA,
   });
 
   cards.push({
     category: "daylight",
     status: computeDaylightStatus(conditions.daylight),
-    summary: daylightSummary(conditions.daylight),
+    summary: conditions.daylight ? daylightSummary(conditions.daylight) : NO_DATA,
   });
 
   return cards;

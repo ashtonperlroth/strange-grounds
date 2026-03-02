@@ -9,7 +9,9 @@ import {
   Bookmark,
   Share2,
   Compass,
+  Flame,
 } from 'lucide-react';
+import { useEffect } from 'react';
 import { Accordion } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,7 +19,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { usePlanningStore } from '@/stores/planning-store';
 import { useBriefingPolling } from '@/hooks/useBriefingPolling';
-import { useBriefingStore, type ConditionStatus } from '@/stores/briefing-store';
+import { useBriefingStore, type ConditionStatus, type ConditionCardData } from '@/stores/briefing-store';
 import { ReadinessIndicator } from './ReadinessIndicator';
 import { BriefingSummary } from './BriefingSummary';
 import { ConditionCard } from './ConditionCard';
@@ -29,6 +31,7 @@ import { DaylightCard } from './cards/DaylightCard';
 import { SnotelChart } from '@/components/charts/SnotelChart';
 import { HydrographChart } from '@/components/charts/HydrographChart';
 import type { NWSForecastData } from '@/lib/data-sources/nws';
+import type { FireData } from '@/lib/data-sources/fires';
 import { type SnotelData } from '@/lib/data-sources/snotel';
 import { type AvalancheData } from '@/lib/data-sources/avalanche';
 import { type UsgsData } from '@/lib/data-sources/usgs';
@@ -211,6 +214,19 @@ interface BriefingFullViewProps {
   conditions?: Record<string, unknown>;
 }
 
+function fireStatusSummary(data: FireData | null): string {
+  if (!data) return 'No data available';
+  if (data.nearbyCount === 0) return 'No active fires within 50 miles';
+  return `${data.nearbyCount} fire${data.nearbyCount !== 1 ? 's' : ''} nearby`;
+}
+
+function fireCardStatus(data: FireData | null): ConditionStatus {
+  if (!data) return 'unknown';
+  if (data.nearbyCount === 0) return 'good';
+  if (data.nearbyCount <= 2) return 'caution';
+  return 'concern';
+}
+
 function BriefingFullView({
   locationName,
   dateRange,
@@ -227,6 +243,7 @@ function BriefingFullView({
   const avalancheData = conditions?.avalanche as AvalancheData | undefined;
   const usgsData = conditions?.streamFlow as UsgsData | undefined;
   const daylightData = conditions?.daylight as DaylightData | undefined;
+  const fireData = conditions?.fires as FireData | undefined;
   const sortAvyToTop = getAvalancheSortPriority(avalancheData ?? null) > 0;
 
   return (
@@ -279,6 +296,12 @@ function BriefingFullView({
                 />
               )}
             </StreamCard>
+            <ConditionCard
+              category="Fires"
+              icon={<Flame className="size-4 text-orange-500" />}
+              status={fireCardStatus(fireData ?? null)}
+              summary={fireStatusSummary(fireData ?? null)}
+            />
             <DaylightCard data={daylightData ?? null} />
             {STUB_CARDS.map((card) => (
               <ConditionCard
@@ -305,7 +328,15 @@ export function BriefingPanel() {
   const { activeBriefingId, isGenerating, location, dateRange, activity } =
     usePlanningStore();
   const { briefing, isLoading } = useBriefingPolling(activeBriefingId);
-  const { getWarningCount, getCriticalCount } = useBriefingStore();
+  const { setConditionCards, getWarningCount, getCriticalCount } = useBriefingStore();
+
+  useEffect(() => {
+    if (!briefing?.narrative) return;
+    const cards = briefing.conditions?.conditionCards as ConditionCardData[] | undefined;
+    if (cards && Array.isArray(cards)) {
+      setConditionCards(cards);
+    }
+  }, [briefing?.narrative, briefing?.conditions, setConditionCards]);
 
   if (!activeBriefingId && !isGenerating) {
     return <BriefingEmptyState />;

@@ -3,13 +3,24 @@
 import { useEffect, useCallback, useSyncExternalStore } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
+interface ConditionCardData {
+  category: string;
+  status: 'good' | 'caution' | 'concern' | 'unknown';
+  summary: string;
+  detail?: string;
+}
+
+interface BriefingConditions extends Record<string, unknown> {
+  conditionCards?: ConditionCardData[];
+}
+
 interface Briefing {
   id: string;
   trip_id: string;
   narrative: string | null;
-  conditions: Record<string, unknown>;
+  conditions: BriefingConditions;
   raw_data: Record<string, unknown>;
-  readiness: string | null;
+  readiness: 'green' | 'yellow' | 'red' | null;
   share_token: string | null;
   created_at: string;
 }

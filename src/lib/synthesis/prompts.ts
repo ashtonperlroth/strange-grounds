@@ -82,14 +82,16 @@ function serializeConditions(conditions: ConditionsBundle): string {
 
   // Weather
   const w = conditions.weather;
-  if (w.periods.length > 0) {
+  if (w && w.periods.length > 0) {
     const forecastLines = w.periods.slice(0, 7).map((p) => {
       const precip = p.probabilityOfPrecipitation?.value ?? 0;
       return `  ${p.name}: ${p.temperature}°${p.temperatureUnit}, wind ${p.windSpeed} ${p.windDirection}, ${p.shortForecast}${precip > 0 ? `, ${precip}% precip` : ""}`;
     });
     sections.push(`WEATHER FORECAST:\n${forecastLines.join("\n")}`);
+  } else {
+    sections.push("WEATHER FORECAST: Data unavailable.");
   }
-  if (w.alerts.length > 0) {
+  if (w && w.alerts.length > 0) {
     const alertLines = w.alerts.map(
       (a) => `  ${a.event} (${a.severity}): ${a.headline}`,
     );
@@ -117,7 +119,7 @@ function serializeConditions(conditions: ConditionsBundle): string {
 
   // Snowpack
   const sn = conditions.snowpack;
-  if (sn.stations.length > 0) {
+  if (sn && sn.stations.length > 0) {
     const stationLines = sn.stations.map((s) => {
       const depth = s.latest.snowDepthIn !== null ? `${s.latest.snowDepthIn}" depth` : "no depth";
       const swe = s.latest.sweIn !== null ? `${s.latest.sweIn}" SWE` : "no SWE";
@@ -134,7 +136,7 @@ function serializeConditions(conditions: ConditionsBundle): string {
 
   // Stream Flow
   const st = conditions.streamFlow;
-  if (st.stations.length > 0) {
+  if (st && st.stations.length > 0) {
     const gaugeLines = st.stations.map((s) => {
       const cfs = s.current.dischargeCfs !== null ? `${Math.round(s.current.dischargeCfs)} cfs` : "N/A";
       const pct = s.percentOfMedian !== null ? `${s.percentOfMedian}% of median` : "";
@@ -147,7 +149,7 @@ function serializeConditions(conditions: ConditionsBundle): string {
 
   // Fires
   const f = conditions.fires;
-  if (f.nearbyCount > 0) {
+  if (f && f.nearbyCount > 0) {
     const fireLines = f.fires.map((fire) => {
       const acres = fire.acres !== null ? `${Math.round(fire.acres).toLocaleString()} acres` : "size unknown";
       const cont = fire.containment !== null ? `, ${fire.containment}% contained` : "";
@@ -160,9 +162,13 @@ function serializeConditions(conditions: ConditionsBundle): string {
 
   // Daylight
   const d = conditions.daylight;
-  sections.push(
-    `DAYLIGHT:\n  Sunrise: ${d.sunrise}, Sunset: ${d.sunset}\n  Total daylight: ${d.daylightHours} hours\n  Golden hour: ${d.goldenHourStart}–${d.goldenHourEnd}`,
-  );
+  if (d) {
+    sections.push(
+      `DAYLIGHT:\n  Sunrise: ${d.sunrise}, Sunset: ${d.sunset}\n  Total daylight: ${d.daylightHours} hours\n  Golden hour: ${d.goldenHourStart}–${d.goldenHourEnd}`,
+    );
+  } else {
+    sections.push("DAYLIGHT: Data unavailable.");
+  }
 
   return sections.join("\n\n");
 }
