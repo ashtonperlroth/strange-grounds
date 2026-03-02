@@ -4,6 +4,7 @@ import { fetchNWS } from "@/lib/data-sources/nws";
 import { fetchSnotel } from "@/lib/data-sources/snotel";
 import { fetchAvalanche } from "@/lib/data-sources/avalanche";
 import { fetchUsgs } from "@/lib/data-sources/usgs";
+import { computeDaylight } from "@/lib/data-sources/daylight";
 import { fetchFires } from "@/lib/data-sources/fires";
 
 export const generateBriefing = inngest.createFunction(
@@ -33,15 +34,15 @@ export const generateBriefing = inngest.createFunction(
       return fetchFires({ lat, lng });
     });
 
-    const daylightData = await step.run("compute-daylight", async () => {
-      return {
-        source: "suncalc",
-        sunrise: "07:15",
-        sunset: "17:45",
-        daylightHours: 10.5,
-        goldenHourStart: "16:55",
-        goldenHourEnd: "17:45",
-      };
+    const daylightData = await step.run("compute-daylight", () => {
+      const start = new Date(startDate + "T12:00:00");
+      const end = new Date(endDate + "T12:00:00");
+      const dates: Date[] = [];
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        dates.push(new Date(d));
+      }
+      if (dates.length === 0) dates.push(start);
+      return computeDaylight(lat, lng, dates);
     });
 
     const narrative = await step.run("synthesize", async () => {
@@ -73,7 +74,7 @@ export const generateBriefing = inngest.createFunction(
         `## Snowpack\n${snotelData.nearest ? `Snow depth: ${snotelData.nearest.latest.snowDepthIn ?? "N/A"}" at ${snotelData.nearest.station.name}\nSWE: ${snotelData.nearest.latest.sweIn ?? "N/A"}"\nTrend: ${snotelData.nearest.trend}` : "No SNOTEL stations found within 50 km"}`,
         `## Stream Crossings\n${usgsData.nearest ? `${usgsData.nearest.station.name}: ${usgsData.nearest.current.dischargeCfs ?? "N/A"} cfs (${usgsData.nearest.trend})\nGage height: ${usgsData.nearest.current.gageHeightFt ?? "N/A"} ft${usgsData.nearest.percentOfMedian !== null ? `\n% of median: ${usgsData.nearest.percentOfMedian}%` : ""}` : "No USGS stream gauges found within 30 km"}`,
         fireSection,
-        `## Daylight\nSunrise: ${daylightData.sunrise} | Sunset: ${daylightData.sunset}\nTotal daylight: ${daylightData.daylightHours} hours`,
+        `## Daylight\n${daylightData.days.map((d) => `${d.date}: Sunrise ${d.sunrise} | Sunset ${d.sunset} | ${d.daylightHours}h daylight | ${d.moonPhaseName} (${d.moonIllumination}%)`).join("\n")}`,
       ];
 
       return `# Conditions Briefing — ${activity}\n**Location:** ${lat.toFixed(4)}, ${lng.toFixed(4)}\n**Dates:** ${startDate} to ${endDate}\n\n${sections.join("\n\n")}`;
