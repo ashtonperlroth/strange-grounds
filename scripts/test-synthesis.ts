@@ -216,11 +216,14 @@ const mockFires: FireData = {
 
 const mockDaylight: DaylightData = {
   source: "suncalc",
-  sunrise: "07:02",
-  sunset: "18:12",
+  sunrise: "7:02 AM",
+  sunset: "6:12 PM",
   daylightHours: 11.2,
-  goldenHourStart: "17:25",
-  goldenHourEnd: "18:12",
+  goldenHourStart: "5:25 PM",
+  goldenHourEnd: "6:12 PM",
+  civilDawn: "6:33 AM",
+  civilDusk: "6:41 PM",
+  timeZone: "America/Denver",
 };
 
 const mockConditions: ConditionsBundle = {
