@@ -1,6 +1,7 @@
 'use client';
 
-import { Loader2, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -24,6 +25,8 @@ export function GenerateButton() {
     setIsGenerating,
   } = usePlanningStore();
 
+  const [error, setError] = useState<string | null>(null);
+
   const ready = isReadyToGenerate();
 
   const createTrip = trpc.trips.create.useMutation();
@@ -38,6 +41,7 @@ export function GenerateButton() {
     if (!ready || !location || !dateRange || isGenerating) return;
 
     setIsGenerating(true);
+    setError(null);
 
     try {
       const trip = await createTrip.mutateAsync({
@@ -56,29 +60,52 @@ export function GenerateButton() {
       });
 
       setActiveBriefingId(briefing.id);
-    } catch (error) {
-      console.error('Failed to generate briefing:', error);
+    } catch (err) {
+      console.error('Failed to generate briefing:', err);
+      const message =
+        err instanceof Error ? err.message : 'Failed to generate briefing';
+      const isAuthError =
+        message.includes('UNAUTHORIZED') || message.includes('401');
+      setError(isAuthError ? 'Please sign in to generate briefings' : message);
       setIsGenerating(false);
     }
   };
+
+  const buttonLabel = error
+    ? 'Retry'
+    : isGenerating
+      ? 'Generating...'
+      : 'Generate';
 
   const button = (
     <Button
       size="sm"
       disabled={!ready || isGenerating}
       onClick={handleClick}
-      className="h-7 gap-1.5 bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-500 disabled:bg-stone-200 disabled:text-stone-400"
+      className={
+        error
+          ? 'h-7 gap-1.5 bg-red-600 px-3 text-xs font-medium text-white hover:bg-red-500 disabled:bg-stone-200 disabled:text-stone-400'
+          : 'h-7 gap-1.5 bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-500 disabled:bg-stone-200 disabled:text-stone-400'
+      }
     >
       {isGenerating ? (
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : error ? (
+        <AlertCircle className="h-3.5 w-3.5" />
       ) : (
         <Sparkles className="h-3.5 w-3.5" />
       )}
-      {isGenerating ? 'Generating...' : 'Generate'}
+      {buttonLabel}
     </Button>
   );
 
-  if (ready) return button;
+  const tooltipMessage = error
+    ? error
+    : !ready
+      ? `Missing: ${missingItems.join(', ')}`
+      : null;
+
+  if (!tooltipMessage) return button;
 
   return (
     <TooltipProvider>
@@ -86,9 +113,7 @@ export function GenerateButton() {
         <TooltipTrigger asChild>
           <span tabIndex={0}>{button}</span>
         </TooltipTrigger>
-        <TooltipContent side="bottom">
-          Missing: {missingItems.join(', ')}
-        </TooltipContent>
+        <TooltipContent side="bottom">{tooltipMessage}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
