@@ -26,15 +26,7 @@ const DANGER_OUTLINE_COLORS: Record<number, string> = {
   5: '#000000',
 };
 
-function buildFetchUrl(bbox: [number, number, number, number]): string {
-  const params = new URLSearchParams({
-    west: bbox[0].toString(),
-    south: bbox[1].toString(),
-    east: bbox[2].toString(),
-    north: bbox[3].toString(),
-  });
-  return `/api/avalanche-zones?${params}`;
-}
+const FETCH_URL = '/api/avalanche-zones';
 
 function dangerColorExpression(
   property: string,
@@ -135,15 +127,7 @@ export function AvalancheZones({ map, visible }: AvalancheZonesProps) {
       const controller = new AbortController();
       abortRef.current = controller;
 
-      const bounds = map.getBounds();
-      const bbox: [number, number, number, number] = [
-        bounds.getWest(),
-        bounds.getSouth(),
-        bounds.getEast(),
-        bounds.getNorth(),
-      ];
-
-      fetch(buildFetchUrl(bbox), { signal: controller.signal })
+      fetch(FETCH_URL, { signal: controller.signal })
         .then((res) => {
           if (!res.ok) throw new Error(`Avalanche zones ${res.status}`);
           return res.json();
@@ -177,42 +161,39 @@ export function AvalancheZones({ map, visible }: AvalancheZonesProps) {
       const name = props.name ?? 'Unknown Zone';
       const dangerLevel = props.dangerLevel ?? 0;
       const dangerLabel = props.dangerLabel ?? 'No Rating';
-      const centerName = props.centerName ?? null;
-
-      let problemsArr: { name: string; likelihood: string }[] = [];
-      try {
-        problemsArr =
-          typeof props.problems === 'string'
-            ? JSON.parse(props.problems)
-            : props.problems ?? [];
-      } catch {
-        problemsArr = [];
+      const centerName = props.centerName ?? props.center ?? null;
+      const travelAdvice = props.travel_advice ?? null;
+      const forecastLink = props.link ?? null;
+      let warning: string | null = null;
+      if (typeof props.warning === 'string' && props.warning.length > 0) {
+        warning = props.warning;
       }
 
       const dangerColor = DANGER_COLORS[dangerLevel] ?? DANGER_COLORS[0];
 
-      const problemsHtml =
-        problemsArr.length > 0
-          ? `<div style="margin-top:6px;">
-              <div style="font-size:11px;color:#94a3b8;margin-bottom:2px;">Problems</div>
-              ${problemsArr
-                .map(
-                  (p: { name: string; likelihood: string }) =>
-                    `<div style="font-size:12px;color:#e2e8f0;">• ${p.name}${p.likelihood ? ` (${p.likelihood})` : ''}</div>`,
-                )
-                .join('')}
-            </div>`
-          : '';
+      const warningHtml = warning
+        ? `<div style="margin-top:6px;padding:4px 6px;background:rgba(239,68,68,0.15);border-radius:4px;font-size:11px;color:#fca5a5;">${warning}</div>`
+        : '';
+
+      const adviceHtml = travelAdvice
+        ? `<div style="margin-top:6px;font-size:11px;color:#cbd5e1;line-height:1.4;">${travelAdvice}</div>`
+        : '';
+
+      const linkHtml = forecastLink
+        ? `<div style="margin-top:6px;"><a href="${forecastLink}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#60a5fa;text-decoration:underline;">Full forecast →</a></div>`
+        : '';
 
       const html = `
-        <div style="font-family:system-ui,sans-serif;min-width:180px;">
+        <div style="font-family:system-ui,sans-serif;min-width:180px;max-width:260px;">
           <div style="font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:4px;">${name}</div>
           ${centerName ? `<div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">${centerName}</div>` : ''}
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${dangerColor};"></span>
             <span style="font-size:13px;font-weight:500;color:#e2e8f0;">${dangerLabel} (${dangerLevel})</span>
           </div>
-          ${problemsHtml}
+          ${warningHtml}
+          ${adviceHtml}
+          ${linkHtml}
         </div>
       `;
 
