@@ -1,5 +1,5 @@
 export { generateBriefing, generateBriefingText } from "./briefing";
-export type { BriefingResult } from "./briefing";
+export type { BriefingResult, SynthesisResult } from "./briefing";
 
 export {
   computeReadiness,

@@ -342,6 +342,8 @@ interface BriefingFullViewProps {
   activity: string;
   readiness: 'green' | 'yellow' | 'red' | null;
   narrative: string | null;
+  bottomLine: string | null;
+  readinessRationale: string | null;
   weatherData: NWSForecastData | null;
   warningCount?: number;
   criticalCount?: number;
@@ -372,6 +374,8 @@ function BriefingFullView({
   activity,
   readiness,
   narrative,
+  bottomLine,
+  readinessRationale,
   weatherData,
   warningCount = 0,
   criticalCount = 0,
@@ -405,7 +409,9 @@ function BriefingFullView({
         />
 
         <BriefingSummary
+          bottomLine={bottomLine}
           narrative={narrative}
+          readinessRationale={readinessRationale}
           isLoading={isNarrativeLoading}
         />
 
@@ -611,6 +617,8 @@ export function BriefingPanel() {
         activity={activity}
         readiness={readiness}
         narrative={briefing?.narrative ?? null}
+        bottomLine={briefing?.bottom_line ?? null}
+        readinessRationale={briefing?.readiness_rationale ?? null}
         weatherData={weatherData}
         warningCount={getWarningCount()}
         criticalCount={getCriticalCount()}

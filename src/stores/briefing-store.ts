@@ -25,6 +25,8 @@ export interface Briefing {
   id: string;
   trip_id: string;
   narrative: string | null;
+  bottom_line: string | null;
+  readiness_rationale: string | null;
   conditions: Record<string, unknown>;
   raw_data: Record<string, unknown>;
   readiness: 'green' | 'yellow' | 'red' | null;

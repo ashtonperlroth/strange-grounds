@@ -18,9 +18,18 @@ interface BriefingDates {
   end: string;
 }
 
+export interface SynthesisResult {
+  bottomLine: string;
+  narrative: string;
+  readiness: "GREEN" | "YELLOW" | "RED";
+  readinessRationale: string;
+}
+
 export interface BriefingResult {
+  bottomLine: string;
   narrative: string;
   readiness: "green" | "yellow" | "red";
+  readinessRationale: string;
   conditionCards: ConditionCardData[];
 }
 
@@ -35,17 +44,56 @@ function getClient(): Anthropic {
   return _client;
 }
 
+// ── JSON parsing ────────────────────────────────────────────────────
+
+function parseSynthesisResponse(responseText: string): SynthesisResult {
+  const cleaned = responseText.replace(/```json\n?|```\n?/g, "").trim();
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    throw new Error(
+      `Failed to parse synthesis JSON: ${cleaned.slice(0, 200)}`,
+    );
+  }
+
+  const obj = parsed as Record<string, unknown>;
+  if (
+    typeof obj.bottomLine !== "string" ||
+    typeof obj.narrative !== "string" ||
+    typeof obj.readiness !== "string" ||
+    typeof obj.readinessRationale !== "string"
+  ) {
+    throw new Error(
+      `Synthesis JSON missing required fields: ${JSON.stringify(Object.keys(obj))}`,
+    );
+  }
+
+  const readiness = obj.readiness.toUpperCase();
+  if (readiness !== "GREEN" && readiness !== "YELLOW" && readiness !== "RED") {
+    throw new Error(`Invalid readiness value: ${obj.readiness}`);
+  }
+
+  return {
+    bottomLine: obj.bottomLine,
+    narrative: obj.narrative,
+    readiness: readiness as "GREEN" | "YELLOW" | "RED",
+    readinessRationale: obj.readinessRationale,
+  };
+}
+
 // ── Core generation function ────────────────────────────────────────
 
 const MODEL = "claude-sonnet-4-20250514";
-const MAX_TOKENS = 1024;
+const MAX_TOKENS = 1500;
 
 export async function generateBriefingText(
   conditions: ConditionsBundle,
   activity: Activity,
   location: BriefingLocation,
   dates: BriefingDates,
-): Promise<string> {
+): Promise<SynthesisResult> {
   const { system, user } = promptForActivity(activity, conditions, location, dates);
 
   const client = getClient();
@@ -61,7 +109,7 @@ export async function generateBriefingText(
     throw new Error("Claude response contained no text content");
   }
 
-  return textBlock.text;
+  return parseSynthesisResponse(textBlock.text);
 }
 
 // ── Full briefing pipeline ──────────────────────────────────────────
@@ -72,13 +120,21 @@ export async function generateBriefing(
   location: BriefingLocation,
   dates: BriefingDates,
 ): Promise<BriefingResult> {
-  const readiness = computeReadiness(conditions);
+  const fallbackReadiness = computeReadiness(conditions);
   const conditionCards = buildConditionCards(conditions);
-  const narrative = await generateBriefingText(conditions, activity, location, dates);
+  const synthesis = await generateBriefingText(conditions, activity, location, dates);
+
+  const readinessMap: Record<string, "green" | "yellow" | "red"> = {
+    GREEN: "green",
+    YELLOW: "yellow",
+    RED: "red",
+  };
 
   return {
-    narrative,
-    readiness,
+    bottomLine: synthesis.bottomLine,
+    narrative: synthesis.narrative,
+    readiness: readinessMap[synthesis.readiness] ?? fallbackReadiness,
+    readinessRationale: synthesis.readinessRationale,
     conditionCards,
   };
 }

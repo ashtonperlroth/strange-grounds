@@ -378,18 +378,26 @@ for (const activity of activities) {
 
 const skiPrompt = promptForActivity("Ski Touring", mockConditions, location, dates);
 assert(skiPrompt.user.includes("Avalanche conditions are the PRIMARY"), "Ski Touring prompt emphasizes avalanche");
+assert(skiPrompt.user.includes("Cross-reference:"), "Ski Touring prompt includes cross-reference hints");
+assert(!skiPrompt.user.includes("Gear priorities:"), "Ski Touring prompt does not include gear priorities");
+assert(!skiPrompt.user.includes("Overall readiness:"), "Ski Touring prompt does not include readiness label");
+assert(skiPrompt.user.includes("respond with ONLY a valid JSON"), "Ski Touring prompt includes JSON reminder");
 
 const backpackingPrompt = promptForActivity("Backpacking", mockConditions, location, dates);
-assert(backpackingPrompt.user.includes("Water availability and stream crossing"), "Backpacking prompt emphasizes water/streams");
+assert(backpackingPrompt.user.includes("Stream crossing safety"), "Backpacking prompt emphasizes stream crossings");
 
 const mountaineeringPrompt = promptForActivity("Mountaineering", mockConditions, location, dates);
-assert(mountaineeringPrompt.user.includes("Weather windows and altitude"), "Mountaineering prompt emphasizes weather windows");
+assert(mountaineeringPrompt.user.includes("Summit weather windows"), "Mountaineering prompt emphasizes weather windows");
 
 const trailRunPrompt = promptForActivity("Trail Running", mockConditions, location, dates);
 assert(trailRunPrompt.user.includes("Heat exposure, hydration"), "Trail Running prompt emphasizes heat/hydration");
 
 const dayHikePrompt = promptForActivity("Day Hike", mockConditions, location, dates);
 assert(dayHikePrompt.user.includes("Weather exposure and afternoon thunderstorm"), "Day Hike prompt emphasizes weather exposure");
+
+assert(skiPrompt.system.includes("bottomLine"), "System prompt specifies bottomLine JSON field");
+assert(skiPrompt.system.includes("readinessRationale"), "System prompt specifies readinessRationale JSON field");
+assert(!skiPrompt.system.includes("## headings"), "System prompt does not reference markdown headings");
 
 console.log("\n=== Prompt Output Sample (Ski Touring) ===\n");
 console.log("--- SYSTEM PROMPT (first 300 chars) ---");
@@ -408,7 +416,7 @@ async function runApiTest() {
   try {
     console.log("Calling Claude API (claude-sonnet-4-20250514)...");
     const start = Date.now();
-    const narrative = await briefingModule.generateBriefingText(
+    const synthesis = await briefingModule.generateBriefingText(
       mockConditions,
       "Ski Touring",
       location,
@@ -416,27 +424,36 @@ async function runApiTest() {
     );
     const elapsed = Date.now() - start;
 
-    console.log(`\nResponse received in ${elapsed}ms (${narrative.length} chars)\n`);
-    console.log("--- NARRATIVE ---");
-    console.log(narrative);
+    console.log(`\nResponse received in ${elapsed}ms\n`);
+    console.log("--- BOTTOM LINE ---");
+    console.log(synthesis.bottomLine);
+    console.log("\n--- NARRATIVE ---");
+    console.log(synthesis.narrative);
+    console.log("\n--- READINESS ---");
+    console.log(`${synthesis.readiness}: ${synthesis.readinessRationale}`);
     console.log("--- END ---\n");
 
-    assert(narrative.length > 200, `API: narrative is substantial (${narrative.length} chars)`);
-    assert(narrative.toLowerCase().includes("avalanche") || narrative.toLowerCase().includes("avy"), "API: narrative mentions avalanche");
-    assert(narrative.toLowerCase().includes("wind") || narrative.toLowerCase().includes("weather"), "API: narrative mentions weather/wind");
+    assert(typeof synthesis.bottomLine === "string" && synthesis.bottomLine.length > 10, `API: bottomLine is present (${synthesis.bottomLine.length} chars)`);
+    assert(typeof synthesis.narrative === "string" && synthesis.narrative.length > 200, `API: narrative is substantial (${synthesis.narrative.length} chars)`);
+    assert(["GREEN", "YELLOW", "RED"].includes(synthesis.readiness), `API: readiness is valid (${synthesis.readiness})`);
+    assert(typeof synthesis.readinessRationale === "string" && synthesis.readinessRationale.length > 10, `API: readinessRationale is present`);
+    assert(synthesis.narrative.toLowerCase().includes("avalanche") || synthesis.narrative.toLowerCase().includes("avy"), "API: narrative mentions avalanche");
+    assert(synthesis.narrative.toLowerCase().includes("wind") || synthesis.narrative.toLowerCase().includes("weather"), "API: narrative mentions weather/wind");
 
     console.log("\nGenerating Backpacking briefing for comparison...");
-    const backpackNarrative = await briefingModule.generateBriefingText(
+    const backpackSynthesis = await briefingModule.generateBriefingText(
       mockConditions,
       "Backpacking",
       location,
       dates,
     );
+    console.log("\n--- BACKPACKING BOTTOM LINE ---");
+    console.log(backpackSynthesis.bottomLine);
     console.log("\n--- BACKPACKING NARRATIVE ---");
-    console.log(backpackNarrative);
+    console.log(backpackSynthesis.narrative);
     console.log("--- END ---\n");
 
-    assert(backpackNarrative !== narrative, "API: different activities produce different narratives");
+    assert(backpackSynthesis.narrative !== synthesis.narrative, "API: different activities produce different narratives");
   } catch (err) {
     console.error("API test failed:", err);
     failed++;
