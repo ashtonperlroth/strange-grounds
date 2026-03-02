@@ -57,6 +57,8 @@ export function GenerateButton() {
 
       const briefing = await generateBriefing.mutateAsync({
         tripId: trip.id,
+        lat: location.lat,
+        lng: location.lng,
       });
 
       setActiveBriefingId(briefing.id);
