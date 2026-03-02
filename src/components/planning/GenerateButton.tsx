@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2, Sparkles, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,8 +33,23 @@ export function GenerateButton() {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMessage, setAuthModalMessage] = useState<string | undefined>();
+  const [shouldPulse, setShouldPulse] = useState(false);
+  const prevLocationRef = useRef(location);
 
   const ready = isReadyToGenerate();
+
+  useEffect(() => {
+    if (!prevLocationRef.current && location) {
+      const startTimer = setTimeout(() => setShouldPulse(true), 0);
+      const stopTimer = setTimeout(() => setShouldPulse(false), 2000);
+      prevLocationRef.current = location;
+      return () => {
+        clearTimeout(startTimer);
+        clearTimeout(stopTimer);
+      };
+    }
+    prevLocationRef.current = location;
+  }, [location]);
 
   const createTrip = trpc.trips.create.useMutation();
   const generateBriefing = trpc.briefings.generate.useMutation();
@@ -107,15 +122,20 @@ export function GenerateButton() {
       ? 'Retry'
       : 'Generate';
 
+  const pulseClass = shouldPulse && ready && !isGenerating
+    ? ' animate-pulse ring-2 ring-emerald-400 ring-offset-1'
+    : '';
+
   const button = (
     <Button
       size="sm"
       disabled={!ready || isGenerating}
       onClick={handleClick}
       className={
-        hasError && !isGenerating
+        (hasError && !isGenerating
           ? 'h-7 gap-1.5 bg-red-600 px-3 text-xs font-medium text-white hover:bg-red-500 disabled:bg-stone-200 disabled:text-stone-400'
           : 'h-7 gap-1.5 bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-500 disabled:bg-stone-200 disabled:text-stone-400'
+        ) + pulseClass
       }
     >
       {isGenerating ? (
