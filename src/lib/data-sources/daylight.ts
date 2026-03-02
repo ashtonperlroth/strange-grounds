@@ -1,5 +1,5 @@
 import SunCalc from "suncalc";
-import { find as findTimezone } from "geo-tz";
+import tzlookup from "@photostructure/tz-lookup";
 import type { DaylightData } from "@/lib/synthesis/conditions";
 
 export interface DaylightOptions {
@@ -18,9 +18,9 @@ function formatTime(date: Date, timeZone: string): string {
 
 function resolveTimezone(lat: number, lng: number): string {
   try {
-    return findTimezone(lat, lng)[0] ?? "UTC";
+    return tzlookup(lat, lng) ?? "UTC";
   } catch {
-    console.warn("[daylight] geo-tz lookup failed, falling back to UTC");
+    console.warn("[daylight] timezone lookup failed, falling back to UTC");
     return "UTC";
   }
 }
