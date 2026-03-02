@@ -1,5 +1,5 @@
 import SunCalc from "suncalc";
-import { find as findTimezone } from "geo-tz";
+import tzlookup from "@photostructure/tz-lookup";
 import type { DaylightData } from "@/lib/synthesis/conditions";
 
 export interface DaylightOptions {
@@ -16,9 +16,18 @@ function formatTime(date: Date, timeZone: string): string {
   });
 }
 
+function resolveTimezone(lat: number, lng: number): string {
+  try {
+    return tzlookup(lat, lng) ?? "UTC";
+  } catch {
+    console.warn("[daylight] timezone lookup failed, falling back to UTC");
+    return "UTC";
+  }
+}
+
 export function computeDaylight({ lat, lng, date }: DaylightOptions): DaylightData {
   const times = SunCalc.getTimes(date, lat, lng);
-  const timeZone = findTimezone(lat, lng)[0] ?? "UTC";
+  const timeZone = resolveTimezone(lat, lng);
 
   const daylightMs = times.sunset.getTime() - times.sunrise.getTime();
   const daylightHours = Math.round((daylightMs / (1000 * 60 * 60)) * 100) / 100;
