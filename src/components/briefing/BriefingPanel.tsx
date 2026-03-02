@@ -25,6 +25,7 @@ import { usePlanningStore } from '@/stores/planning-store';
 import { useBriefingPolling, resetBriefingPolling } from '@/hooks/useBriefingPolling';
 import { useBriefingStore, type ConditionStatus, type ConditionCardData } from '@/stores/briefing-store';
 import { trpc } from '@/lib/trpc/client';
+import { AuthModal } from '@/components/auth/AuthModal';
 import { ReadinessIndicator } from './ReadinessIndicator';
 import { BriefingSummary } from './BriefingSummary';
 import { ConditionCard } from './ConditionCard';
@@ -292,9 +293,11 @@ function PanelHeader({ locationName, dateRange, activity }: PanelHeaderProps) {
 interface PanelFooterProps {
   onRegenerate?: () => void;
   isRegenerating?: boolean;
+  onSave?: () => void;
+  onShare?: () => void;
 }
 
-function PanelFooter({ onRegenerate, isRegenerating }: PanelFooterProps) {
+function PanelFooter({ onRegenerate, isRegenerating, onSave, onShare }: PanelFooterProps) {
   return (
     <div className="flex items-center gap-2 pt-2">
       <Button
@@ -315,7 +318,7 @@ function PanelFooter({ onRegenerate, isRegenerating }: PanelFooterProps) {
         variant="outline"
         size="sm"
         className="flex-1 border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-800"
-        disabled
+        onClick={onSave}
       >
         <Bookmark className="size-3.5" />
         Save
@@ -324,7 +327,7 @@ function PanelFooter({ onRegenerate, isRegenerating }: PanelFooterProps) {
         variant="outline"
         size="sm"
         className="flex-1 border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-800"
-        disabled
+        onClick={onShare}
       >
         <Share2 className="size-3.5" />
         Share
@@ -346,6 +349,8 @@ interface BriefingFullViewProps {
   conditions?: Record<string, unknown>;
   onRegenerate?: () => void;
   isRegenerating?: boolean;
+  onSave?: () => void;
+  onShare?: () => void;
 }
 
 function fireStatusSummary(data: FireData | null): string {
@@ -374,6 +379,8 @@ function BriefingFullView({
   conditions,
   onRegenerate,
   isRegenerating,
+  onSave,
+  onShare,
 }: BriefingFullViewProps) {
   const snotelData = conditions?.snowpack as SnotelData | undefined;
   const avalancheData = conditions?.avalanche as AvalancheData | undefined;
@@ -457,6 +464,8 @@ function BriefingFullView({
         <PanelFooter
           onRegenerate={onRegenerate}
           isRegenerating={isRegenerating}
+          onSave={onSave}
+          onShare={onShare}
         />
       </div>
     </ScrollArea>
@@ -471,6 +480,7 @@ export function BriefingPanel() {
     location,
     dateRange,
     activity,
+    sessionToken,
     setActiveBriefingId,
     setIsGenerating,
     setGenerationError,
@@ -481,6 +491,11 @@ export function BriefingPanel() {
   const { setConditionCards, getWarningCount, getCriticalCount } = useBriefingStore();
 
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalConfig, setAuthModalConfig] = useState<{
+    title: string;
+    description: string;
+  }>({ title: 'Sign up to continue', description: '' });
   const generateBriefing = trpc.briefings.generate.useMutation();
 
   const handleRetry = useCallback(async () => {
@@ -494,6 +509,7 @@ export function BriefingPanel() {
     try {
       const briefingResult = await generateBriefing.mutateAsync({
         tripId: activeTripId,
+        sessionToken: sessionToken ?? undefined,
         lat: location.lat,
         lng: location.lng,
       });
@@ -511,6 +527,7 @@ export function BriefingPanel() {
     activeTripId,
     location,
     isRegenerating,
+    sessionToken,
     generateBriefing,
     setActiveBriefingId,
     setIsGenerating,
@@ -540,6 +557,22 @@ export function BriefingPanel() {
       setConditionCards(cards);
     }
   }, [briefing?.narrative, briefing?.conditions, setConditionCards]);
+
+  const requireAuth = useCallback(
+    (title: string, description: string) => {
+      setAuthModalConfig({ title, description });
+      setShowAuthModal(true);
+    },
+    [],
+  );
+
+  const handleSave = useCallback(() => {
+    requireAuth('Sign up to save trips', 'Create a free account to save trips and track conditions over time.');
+  }, [requireAuth]);
+
+  const handleShare = useCallback(() => {
+    requireAuth('Sign up to share briefings', 'Create a free account to share briefings with your trip partners.');
+  }, [requireAuth]);
 
   if (!activeBriefingId && !isGenerating) {
     return <BriefingEmptyState />;
@@ -571,19 +604,29 @@ export function BriefingPanel() {
   const weatherData = (briefing?.conditions?.weather as NWSForecastData) ?? null;
 
   return (
-    <BriefingFullView
-      locationName={location?.name ?? null}
-      dateRange={dateRange}
-      activity={activity}
-      readiness={readiness}
-      narrative={briefing?.narrative ?? null}
-      weatherData={weatherData}
-      warningCount={getWarningCount()}
-      criticalCount={getCriticalCount()}
-      isNarrativeLoading={isLoading}
-      conditions={briefing?.conditions as Record<string, unknown> | undefined}
-      onRegenerate={handleRetry}
-      isRegenerating={isRegenerating}
-    />
+    <>
+      <BriefingFullView
+        locationName={location?.name ?? null}
+        dateRange={dateRange}
+        activity={activity}
+        readiness={readiness}
+        narrative={briefing?.narrative ?? null}
+        weatherData={weatherData}
+        warningCount={getWarningCount()}
+        criticalCount={getCriticalCount()}
+        isNarrativeLoading={isLoading}
+        conditions={briefing?.conditions as Record<string, unknown> | undefined}
+        onRegenerate={handleRetry}
+        isRegenerating={isRegenerating}
+        onSave={handleSave}
+        onShare={handleShare}
+      />
+      <AuthModal
+        open={showAuthModal}
+        onOpenChange={setShowAuthModal}
+        title={authModalConfig.title}
+        description={authModalConfig.description}
+      />
+    </>
   );
 }

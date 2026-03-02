@@ -1,28 +1,57 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure, protectedProcedure } from "../init";
+import { router, publicProcedure } from "../init";
 import { inngest } from "@/lib/inngest/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const briefingsRouter = router({
-  getByTripId: protectedProcedure
-    .input(z.object({ tripId: z.string().uuid() }))
+  getByTripId: publicProcedure
+    .input(
+      z.object({
+        tripId: z.string().uuid(),
+        sessionToken: z.string().uuid().optional(),
+      }),
+    )
     .query(async ({ ctx, input }) => {
-      const { data: trip } = await ctx.supabase
-        .from("trips")
-        .select("id")
-        .eq("id", input.tripId)
-        .eq("user_id", ctx.user.id)
-        .single();
+      const admin = createAdminClient();
 
-      if (!trip) {
+      if (ctx.user) {
+        const { data: trip } = await admin
+          .from("trips")
+          .select("id")
+          .eq("id", input.tripId)
+          .eq("user_id", ctx.user.id)
+          .single();
+
+        if (!trip) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Trip not found",
+          });
+        }
+      } else if (input.sessionToken) {
+        const { data: trip } = await admin
+          .from("trips")
+          .select("id")
+          .eq("id", input.tripId)
+          .eq("session_token", input.sessionToken)
+          .is("user_id", null)
+          .single();
+
+        if (!trip) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Trip not found",
+          });
+        }
+      } else {
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Trip not found",
+          code: "UNAUTHORIZED",
+          message: "Authentication or session token required",
         });
       }
 
-      const { data, error } = await ctx.supabase
+      const { data, error } = await admin
         .from("briefings")
         .select("*")
         .eq("trip_id", input.tripId)
@@ -57,21 +86,38 @@ export const briefingsRouter = router({
       return data;
     }),
 
-  generate: protectedProcedure
+  generate: publicProcedure
     .input(
       z.object({
         tripId: z.string().uuid(),
+        sessionToken: z.string().uuid().optional(),
         lat: z.number().min(-90).max(90),
         lng: z.number().min(-180).max(180),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { data: trip } = await ctx.supabase
-        .from("trips")
-        .select("id, start_date, end_date, activity")
-        .eq("id", input.tripId)
-        .eq("user_id", ctx.user.id)
-        .single();
+      const admin = createAdminClient();
+
+      let trip;
+
+      if (ctx.user) {
+        const { data } = await admin
+          .from("trips")
+          .select("id, start_date, end_date, activity")
+          .eq("id", input.tripId)
+          .eq("user_id", ctx.user.id)
+          .single();
+        trip = data;
+      } else if (input.sessionToken) {
+        const { data } = await admin
+          .from("trips")
+          .select("id, start_date, end_date, activity")
+          .eq("id", input.tripId)
+          .eq("session_token", input.sessionToken)
+          .is("user_id", null)
+          .single();
+        trip = data;
+      }
 
       if (!trip) {
         throw new TRPCError({
@@ -79,8 +125,6 @@ export const briefingsRouter = router({
           message: "Trip not found",
         });
       }
-
-      const admin = createAdminClient();
 
       const { data, error } = await admin
         .from("briefings")

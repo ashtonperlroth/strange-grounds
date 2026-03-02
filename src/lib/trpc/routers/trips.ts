@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../init";
+import { router, publicProcedure, protectedProcedure } from "../init";
+import { checkAnonymousRateLimit } from "../rate-limit";
 
 export const tripsRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
@@ -40,7 +41,7 @@ export const tripsRouter = router({
       return data;
     }),
 
-  create: protectedProcedure
+  create: publicProcedure
     .input(
       z.object({
         name: z.string().optional(),
@@ -53,18 +54,27 @@ export const tripsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await ctx.adminSupabase
-        .from("profiles")
-        .upsert({ id: ctx.user.id }, { onConflict: "id" });
+      const userId = ctx.user?.id ?? null;
+      let sessionToken: string | null = null;
+
+      if (userId) {
+        await ctx.adminSupabase
+          .from("profiles")
+          .upsert({ id: userId }, { onConflict: "id" });
+      } else {
+        await checkAnonymousRateLimit(ctx.adminSupabase, ctx.ip);
+        sessionToken = crypto.randomUUID();
+      }
 
       const { latitude, longitude, ...rest } = input;
       const point = `POINT(${longitude} ${latitude})`;
 
-      const { data, error } = await ctx.supabase
+      const { data, error } = await ctx.adminSupabase
         .from("trips")
         .insert({
           ...rest,
-          user_id: ctx.user.id,
+          user_id: userId,
+          session_token: sessionToken,
           location: point,
         })
         .select()
@@ -77,7 +87,7 @@ export const tripsRouter = router({
         });
       }
 
-      return data;
+      return { ...data, sessionToken };
     }),
 
   update: protectedProcedure

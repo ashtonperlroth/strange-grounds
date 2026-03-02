@@ -13,6 +13,7 @@ import { usePlanningStore } from '@/stores/planning-store';
 import { trpc } from '@/lib/trpc/client';
 import { format } from 'date-fns';
 import { resetBriefingPolling } from '@/hooks/useBriefingPolling';
+import { AuthModal } from '@/components/auth/AuthModal';
 
 export function GenerateButton() {
   const {
@@ -26,9 +27,12 @@ export function GenerateButton() {
     setActiveBriefingId,
     setIsGenerating,
     setGenerationError,
+    setSessionToken,
   } = usePlanningStore();
 
   const [mutationError, setMutationError] = useState<string | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMessage, setAuthModalMessage] = useState<string | undefined>();
 
   const ready = isReadyToGenerate();
 
@@ -64,8 +68,14 @@ export function GenerateButton() {
 
       setActiveTripId(trip.id);
 
+      const returnedSessionToken = trip.sessionToken as string | null;
+      if (returnedSessionToken) {
+        setSessionToken(returnedSessionToken);
+      }
+
       const briefing = await generateBriefing.mutateAsync({
         tripId: trip.id,
+        sessionToken: returnedSessionToken ?? undefined,
         lat: location.lat,
         lng: location.lng,
       });
@@ -75,9 +85,18 @@ export function GenerateButton() {
       console.error('Failed to generate briefing:', err);
       const message =
         err instanceof Error ? err.message : 'Failed to generate briefing';
-      const isAuthError =
-        message.includes('UNAUTHORIZED') || message.includes('401');
-      setMutationError(isAuthError ? 'Please sign in to generate briefings' : message);
+      const isRateLimit =
+        message.includes('TOO_MANY_REQUESTS') ||
+        message.includes('free briefings');
+      if (isRateLimit) {
+        setAuthModalMessage(
+          "You've used your 3 free briefings today. Sign up for unlimited access.",
+        );
+        setShowAuthModal(true);
+        setMutationError(message);
+      } else {
+        setMutationError(message);
+      }
       setIsGenerating(false);
     }
   };
@@ -116,9 +135,7 @@ export function GenerateButton() {
       ? `Missing: ${missingItems.join(', ')}`
       : null;
 
-  if (!tooltipMessage) return button;
-
-  return (
+  const wrappedButton = tooltipMessage ? (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -129,5 +146,19 @@ export function GenerateButton() {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  ) : (
+    button
+  );
+
+  return (
+    <>
+      {wrappedButton}
+      <AuthModal
+        open={showAuthModal}
+        onOpenChange={setShowAuthModal}
+        title="Free briefing limit reached"
+        description={authModalMessage}
+      />
+    </>
   );
 }
