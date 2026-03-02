@@ -109,6 +109,8 @@ async function findNearestStations(
 ): Promise<SnotelStation[]> {
   const supabase = createAdminClient();
 
+  console.log(`[snotel] Finding stations near (${lat}, ${lng}), radius=${SEARCH_RADIUS_M}m`);
+
   const { data, error } = await supabase.rpc("find_nearest_snotel_stations", {
     p_lat: lat,
     p_lng: lng,
@@ -117,15 +119,25 @@ async function findNearestStations(
   });
 
   if (error) {
-    console.error("Error finding SNOTEL stations:", error);
+    console.error("[snotel] RPC find_nearest_snotel_stations failed:", error.message, error.details);
+    console.log("[snotel] Falling back to plain stations query...");
     const { data: fallbackData, error: fallbackError } = await supabase
       .from("stations")
       .select("id, station_id, name, elevation_m, metadata")
       .eq("source", "snotel")
       .limit(3);
 
-    if (fallbackError || !fallbackData?.length) return [];
+    if (fallbackError) {
+      console.error("[snotel] Fallback query also failed:", fallbackError.message);
+      return [];
+    }
 
+    if (!fallbackData?.length) {
+      console.warn("[snotel] No SNOTEL stations found in stations table. Has the seed script been run?");
+      return [];
+    }
+
+    console.log(`[snotel] Fallback found ${fallbackData.length} station(s)`);
     return fallbackData.map((s) => ({
       id: s.id,
       stationId: s.station_id,
@@ -136,7 +148,17 @@ async function findNearestStations(
     }));
   }
 
-  if (!data?.length) return [];
+  if (!data?.length) {
+    console.warn(`[snotel] RPC returned 0 stations near (${lat}, ${lng}). Checking if any SNOTEL stations exist...`);
+    const { count } = await supabase
+      .from("stations")
+      .select("id", { count: "exact", head: true })
+      .eq("source", "snotel");
+    console.warn(`[snotel] Total SNOTEL stations in DB: ${count ?? 0}. ${count === 0 ? "Seed script may not have been run." : "Stations exist but none within search radius."}`);
+    return [];
+  }
+
+  console.log(`[snotel] Found ${data.length} station(s): ${data.map((s: { name: string }) => s.name).join(", ")}`);
 
   return data.map(
     (s: {
@@ -161,9 +183,12 @@ async function fetchStationData(
   station: SnotelStation,
 ): Promise<SnotelStationData> {
   const url = buildSnotelUrl(station.stationId, station.state);
+  console.log(`[snotel] Fetching CSV for ${station.name} (${station.stationId}:${station.state})`);
+
   const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
 
   if (!response.ok) {
+    console.error(`[snotel] CSV fetch failed for ${station.stationId}: HTTP ${response.status}`);
     throw new Error(
       `SNOTEL fetch failed for ${station.stationId}: ${response.status}`,
     );
@@ -171,6 +196,7 @@ async function fetchStationData(
 
   const csv = await response.text();
   const readings = parseSnotelCsv(csv);
+  console.log(`[snotel] Parsed ${readings.length} readings for ${station.name}`);
 
   const latest =
     readings.length > 0

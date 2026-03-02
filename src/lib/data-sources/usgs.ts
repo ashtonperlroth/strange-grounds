@@ -127,6 +127,8 @@ async function findNearestStations(
 ): Promise<UsgsStation[]> {
   const supabase = createAdminClient();
 
+  console.log(`[usgs] Finding stations near (${lat}, ${lng}), radius=${SEARCH_RADIUS_M}m`);
+
   const { data, error } = await supabase.rpc("find_nearest_usgs_stations", {
     p_lat: lat,
     p_lng: lng,
@@ -135,15 +137,25 @@ async function findNearestStations(
   });
 
   if (error) {
-    console.error("Error finding USGS stations via RPC:", error);
+    console.error("[usgs] RPC find_nearest_usgs_stations failed:", error.message, error.details);
+    console.log("[usgs] Falling back to plain stations query...");
     const { data: fallbackData, error: fallbackError } = await supabase
       .from("stations")
       .select("id, station_id, name")
       .eq("source", "usgs")
       .limit(MAX_STATIONS);
 
-    if (fallbackError || !fallbackData?.length) return [];
+    if (fallbackError) {
+      console.error("[usgs] Fallback query also failed:", fallbackError.message);
+      return [];
+    }
 
+    if (!fallbackData?.length) {
+      console.warn("[usgs] No USGS stations found in stations table. Has the seed script been run?");
+      return [];
+    }
+
+    console.log(`[usgs] Fallback found ${fallbackData.length} station(s)`);
     return fallbackData.map((s) => ({
       id: s.id,
       siteId: s.station_id,
@@ -152,7 +164,17 @@ async function findNearestStations(
     }));
   }
 
-  if (!data?.length) return [];
+  if (!data?.length) {
+    console.warn(`[usgs] RPC returned 0 stations near (${lat}, ${lng}). Checking if any USGS stations exist...`);
+    const { count } = await supabase
+      .from("stations")
+      .select("id", { count: "exact", head: true })
+      .eq("source", "usgs");
+    console.warn(`[usgs] Total USGS stations in DB: ${count ?? 0}. ${count === 0 ? "Seed script may not have been run." : "Stations exist but none within search radius."}`);
+    return [];
+  }
+
+  console.log(`[usgs] Found ${data.length} station(s): ${data.map((s: { name: string }) => s.name).join(", ")}`);
 
   return data.map(
     (s: {
@@ -186,18 +208,21 @@ async function fetchCurrentConditions(
   url.searchParams.set("parameterCd", `${PARAM_DISCHARGE},${PARAM_GAGE_HEIGHT}`);
   url.searchParams.set("format", "json");
 
+  console.log(`[usgs] Fetching instantaneous values for ${siteIds.length} site(s)`);
+
   try {
     const response = await fetch(url.toString(), {
       signal: AbortSignal.timeout(15_000),
     });
 
     if (!response.ok) {
-      console.error(`USGS IV fetch failed: ${response.status}`);
+      console.error(`[usgs] IV fetch failed: HTTP ${response.status} ${response.statusText}`);
       return result;
     }
 
     const json = (await response.json()) as UsgsResponse;
     const timeSeries = json?.value?.timeSeries ?? [];
+    console.log(`[usgs] IV response: ${timeSeries.length} time series`);
 
     for (const ts of timeSeries) {
       const siteId = ts.sourceInfo?.siteCode?.[0]?.value;
@@ -223,8 +248,10 @@ async function fetchCurrentConditions(
 
       result.set(siteId, existing);
     }
+
+    console.log(`[usgs] IV: got data for ${result.size} site(s)`);
   } catch (err) {
-    console.error("USGS IV fetch error:", err);
+    console.error("[usgs] IV fetch error:", err instanceof Error ? err.message : err);
   }
 
   return result;
@@ -248,18 +275,21 @@ async function fetchDailyHistory(
   url.searchParams.set("endDT", formatDate(endDate));
   url.searchParams.set("format", "json");
 
+  console.log(`[usgs] Fetching 30-day daily values for ${siteIds.length} site(s)`);
+
   try {
     const response = await fetch(url.toString(), {
       signal: AbortSignal.timeout(15_000),
     });
 
     if (!response.ok) {
-      console.error(`USGS DV fetch failed: ${response.status}`);
+      console.error(`[usgs] DV fetch failed: HTTP ${response.status} ${response.statusText}`);
       return result;
     }
 
     const json = (await response.json()) as UsgsResponse;
     const timeSeries = json?.value?.timeSeries ?? [];
+    console.log(`[usgs] DV response: ${timeSeries.length} time series`);
 
     for (const ts of timeSeries) {
       const siteId = ts.sourceInfo?.siteCode?.[0]?.value;
@@ -273,8 +303,10 @@ async function fetchDailyHistory(
 
       result.set(siteId, readings);
     }
+
+    console.log(`[usgs] DV: got history for ${result.size} site(s)`);
   } catch (err) {
-    console.error("USGS DV fetch error:", err);
+    console.error("[usgs] DV fetch error:", err instanceof Error ? err.message : err);
   }
 
   return result;
