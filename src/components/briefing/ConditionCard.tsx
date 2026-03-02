@@ -28,6 +28,10 @@ const STATUS_CONFIG: Record<
     label: 'N/A',
     className: 'border-stone-300 bg-stone-50 text-stone-500',
   },
+  unavailable: {
+    label: 'Unavailable',
+    className: 'border-stone-300 bg-stone-100 text-stone-500',
+  },
 };
 
 interface ConditionCardProps {

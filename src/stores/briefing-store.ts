@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ConditionStatus = 'good' | 'caution' | 'concern' | 'unknown';
+export type ConditionStatus = 'good' | 'caution' | 'concern' | 'unknown' | 'unavailable';
 
 export type ConditionCategory =
   | 'avalanche'

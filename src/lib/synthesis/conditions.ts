@@ -196,46 +196,114 @@ function fireSummary(data: FireData): string {
 }
 
 const NO_DATA = "No data available";
+const UNAVAILABLE_SUMMARY = "Data temporarily unavailable";
+const UNAVAILABLE_DETAIL =
+  "This data source did not respond. Try regenerating the briefing.";
 
-export function buildConditionCards(conditions: ConditionsBundle): ConditionCardData[] {
+const SOURCE_TO_CATEGORY: Record<string, ConditionCategory> = {
+  NWS: "weather",
+  SNOTEL: "snowpack",
+  Avalanche: "avalanche",
+  USGS: "stream_crossings",
+  Fires: "fires",
+  Daylight: "daylight",
+};
+
+function isUnavailable(
+  category: ConditionCategory,
+  unavailableSources: string[],
+): boolean {
+  return unavailableSources.some(
+    (s) => SOURCE_TO_CATEGORY[s] === category,
+  );
+}
+
+export function buildConditionCards(
+  conditions: ConditionsBundle,
+  unavailableSources: string[] = [],
+): ConditionCardData[] {
   const cards: ConditionCardData[] = [];
 
+  const weatherUnavailable =
+    !conditions.weather && isUnavailable("weather", unavailableSources);
   cards.push({
     category: "weather",
-    status: computeWeatherStatus(conditions.weather),
-    summary: conditions.weather ? weatherSummary(conditions.weather) : NO_DATA,
+    status: weatherUnavailable ? "unavailable" : computeWeatherStatus(conditions.weather),
+    summary: weatherUnavailable
+      ? UNAVAILABLE_SUMMARY
+      : conditions.weather
+        ? weatherSummary(conditions.weather)
+        : NO_DATA,
+    ...(weatherUnavailable && { detail: UNAVAILABLE_DETAIL }),
   });
 
+  const avyUnavailable =
+    !conditions.avalanche && isUnavailable("avalanche", unavailableSources);
   if (conditions.avalanche) {
     cards.push({
       category: "avalanche",
       status: computeAvalancheStatus(conditions.avalanche),
       summary: avalancheSummary(conditions.avalanche),
     });
+  } else if (avyUnavailable) {
+    cards.push({
+      category: "avalanche",
+      status: "unavailable",
+      summary: UNAVAILABLE_SUMMARY,
+      detail: UNAVAILABLE_DETAIL,
+    });
   }
 
+  const snowUnavailable =
+    !conditions.snowpack && isUnavailable("snowpack", unavailableSources);
   cards.push({
     category: "snowpack",
-    status: computeSnowpackStatus(conditions.snowpack),
-    summary: conditions.snowpack ? snowpackSummary(conditions.snowpack) : NO_DATA,
+    status: snowUnavailable ? "unavailable" : computeSnowpackStatus(conditions.snowpack),
+    summary: snowUnavailable
+      ? UNAVAILABLE_SUMMARY
+      : conditions.snowpack
+        ? snowpackSummary(conditions.snowpack)
+        : NO_DATA,
+    ...(snowUnavailable && { detail: UNAVAILABLE_DETAIL }),
   });
 
+  const streamUnavailable =
+    !conditions.streamFlow && isUnavailable("stream_crossings", unavailableSources);
   cards.push({
     category: "stream_crossings",
-    status: computeStreamStatus(conditions.streamFlow),
-    summary: conditions.streamFlow ? streamSummary(conditions.streamFlow) : NO_DATA,
+    status: streamUnavailable ? "unavailable" : computeStreamStatus(conditions.streamFlow),
+    summary: streamUnavailable
+      ? UNAVAILABLE_SUMMARY
+      : conditions.streamFlow
+        ? streamSummary(conditions.streamFlow)
+        : NO_DATA,
+    ...(streamUnavailable && { detail: UNAVAILABLE_DETAIL }),
   });
 
+  const firesUnavailable =
+    !conditions.fires && isUnavailable("fires", unavailableSources);
   cards.push({
     category: "fires",
-    status: computeFireStatus(conditions.fires),
-    summary: conditions.fires ? fireSummary(conditions.fires) : NO_DATA,
+    status: firesUnavailable ? "unavailable" : computeFireStatus(conditions.fires),
+    summary: firesUnavailable
+      ? UNAVAILABLE_SUMMARY
+      : conditions.fires
+        ? fireSummary(conditions.fires)
+        : NO_DATA,
+    ...(firesUnavailable && { detail: UNAVAILABLE_DETAIL }),
   });
 
+  const daylightUnavailable =
+    !conditions.daylight && isUnavailable("daylight", unavailableSources);
   cards.push({
     category: "daylight",
-    status: computeDaylightStatus(conditions.daylight),
-    summary: conditions.daylight ? daylightSummary(conditions.daylight) : NO_DATA,
+    status: daylightUnavailable ? "unavailable" : computeDaylightStatus(conditions.daylight),
+    summary: daylightUnavailable
+      ? UNAVAILABLE_SUMMARY
+      : conditions.daylight
+        ? daylightSummary(conditions.daylight)
+        : NO_DATA,
+    ...(daylightUnavailable && { detail: UNAVAILABLE_DETAIL }),
   });
 
   return cards;
@@ -246,6 +314,7 @@ export function buildConditionCards(conditions: ConditionsBundle): ConditionCard
 const STATUS_SEVERITY: Record<ConditionStatus, number> = {
   good: 0,
   unknown: 1,
+  unavailable: 1,
   caution: 2,
   concern: 3,
 };
