@@ -26,14 +26,21 @@ export async function signup(formData: FormData) {
   const password = formData.get("password") as string;
 
   const admin = createAdminClient();
-  const { error: createError } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
+  const { data: newUser, error: createError } =
+    await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
 
   if (createError) {
     redirect(`/signup?error=${encodeURIComponent(createError.message)}`);
+  }
+
+  if (newUser?.user) {
+    await admin
+      .from("profiles")
+      .upsert({ id: newUser.user.id }, { onConflict: "id" });
   }
 
   const supabase = await createClient();
