@@ -97,7 +97,7 @@ function mapFireFeature(feature: any): FirePerimeter {
   return {
     id: String(props.OBJECTID ?? props.IrwinID ?? feature.id ?? ""),
     name: props.IncidentName ?? props.poly_IncidentName ?? "Unknown Fire",
-    acres: props.GISAcres ?? props.DailyAcres ?? null,
+    acres: props.DailyAcres ?? props.GISAcres ?? null,
     containment: props.PercentContained ?? null,
     discoveredAt: props.FireDiscoveryDateTime ?? null,
     updatedAt: props.DateCurrent ?? props.ModifiedOnDateTime ?? null,
@@ -166,8 +166,18 @@ export async function fetchFires(options: FireOptions): Promise<FireData> {
   );
   const bbox = `${west},${south},${east},${north}`;
 
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
+
+  const where = [
+    `FireDiscoveryDateTime >= TIMESTAMP '${thirtyDaysAgo}'`,
+    `PercentContained < 100`,
+    `IncidentTypeCategory = 'WF'`,
+  ].join(" AND ");
+
   const params = new URLSearchParams({
-    where: "1=1",
+    where,
     outFields: "*",
     geometry: bbox,
     geometryType: "esriGeometryEnvelope",
@@ -185,7 +195,11 @@ export async function fetchFires(options: FireOptions): Promise<FireData> {
   }
 
   const geojson = await res.json();
-  const features: FirePerimeter[] = (geojson.features ?? []).map(mapFireFeature);
+
+  const prescribedPattern = /\b(RX|Pile|Prescribed)\b/i;
+  const features: FirePerimeter[] = (geojson.features ?? [])
+    .map(mapFireFeature)
+    .filter((f: FirePerimeter) => !prescribedPattern.test(f.name));
 
   const nearbyFires = features.filter((f) => {
     const [cLng, cLat] = centroidOfGeometry(f.geometry);
