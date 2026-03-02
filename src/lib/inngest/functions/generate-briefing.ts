@@ -4,6 +4,7 @@ import { fetchNWS } from "@/lib/data-sources/nws";
 import { fetchSnotel } from "@/lib/data-sources/snotel";
 import { fetchAvalanche } from "@/lib/data-sources/avalanche";
 import { fetchUsgs } from "@/lib/data-sources/usgs";
+import { fetchFires } from "@/lib/data-sources/fires";
 
 export const generateBriefing = inngest.createFunction(
   { id: "generate-briefing" },
@@ -26,6 +27,10 @@ export const generateBriefing = inngest.createFunction(
 
     const usgsData = await step.run("fetch-usgs", async () => {
       return fetchUsgs({ lat, lng });
+    });
+
+    const fireData = await step.run("fetch-fires", async () => {
+      return fetchFires({ lat, lng });
     });
 
     const daylightData = await step.run("compute-daylight", async () => {
@@ -57,11 +62,17 @@ export const generateBriefing = inngest.createFunction(
         ? `## Avalanche Conditions\n${avalancheData.discussion || "No discussion available."}\nDanger Level: ${avalancheData.dangerLabel} (${avalancheData.dangerLevel}/5)\nProblems: ${avalancheData.problems.map((p) => p.name).join(", ") || "None identified"}`
         : "## Avalanche Conditions\nNo avalanche forecast zone found for this location.";
 
+      const fireSection =
+        fireData.nearbyCount > 0
+          ? `## Active Fires\n${fireData.fires.map((f) => `- **${f.name}**: ${f.acres ? `${Math.round(f.acres).toLocaleString()} acres` : "size unknown"}${f.containment !== null ? `, ${f.containment}% contained` : ""}`).join("\n")}\n\n⚠️ ${fireData.nearbyCount} active fire${fireData.nearbyCount > 1 ? "s" : ""} within 50 miles — check local fire restrictions and air quality.`
+          : "## Active Fires\nNo active fires within 50 miles.";
+
       const sections = [
         `## Weather Forecast\n${weatherSummary}${alertSection}`,
         avySection,
         `## Snowpack\n${snotelData.nearest ? `Snow depth: ${snotelData.nearest.latest.snowDepthIn ?? "N/A"}" at ${snotelData.nearest.station.name}\nSWE: ${snotelData.nearest.latest.sweIn ?? "N/A"}"\nTrend: ${snotelData.nearest.trend}` : "No SNOTEL stations found within 50 km"}`,
         `## Stream Crossings\n${usgsData.nearest ? `${usgsData.nearest.station.name}: ${usgsData.nearest.current.dischargeCfs ?? "N/A"} cfs (${usgsData.nearest.trend})\nGage height: ${usgsData.nearest.current.gageHeightFt ?? "N/A"} ft${usgsData.nearest.percentOfMedian !== null ? `\n% of median: ${usgsData.nearest.percentOfMedian}%` : ""}` : "No USGS stream gauges found within 30 km"}`,
+        fireSection,
         `## Daylight\nSunrise: ${daylightData.sunrise} | Sunset: ${daylightData.sunset}\nTotal daylight: ${daylightData.daylightHours} hours`,
       ];
 
@@ -76,6 +87,7 @@ export const generateBriefing = inngest.createFunction(
         snowpack: snotelData,
         avalanche: avalancheData,
         streamFlow: usgsData,
+        fires: fireData,
         daylight: daylightData,
       };
 
