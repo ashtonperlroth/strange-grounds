@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { ArrowRightLeft, Download, Pencil, Trash2, Undo2 } from 'lucide-react';
+import { ArrowRightLeft, Download, Magnet, Pencil, Trash2, Undo2 } from 'lucide-react';
 import { lineString, length as turfLength, bbox as turfBbox, center as turfCenter } from '@turf/turf';
-import type { LineString } from 'geojson';
 import { trpc } from '@/lib/trpc/client';
 import { fetchElevationsForPositions } from '@/lib/routes/elevation';
 import { parseGPX, parseKML, type ParsedRoute } from '@/lib/routes/parsers/gpx';
 import type { Route, RouteWaypoint } from '@/lib/types/route';
 import { usePlanningStore } from '@/stores/planning-store';
-import { useRouteStore } from '@/stores/route-store';
+import { selectRouteGeometry, useRouteStore } from '@/stores/route-store';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 function formatEta(hours: number): string {
   if (!Number.isFinite(hours) || hours <= 0) return '—';
@@ -236,6 +236,9 @@ export function RouteToolbar() {
   const reorderWaypoints = useRouteStore((s) => s.reorderWaypoints);
   const setRoute = useRouteStore((s) => s.setRoute);
   const updateWaypoint = useRouteStore((s) => s.updateWaypoint);
+  const snapToTrailsEnabled = useRouteStore((s) => s.snapToTrailsEnabled);
+  const setSnapToTrailsEnabled = useRouteStore((s) => s.setSnapToTrailsEnabled);
+  const geometry = useRouteStore(selectRouteGeometry);
   const setRouteContext = usePlanningStore((s) => s.setRouteContext);
   const activeTripId = usePlanningStore((s) => s.activeTripId);
 
@@ -253,34 +256,6 @@ export function RouteToolbar() {
     () => [...waypoints].sort((a, b) => a.sortOrder - b.sortOrder),
     [waypoints],
   );
-  const routeCoordinates = useMemo(
-    () => sortedWaypoints.map((waypoint) => waypoint.location.coordinates),
-    [sortedWaypoints],
-  );
-  const geometry = useMemo<LineString | null>(
-    () =>
-      routeCoordinates.length >= 2
-        ? { type: 'LineString', coordinates: routeCoordinates }
-        : null,
-    [routeCoordinates],
-  );
-  const persistedGeometry = useMemo<LineString | null>(() => {
-    if (
-      currentRoute?.geometry &&
-      Array.isArray(currentRoute.geometry.coordinates) &&
-      currentRoute.geometry.coordinates.length >= 2
-    ) {
-      return {
-        type: 'LineString',
-        coordinates: currentRoute.geometry.coordinates.map((coord) => [
-          coord[0],
-          coord[1],
-        ]),
-      };
-    }
-    return geometry;
-  }, [currentRoute, geometry]);
-
   const stats = useMemo(() => {
     if (!geometry) {
       return {
@@ -323,21 +298,21 @@ export function RouteToolbar() {
   }, [geometry, sortedWaypoints]);
 
   useEffect(() => {
-    if (!persistedGeometry) {
+    if (!geometry) {
       setRouteContext(null);
       return;
     }
 
-    const line = lineString(persistedGeometry.coordinates);
+    const line = lineString(geometry.coordinates);
     const center = turfCenter(line).geometry.coordinates;
     const bbox = turfBbox(line) as [number, number, number, number];
 
     setRouteContext({
       center: { lng: center[0], lat: center[1] },
       bbox,
-      geometry: persistedGeometry,
+      geometry,
     });
-  }, [persistedGeometry, setRouteContext]);
+  }, [geometry, setRouteContext]);
 
   useEffect(() => {
     const missing = sortedWaypoints.filter((waypoint) => waypoint.elevationM == null);
@@ -368,11 +343,11 @@ export function RouteToolbar() {
   }, [sortedWaypoints, updateWaypoint]);
 
   useEffect(() => {
-    if (!persistedGeometry) return;
+    if (!geometry) return;
 
     const signature = createAutosaveSignature({
       tripId: activeTripId ?? null,
-      coordinates: persistedGeometry.coordinates,
+      coordinates: geometry.coordinates,
       waypoints: sortedWaypoints.map((waypoint) => ({
         sortOrder: waypoint.sortOrder,
         name: waypoint.name,
@@ -387,7 +362,7 @@ export function RouteToolbar() {
     const timer = setTimeout(async () => {
       const payloadGeometry = {
         type: 'LineString' as const,
-        coordinates: persistedGeometry.coordinates.map(
+        coordinates: geometry.coordinates.map(
           (coord) => [coord[0], coord[1]] as [number, number],
         ),
       };
@@ -452,7 +427,7 @@ export function RouteToolbar() {
     activeTripId,
     createRoute,
     currentRoute,
-    persistedGeometry,
+    geometry,
     setRoute,
     sortedWaypoints,
     updateRouteMutation,
@@ -596,6 +571,19 @@ export function RouteToolbar() {
         >
           <Pencil className="size-3.5" />
           {isDrawing ? 'Finish' : 'Draw Route'}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className={cn(
+            'h-8 border-white/30 bg-transparent px-2 text-xs text-white hover:bg-white/10',
+            snapToTrailsEnabled && 'border-amber-300/70 bg-amber-500/25 text-amber-100',
+          )}
+          onClick={() => setSnapToTrailsEnabled(!snapToTrailsEnabled)}
+          aria-pressed={snapToTrailsEnabled}
+        >
+          <Magnet className="size-3.5" />
+          Snap to Trails
         </Button>
         <Button
           size="sm"
