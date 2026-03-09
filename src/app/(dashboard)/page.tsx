@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/DashboardShell';
 import { BriefingPanel } from '@/components/briefing/BriefingPanel';
+import { PopularRoutesPanel } from '@/components/routes/PopularRoutesPanel';
 import { MapErrorBoundary, BriefingPanelErrorBoundary } from './error-boundaries';
 
 const Map = dynamic(
@@ -39,6 +40,7 @@ export default function DashboardPage() {
           <BriefingPanel />
         </BriefingPanelErrorBoundary>
       }
+      routesPanelSlot={<PopularRoutesPanel />}
       drawerSlot={<DrawerCharts />}
     />
   );

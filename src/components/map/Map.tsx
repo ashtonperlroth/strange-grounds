@@ -14,6 +14,7 @@ import { SlopeAngleShading } from './layers/SlopeAngleShading';
 import { TrailLayer } from './layers/TrailLayer';
 import { RouteLayer } from './layers/RouteLayer';
 import { RouteDrawing } from './interactions/RouteDrawing';
+import { PopularRoutePreview } from './layers/PopularRoutePreview';
 import { ROUTE_WAYPOINTS_CIRCLE_LAYER_ID } from './route-constants';
 import { RouteToolbar } from '@/components/routes/RouteToolbar';
 import { WaypointPopup } from '@/components/routes/WaypointPopup';
@@ -255,6 +256,7 @@ export function Map() {
       <RouteToolbar />
       <TrailLayer map={mapInstance} visible={activeOverlays.has('trails')} />
       <RouteLayer map={mapInstance} />
+      <PopularRoutePreview map={mapInstance} />
       <RouteDrawing map={mapInstance} />
       <WaypointPopup map={mapInstance} />
       <ElevationProfile />
