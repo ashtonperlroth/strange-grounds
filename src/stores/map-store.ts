@@ -39,7 +39,7 @@ const DEFAULT_VIEWPORT: Viewport = {
 
 export const useMapStore = create<MapState>((set) => ({
   viewport: DEFAULT_VIEWPORT,
-  activeOverlays: new Set<string>(),
+  activeOverlays: new Set<string>(['trails']),
   selectedPoint: null,
   flyToTarget: null,
 
