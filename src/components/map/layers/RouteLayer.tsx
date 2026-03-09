@@ -34,6 +34,7 @@ function buildLineFeature(
 }
 
 export function RouteLayer({ map }: RouteLayerProps) {
+  const currentRoute = useRouteStore((s) => s.currentRoute);
   const isDrawing = useRouteStore((s) => s.isDrawing);
   const selectedWaypointId = useRouteStore((s) => s.selectedWaypointId);
   const profileHoverPosition = useRouteStore((s) => s.profileHoverPosition);
@@ -46,8 +47,12 @@ export function RouteLayer({ map }: RouteLayerProps) {
   );
 
   const routeCoordinates = useMemo(
-    () => sortedWaypoints.map((wp) => wp.location.coordinates),
-    [sortedWaypoints],
+    () =>
+      currentRoute?.geometry?.coordinates &&
+      currentRoute.geometry.coordinates.length >= 2
+        ? currentRoute.geometry.coordinates.map((coord) => [coord[0], coord[1]])
+        : sortedWaypoints.map((wp) => wp.location.coordinates),
+    [currentRoute, sortedWaypoints],
   );
 
   const waypointFeatureCollection = useMemo<FeatureCollection<Point>>(() => {

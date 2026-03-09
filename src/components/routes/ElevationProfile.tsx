@@ -11,32 +11,14 @@ import {
   YAxis,
 } from 'recharts';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { along, length as turfLength, lineString } from '@turf/turf';
 import type { Position } from 'geojson';
 import { useRouteStore } from '@/stores/route-store';
-import { fetchElevationsForPositions } from '@/lib/routes/elevation';
+import { computeElevationProfile } from '@/lib/routes/elevation';
 
 interface ProfilePoint {
   distanceMi: number;
   elevationFt: number;
   position: Position;
-}
-
-function buildSamplePositions(routeCoordinates: Position[]): Position[] {
-  if (routeCoordinates.length < 2) return [];
-  const line = lineString(routeCoordinates);
-  const totalDistanceKm = turfLength(line, { units: 'kilometers' });
-  const sampleStepKm = 0.1;
-  const sampleCount = Math.max(2, Math.ceil(totalDistanceKm / sampleStepKm));
-  const positions: Position[] = [];
-
-  for (let idx = 0; idx <= sampleCount; idx += 1) {
-    const distanceKm = (idx / sampleCount) * totalDistanceKm;
-    const point = along(line, distanceKm, { units: 'kilometers' });
-    positions.push(point.geometry.coordinates as Position);
-  }
-
-  return positions;
 }
 
 export function ElevationProfile() {
@@ -51,7 +33,11 @@ export function ElevationProfile() {
     () =>
       [...waypoints]
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((waypoint) => waypoint.location.coordinates as Position),
+        .map((waypoint) => [
+          waypoint.location.coordinates[0],
+          waypoint.location.coordinates[1],
+          waypoint.elevationM ?? undefined,
+        ] as [number, number, number?]),
     [waypoints],
   );
 
@@ -68,16 +54,15 @@ export function ElevationProfile() {
       setLoading(true);
       setError(null);
       try {
-        const positions = buildSamplePositions(routeCoordinates);
-        const elevationsM = await fetchElevationsForPositions(positions);
+        const computedProfile = await computeElevationProfile(routeCoordinates);
         if (cancelled) return;
-        const line = lineString(routeCoordinates);
-        const totalKm = turfLength(line, { units: 'kilometers' });
-        const nextProfile: ProfilePoint[] = positions.map((position, index) => ({
-          position,
-          distanceMi: ((index / Math.max(positions.length - 1, 1)) * totalKm) * 0.621371,
-          elevationFt: Math.round((elevationsM[index] ?? 0) * 3.28084),
-        }));
+        const nextProfile: ProfilePoint[] = computedProfile.points.map(
+          (point, index) => ({
+            position: [routeCoordinates[index][0], routeCoordinates[index][1]],
+            distanceMi: point.distance * 0.000621371,
+            elevationFt: Math.round(point.elevation * 3.28084),
+          }),
+        );
         setProfile(nextProfile);
       } catch (e) {
         if (!cancelled) {
