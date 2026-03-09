@@ -11,6 +11,7 @@ import { MapControls } from './MapControls';
 import { AvalancheZones } from './layers/AvalancheZones';
 import { FirePerimeters } from './layers/FirePerimeters';
 import { SlopeAngleShading } from './layers/SlopeAngleShading';
+import { TrailLayer } from './layers/TrailLayer';
 import { RouteLayer } from './layers/RouteLayer';
 import { RouteDrawing } from './interactions/RouteDrawing';
 import { ROUTE_WAYPOINTS_CIRCLE_LAYER_ID } from './route-constants';
@@ -252,6 +253,7 @@ export function Map() {
 
       <MapControls onStyleChange={handleStyleChange} />
       <RouteToolbar />
+      <TrailLayer map={mapInstance} visible={activeOverlays.has('trails')} />
       <RouteLayer map={mapInstance} />
       <RouteDrawing map={mapInstance} />
       <WaypointPopup map={mapInstance} />

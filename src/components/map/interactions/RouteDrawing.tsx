@@ -8,6 +8,7 @@ import {
   ROUTE_GHOST_SOURCE_ID,
   ROUTE_WAYPOINTS_CIRCLE_LAYER_ID,
 } from '@/components/map/route-constants';
+import { findNearestTrailSnap } from '@/lib/routes/snap-to-trail';
 
 interface RouteDrawingProps {
   map: maplibregl.Map | null;
@@ -105,6 +106,15 @@ export function RouteDrawing({ map }: RouteDrawingProps) {
 
     const onMove = (e: maplibregl.MapMouseEvent) => {
       const last = sortedWaypoints[sortedWaypoints.length - 1];
+      const state = useRouteStore.getState();
+      const rawPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+      const snapResult =
+        state.snapToTrailsEnabled && state.trailNetwork.features.length > 0
+          ? findNearestTrailSnap(rawPoint, state.trailNetwork, 50)
+          : null;
+      const previewPoint = snapResult?.coordinates ?? rawPoint;
+      map.getCanvas().style.cursor = snapResult ? 'cell' : 'crosshair';
+
       source.setData({
         type: 'FeatureCollection',
         features: [
@@ -112,7 +122,7 @@ export function RouteDrawing({ map }: RouteDrawingProps) {
             type: 'Feature',
             geometry: {
               type: 'LineString',
-              coordinates: [last.location.coordinates, [e.lngLat.lng, e.lngLat.lat]],
+              coordinates: [last.location.coordinates, previewPoint],
             },
             properties: {},
           },
@@ -132,7 +142,22 @@ export function RouteDrawing({ map }: RouteDrawingProps) {
 
     const onClick = (e: maplibregl.MapMouseEvent) => {
       if (!useRouteStore.getState().isDrawing) return;
-      addWaypoint({ coordinates: [e.lngLat.lng, e.lngLat.lat] });
+      const state = useRouteStore.getState();
+      const rawPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+      const snapResult =
+        state.snapToTrailsEnabled && state.trailNetwork.features.length > 0
+          ? findNearestTrailSnap(rawPoint, state.trailNetwork, 50)
+          : null;
+
+      addWaypoint({
+        coordinates: snapResult?.coordinates ?? rawPoint,
+        snappedTrail: snapResult
+          ? {
+              trailId: snapResult.trailId,
+              trail: snapResult.trail,
+            }
+          : undefined,
+      });
     };
 
     map.on('click', onClick);

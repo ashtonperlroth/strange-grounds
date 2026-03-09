@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type maplibregl from 'maplibre-gl';
 import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
-import { useRouteStore } from '@/stores/route-store';
+import { selectRouteGeometry, useRouteStore } from '@/stores/route-store';
 import {
   ROUTE_CASING_LAYER_ID,
   ROUTE_LINE_LAYER_ID,
@@ -12,6 +12,7 @@ import {
   ROUTE_SOURCE_ID,
   ROUTE_WAYPOINTS_CIRCLE_LAYER_ID,
   ROUTE_WAYPOINTS_LABEL_LAYER_ID,
+  ROUTE_WAYPOINTS_SNAP_LAYER_ID,
   ROUTE_WAYPOINTS_SOURCE_ID,
 } from '@/components/map/route-constants';
 
@@ -38,16 +39,13 @@ export function RouteLayer({ map }: RouteLayerProps) {
   const selectedWaypointId = useRouteStore((s) => s.selectedWaypointId);
   const profileHoverPosition = useRouteStore((s) => s.profileHoverPosition);
   const waypoints = useRouteStore((s) => s.waypoints);
+  const routeGeometry = useRouteStore(selectRouteGeometry);
+  const snappedWaypoints = useRouteStore((s) => s.snappedWaypoints);
   const addedRef = useRef(false);
 
   const sortedWaypoints = useMemo(
     () => [...waypoints].sort((a, b) => a.sortOrder - b.sortOrder),
     [waypoints],
-  );
-
-  const routeCoordinates = useMemo(
-    () => sortedWaypoints.map((wp) => wp.location.coordinates),
-    [sortedWaypoints],
   );
 
   const waypointFeatureCollection = useMemo<FeatureCollection<Point>>(() => {
@@ -64,12 +62,13 @@ export function RouteLayer({ map }: RouteLayerProps) {
           label: `${index + 1}`,
           role,
           selected: wp.id === selectedWaypointId,
+          snapped: Boolean(snappedWaypoints[wp.id]),
         },
       };
     });
 
     return { type: 'FeatureCollection', features };
-  }, [selectedWaypointId, sortedWaypoints]);
+  }, [selectedWaypointId, snappedWaypoints, sortedWaypoints]);
 
   const ensureLayers = useCallback(() => {
     if (!map || addedRef.current) return;
@@ -171,6 +170,26 @@ export function RouteLayer({ map }: RouteLayerProps) {
       });
     }
 
+    if (!map.getLayer(ROUTE_WAYPOINTS_SNAP_LAYER_ID)) {
+      map.addLayer({
+        id: ROUTE_WAYPOINTS_SNAP_LAYER_ID,
+        type: 'symbol',
+        source: ROUTE_WAYPOINTS_SOURCE_ID,
+        filter: ['==', ['get', 'snapped'], true],
+        layout: {
+          'text-field': '🧲',
+          'text-size': 11,
+          'text-offset': [0, 1.4],
+          'text-allow-overlap': true,
+        },
+        paint: {
+          'text-color': '#f59e0b',
+          'text-halo-color': '#111827',
+          'text-halo-width': 1,
+        },
+      });
+    }
+
     if (!map.getSource(ROUTE_PROFILE_HOVER_SOURCE_ID)) {
       map.addSource(ROUTE_PROFILE_HOVER_SOURCE_ID, {
         type: 'geojson',
@@ -225,7 +244,7 @@ export function RouteLayer({ map }: RouteLayerProps) {
       | undefined;
     if (!source) return;
 
-    const line = buildLineFeature(routeCoordinates);
+    const line = routeGeometry ? buildLineFeature(routeGeometry.coordinates) : null;
     source.setData({
       type: 'FeatureCollection',
       features: line ? [line] : [],
@@ -238,7 +257,7 @@ export function RouteLayer({ map }: RouteLayerProps) {
         isDrawing ? [2, 2] : [1, 0.0001],
       );
     }
-  }, [isDrawing, map, routeCoordinates]);
+  }, [isDrawing, map, routeGeometry]);
 
   useEffect(() => {
     if (!map || !addedRef.current) return;

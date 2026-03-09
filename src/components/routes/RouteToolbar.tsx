@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import { ArrowRightLeft, Pencil, Trash2, Undo2 } from 'lucide-react';
+import { ArrowRightLeft, Magnet, Pencil, Trash2, Undo2 } from 'lucide-react';
 import { lineString, length as turfLength, bbox as turfBbox, center as turfCenter } from '@turf/turf';
-import type { LineString } from 'geojson';
 import { trpc } from '@/lib/trpc/client';
 import { fetchElevationsForPositions } from '@/lib/routes/elevation';
 import { usePlanningStore } from '@/stores/planning-store';
-import { useRouteStore } from '@/stores/route-store';
+import { selectRouteGeometry, useRouteStore } from '@/stores/route-store';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 function formatEta(hours: number): string {
   if (!Number.isFinite(hours) || hours <= 0) return '—';
@@ -31,6 +31,9 @@ export function RouteToolbar() {
   const reorderWaypoints = useRouteStore((s) => s.reorderWaypoints);
   const setRoute = useRouteStore((s) => s.setRoute);
   const updateWaypoint = useRouteStore((s) => s.updateWaypoint);
+  const snapToTrailsEnabled = useRouteStore((s) => s.snapToTrailsEnabled);
+  const setSnapToTrailsEnabled = useRouteStore((s) => s.setSnapToTrailsEnabled);
+  const geometry = useRouteStore(selectRouteGeometry);
   const setRouteContext = usePlanningStore((s) => s.setRouteContext);
   const activeTripId = usePlanningStore((s) => s.activeTripId);
 
@@ -43,18 +46,6 @@ export function RouteToolbar() {
     () => [...waypoints].sort((a, b) => a.sortOrder - b.sortOrder),
     [waypoints],
   );
-  const routeCoordinates = useMemo(
-    () => sortedWaypoints.map((waypoint) => waypoint.location.coordinates),
-    [sortedWaypoints],
-  );
-  const geometry = useMemo<LineString | null>(
-    () =>
-      routeCoordinates.length >= 2
-        ? { type: 'LineString', coordinates: routeCoordinates }
-        : null,
-    [routeCoordinates],
-  );
-
   const stats = useMemo(() => {
     if (!geometry) {
       return {
@@ -266,6 +257,19 @@ export function RouteToolbar() {
         >
           <Pencil className="size-3.5" />
           {isDrawing ? 'Finish' : 'Draw Route'}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className={cn(
+            'h-8 border-white/30 bg-transparent px-2 text-xs text-white hover:bg-white/10',
+            snapToTrailsEnabled && 'border-amber-300/70 bg-amber-500/25 text-amber-100',
+          )}
+          onClick={() => setSnapToTrailsEnabled(!snapToTrailsEnabled)}
+          aria-pressed={snapToTrailsEnabled}
+        >
+          <Magnet className="size-3.5" />
+          Snap to Trails
         </Button>
         <Button
           size="sm"
