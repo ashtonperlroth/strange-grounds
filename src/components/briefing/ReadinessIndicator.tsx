@@ -62,6 +62,7 @@ export function ReadinessIndicator({
 
   const { label, Icon, badgeClass, iconClass } = CONFIG[readiness];
   const alertCount = warningCount + criticalCount;
+  const srDescription = `Overall readiness: ${label.toLowerCase()}${alertCount > 0 ? `, ${criticalCount} critical, ${warningCount} warnings` : ''}`;
 
   return (
     <div
@@ -71,12 +72,14 @@ export function ReadinessIndicator({
           ? 'translate-y-0 opacity-100'
           : '-translate-y-2 opacity-0',
       )}
+      role="status"
+      aria-label={srDescription}
     >
       <Badge
         variant="outline"
         className={cn('gap-1.5 px-3 py-1 text-sm font-semibold', badgeClass)}
       >
-        <Icon className={cn('size-4', iconClass)} />
+        <Icon className={cn('size-4', iconClass)} aria-hidden="true" />
         {label}
       </Badge>
       {alertCount > 0 && (

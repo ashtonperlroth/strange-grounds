@@ -123,7 +123,7 @@ export function LocationSearch({ variant = 'compact' }: LocationSearchProps) {
 
   const containerClass = isHero
     ? 'relative w-full'
-    : 'relative min-w-[400px]';
+    : 'relative w-full min-w-0 md:min-w-[400px]';
 
   const inputWrapperClass = isHero
     ? 'flex h-12 items-center gap-3 rounded-xl border border-stone-200 bg-white px-4 shadow-lg shadow-stone-900/5 transition-colors focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-200'
@@ -147,11 +147,11 @@ export function LocationSearch({ variant = 'compact' }: LocationSearchProps) {
       }`;
 
   return (
-    <div ref={containerRef} className={containerClass}>
+    <div ref={containerRef} className={containerClass} role="combobox" aria-expanded={showDropdown} aria-haspopup="listbox" aria-controls="location-results">
       <div className={inputWrapperClass}>
         {location && !focused ? (
           <>
-            <MapPin className={`${iconSize} shrink-0 text-emerald-600`} />
+            <MapPin className={`${iconSize} shrink-0 text-emerald-600`} aria-hidden="true" />
             <button
               type="button"
               className={`flex-1 truncate text-left ${textSize} text-stone-700`}
@@ -160,17 +160,22 @@ export function LocationSearch({ variant = 'compact' }: LocationSearchProps) {
                 setQuery('');
                 setTimeout(() => inputRef.current?.focus(), 0);
               }}
+              aria-label={`Selected location: ${location.name ?? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`}. Click to change.`}
             >
               {location.name ?? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`}
             </button>
-            <X
-              className={`${clearIconSize} shrink-0 cursor-pointer text-stone-400 hover:text-stone-600`}
+            <button
+              type="button"
               onClick={handleClear}
-            />
+              className="shrink-0 rounded-sm p-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+              aria-label="Clear location"
+            >
+              <X className={`${clearIconSize} text-stone-400 hover:text-stone-600`} />
+            </button>
           </>
         ) : (
           <>
-            <Search className={`${iconSize} shrink-0 text-stone-400`} />
+            <Search className={`${iconSize} shrink-0 text-stone-400`} aria-hidden="true" />
             <input
               ref={inputRef}
               type="text"
@@ -180,28 +185,35 @@ export function LocationSearch({ variant = 'compact' }: LocationSearchProps) {
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
               className={`flex-1 bg-transparent ${textSize} text-stone-700 placeholder:text-stone-500 focus:outline-none`}
+              aria-label="Search for a location"
+              aria-autocomplete="list"
+              aria-controls="location-results"
+              aria-activedescendant={highlightIndex >= 0 ? `location-result-${highlightIndex}` : undefined}
             />
-            {loading && <Loader2 className={`${iconSize} shrink-0 animate-spin text-stone-400`} />}
+            {loading && <Loader2 className={`${iconSize} shrink-0 animate-spin text-stone-400`} aria-label="Searching" />}
           </>
         )}
       </div>
 
       {showDropdown && (
-        <div className={dropdownClass}>
+        <div className={dropdownClass} id="location-results" role="listbox" aria-label="Location search results">
           {loading && results.length === 0 && (
-            <div className={`px-4 py-3 text-center ${textSize} text-stone-400`}>
+            <div className={`px-4 py-3 text-center ${textSize} text-stone-400`} role="status">
               Searching…
             </div>
           )}
           {!loading && results.length === 0 && (
-            <div className={`px-4 py-3 text-center ${textSize} text-stone-400`}>
+            <div className={`px-4 py-3 text-center ${textSize} text-stone-400`} role="status">
               No locations found.
             </div>
           )}
           {results.map((result, i) => (
             <button
               key={result.place_id}
+              id={`location-result-${i}`}
               type="button"
+              role="option"
+              aria-selected={i === highlightIndex}
               className={dropdownItemClass(i === highlightIndex)}
               onMouseEnter={() => setHighlightIndex(i)}
               onMouseDown={(e) => {
@@ -209,7 +221,7 @@ export function LocationSearch({ variant = 'compact' }: LocationSearchProps) {
                 handleSelect(result);
               }}
             >
-              <MapPin className={`${iconSize} shrink-0 text-stone-400`} />
+              <MapPin className={`${iconSize} shrink-0 text-stone-400`} aria-hidden="true" />
               <span className="truncate">{result.display_name}</span>
             </button>
           ))}
