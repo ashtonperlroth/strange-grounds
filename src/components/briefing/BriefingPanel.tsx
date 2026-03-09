@@ -47,7 +47,7 @@ import { type ReactNode } from 'react';
 import {
   ErrorBoundary,
   ConditionCardErrorFallback,
-} from '@/components/ErrorBoundary';
+} from '@/components/layout/ErrorBoundary';
 
 interface StubCard {
   category: string;
@@ -94,15 +94,15 @@ const STUB_CARDS: StubCard[] = [
 
 function BriefingEmptyState() {
   return (
-    <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+    <div className="flex h-full flex-col items-center justify-center px-6 text-center" role="status">
       <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-stone-100">
-        <Compass className="size-8 text-stone-400" />
+        <Compass className="size-8 text-stone-400" aria-hidden="true" />
       </div>
       <h3 className="mb-2 text-base font-semibold text-stone-800">
         No Briefing Loaded
       </h3>
       <p className="mb-6 max-w-[260px] text-sm leading-relaxed text-stone-500">
-        Select a location on the map and generate a conditions briefing to get started.
+        Select your trip details and generate a briefing
       </p>
       <div className="w-full max-w-[280px] space-y-3">
         {['Weather', 'Avalanche', 'Snowpack', 'Stream Flow'].map((section) => (
@@ -308,7 +308,7 @@ function PanelFooter({ onRegenerate, isRegenerating, onSave, onShare }: PanelFoo
       <Button
         variant="outline"
         size="sm"
-        className="flex-1 border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-800"
+        className="flex-1 border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-800 focus-visible:ring-emerald-500"
         onClick={onRegenerate}
         disabled={isRegenerating}
       >
@@ -322,7 +322,7 @@ function PanelFooter({ onRegenerate, isRegenerating, onSave, onShare }: PanelFoo
       <Button
         variant="outline"
         size="sm"
-        className="flex-1 border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-800"
+        className="flex-1 border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-800 focus-visible:ring-emerald-500"
         onClick={onSave}
       >
         <Bookmark className="size-3.5" />
@@ -331,7 +331,7 @@ function PanelFooter({ onRegenerate, isRegenerating, onSave, onShare }: PanelFoo
       <Button
         variant="outline"
         size="sm"
-        className="flex-1 border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-800"
+        className="flex-1 border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-800 focus-visible:ring-emerald-500"
         onClick={onShare}
       >
         <Share2 className="size-3.5" />

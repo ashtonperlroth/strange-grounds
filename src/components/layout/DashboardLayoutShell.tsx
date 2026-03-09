@@ -13,16 +13,16 @@ export function DashboardLayoutShell({ children }: { children: ReactNode }) {
     <div className="flex h-screen flex-col bg-[#FAF7F2] text-stone-800">
       <div
         className={`shrink-0 overflow-hidden transition-[max-height,opacity] duration-500 ease-out ${
-          hasLocation ? 'max-h-12 opacity-100' : 'max-h-0 opacity-0'
+          hasLocation ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
         <TopBar />
       </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      <main className="relative flex min-h-0 flex-1 flex-col">
         {children}
         <HeroOverlay />
-      </div>
+      </main>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { Loader2 } from 'lucide-react';
 import { useMapStore } from '@/stores/map-store';
 import { usePlanningStore } from '@/stores/planning-store';
 import { MapControls } from './MapControls';
@@ -63,7 +64,9 @@ export function Map() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { viewport, setViewport, flyToTarget, clearFlyTo } = useMapStore();
   const activeOverlays = useMapStore((s) => s.activeOverlays);
   const location = usePlanningStore((s) => s.location);
@@ -137,16 +140,21 @@ export function Map() {
         'sky-horizon-blend': 0.5,
         'atmosphere-blend': 0.8,
       });
+
+      setIsLoading(false);
     });
 
     map.on('moveend', () => {
-      const center = map.getCenter();
-      setViewport({
-        center: [center.lng, center.lat],
-        zoom: map.getZoom(),
-        pitch: map.getPitch(),
-        bearing: map.getBearing(),
-      });
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        const center = map.getCenter();
+        setViewport({
+          center: [center.lng, center.lat],
+          zoom: map.getZoom(),
+          pitch: map.getPitch(),
+          bearing: map.getBearing(),
+        });
+      }, 150);
     });
 
     map.on('click', (e) => {
@@ -171,6 +179,7 @@ export function Map() {
     ro.observe(containerRef.current);
 
     return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       ro.disconnect();
       map.remove();
       mapRef.current = null;
@@ -214,7 +223,17 @@ export function Map() {
 
   return (
     <div className="relative h-full w-full">
-      <div ref={containerRef} className="h-full w-full" />
+      <div ref={containerRef} className="h-full w-full" role="application" aria-label="Interactive map" />
+
+      {isLoading && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-stone-100/80 backdrop-blur-sm">
+          <div className="flex items-center gap-2 rounded-lg bg-white/90 px-4 py-2 shadow-sm">
+            <Loader2 className="size-4 animate-spin text-emerald-600" />
+            <span className="text-sm text-stone-600">Loading map&hellip;</span>
+          </div>
+        </div>
+      )}
+
       <MapControls onStyleChange={handleStyleChange} />
       <AvalancheZones
         map={mapInstance}

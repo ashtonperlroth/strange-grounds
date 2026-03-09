@@ -10,27 +10,32 @@ import { type ConditionStatus } from '@/stores/briefing-store';
 
 const STATUS_CONFIG: Record<
   ConditionStatus,
-  { label: string; className: string }
+  { label: string; className: string; srText: string }
 > = {
   good: {
     label: 'Good',
     className: 'border-emerald-600/20 bg-emerald-50 text-emerald-700',
+    srText: 'Status: good conditions',
   },
   caution: {
     label: 'Caution',
     className: 'border-yellow-600/20 bg-yellow-50 text-yellow-700',
+    srText: 'Status: use caution',
   },
   concern: {
     label: 'Concern',
     className: 'border-red-600/20 bg-red-50 text-red-700',
+    srText: 'Status: significant concern',
   },
   unknown: {
     label: 'N/A',
     className: 'border-stone-300 bg-stone-50 text-stone-500',
+    srText: 'Status: not available',
   },
   unavailable: {
     label: 'Unavailable',
     className: 'border-stone-300 bg-stone-100 text-stone-500',
+    srText: 'Status: data unavailable',
   },
 };
 
@@ -56,11 +61,11 @@ export function ConditionCard({
   return (
     <AccordionItem
       value={category}
-      className="rounded-lg border border-stone-200 bg-white px-4 last:border-b"
+      className="rounded-lg border border-stone-200 bg-white px-4 transition-shadow hover:shadow-sm last:border-b"
     >
       <AccordionTrigger className="gap-3 hover:no-underline [&>svg]:text-stone-400">
         <div className="flex flex-1 items-center gap-3 overflow-hidden">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-stone-50 text-base">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-stone-50 text-base" aria-hidden="true">
             {icon}
           </span>
           <div className="flex flex-1 flex-col items-start gap-1 overflow-hidden">
@@ -74,6 +79,7 @@ export function ConditionCard({
               >
                 {statusConfig.label}
               </Badge>
+              <span className="sr-only">{statusConfig.srText}</span>
             </div>
             <p className="w-full truncate text-left text-xs text-stone-500">
               {summary}

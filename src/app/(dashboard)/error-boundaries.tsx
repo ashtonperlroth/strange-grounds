@@ -5,7 +5,7 @@ import {
   ErrorBoundary,
   MapErrorFallback,
   BriefingPanelErrorFallback,
-} from '@/components/ErrorBoundary';
+} from '@/components/layout/ErrorBoundary';
 
 export function MapErrorBoundary({ children }: { children: ReactNode }) {
   return (
