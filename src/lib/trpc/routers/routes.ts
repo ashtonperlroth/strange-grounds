@@ -196,6 +196,7 @@ export const routesRouter = router({
     .input(
       z.object({
         id: z.string().uuid(),
+        tripId: z.string().uuid().nullish(),
         name: z.string().nullish(),
         description: z.string().nullish(),
         geometry: z
@@ -237,6 +238,7 @@ export const routesRouter = router({
         updated_at: new Date().toISOString(),
       };
       if (input.name !== undefined) updateData.name = input.name;
+      if (input.tripId !== undefined) updateData.trip_id = input.tripId;
       if (input.description !== undefined)
         updateData.description = input.description;
       if (input.activity !== undefined) updateData.activity = input.activity;

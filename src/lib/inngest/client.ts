@@ -6,6 +6,11 @@ type BriefingRequestedEvent = {
     briefingId: string;
     lat: number;
     lng: number;
+    routeGeometry?: {
+      type: "LineString";
+      coordinates: [number, number][];
+    };
+    routeBbox?: [number, number, number, number];
     startDate: string;
     endDate: string;
     activity: string;

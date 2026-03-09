@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { addDays, startOfDay } from 'date-fns';
+import type { LineString } from 'geojson';
 
 export interface PlanningLocation {
   lat: number;
@@ -10,6 +11,15 @@ export interface PlanningLocation {
 export interface DateRange {
   start: Date;
   end: Date;
+}
+
+export interface PlanningRouteContext {
+  center: {
+    lat: number;
+    lng: number;
+  };
+  bbox: [number, number, number, number];
+  geometry: LineString;
 }
 
 export const ACTIVITIES = [
@@ -24,6 +34,7 @@ export type Activity = (typeof ACTIVITIES)[number];
 
 interface PlanningState {
   location: PlanningLocation | null;
+  routeContext: PlanningRouteContext | null;
   dateRange: DateRange;
   activity: Activity;
   activeTripId: string | null;
@@ -32,6 +43,7 @@ interface PlanningState {
   generationError: string | null;
 
   setLocation: (location: PlanningLocation | null) => void;
+  setRouteContext: (routeContext: PlanningRouteContext | null) => void;
   setDateRange: (dateRange: DateRange) => void;
   setActivity: (activity: Activity) => void;
   isReadyToGenerate: () => boolean;
@@ -45,6 +57,7 @@ const today = startOfDay(new Date());
 
 export const usePlanningStore = create<PlanningState>((set, get) => ({
   location: null,
+  routeContext: null,
   dateRange: { start: today, end: addDays(today, 2) },
   activity: 'Backpacking',
   activeTripId: null,
@@ -53,11 +66,12 @@ export const usePlanningStore = create<PlanningState>((set, get) => ({
   generationError: null,
 
   setLocation: (location) => set({ location }),
+  setRouteContext: (routeContext) => set({ routeContext }),
   setDateRange: (dateRange) => set({ dateRange }),
   setActivity: (activity) => set({ activity }),
   isReadyToGenerate: () => {
-    const { location, dateRange, activity } = get();
-    return location !== null && dateRange !== null && activity.length > 0;
+    const { location, routeContext, dateRange, activity } = get();
+    return (location !== null || routeContext !== null) && dateRange !== null && activity.length > 0;
   },
   setActiveTripId: (id) => set({ activeTripId: id }),
   setActiveBriefingId: (id) => set({ activeBriefingId: id }),

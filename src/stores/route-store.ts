@@ -2,14 +2,23 @@ import { create } from "zustand";
 import type { Route, RouteWaypoint } from "@/lib/types/route";
 import type { LineString, Point, Position } from "geojson";
 
+interface RoutePlanningContext {
+  center: { lat: number; lng: number };
+  bbox: [number, number, number, number];
+}
+
 interface RouteState {
   currentRoute: Route | null;
   waypoints: RouteWaypoint[];
   isDrawing: boolean;
+  selectedWaypointId: string | null;
+  profileHoverPosition: Position | null;
 
   setRoute: (route: Route, waypoints?: RouteWaypoint[]) => void;
   clearRoute: () => void;
   setIsDrawing: (drawing: boolean) => void;
+  setSelectedWaypointId: (id: string | null) => void;
+  setProfileHoverPosition: (position: Position | null) => void;
 
   addWaypoint: (point: {
     coordinates: Position;
@@ -21,7 +30,9 @@ interface RouteState {
   moveWaypoint: (id: string, newLocation: Position) => void;
   updateWaypoint: (
     id: string,
-    updates: Partial<Pick<RouteWaypoint, "name" | "waypointType" | "notes">>,
+    updates: Partial<
+      Pick<RouteWaypoint, "name" | "waypointType" | "notes" | "elevationM">
+    >,
   ) => void;
   reorderWaypoints: (waypoints: RouteWaypoint[]) => void;
 }
@@ -46,6 +57,8 @@ export const useRouteStore = create<RouteState>((set) => ({
   currentRoute: null,
   waypoints: [],
   isDrawing: false,
+  selectedWaypointId: null,
+  profileHoverPosition: null,
 
   setRoute: (route, waypoints) =>
     set({
@@ -58,9 +71,13 @@ export const useRouteStore = create<RouteState>((set) => ({
       currentRoute: null,
       waypoints: [],
       isDrawing: false,
+      selectedWaypointId: null,
+      profileHoverPosition: null,
     }),
 
   setIsDrawing: (drawing) => set({ isDrawing: drawing }),
+  setSelectedWaypointId: (id) => set({ selectedWaypointId: id }),
+  setProfileHoverPosition: (position) => set({ profileHoverPosition: position }),
 
   addWaypoint: (point) =>
     set((state) => {
@@ -96,6 +113,8 @@ export const useRouteStore = create<RouteState>((set) => ({
       const geometry = buildRouteGeometry(updatedWaypoints);
       return {
         waypoints: updatedWaypoints,
+        selectedWaypointId:
+          state.selectedWaypointId === id ? null : state.selectedWaypointId,
         currentRoute: state.currentRoute
           ? { ...state.currentRoute, geometry }
           : null,
@@ -142,4 +161,33 @@ export const useRouteStore = create<RouteState>((set) => ({
 export function selectRouteGeometry(state: RouteState): LineString | null {
   if (state.waypoints.length < 2) return null;
   return buildRouteGeometry(state.waypoints);
+}
+
+export function selectRoutePlanningContext(
+  state: RouteState,
+): RoutePlanningContext | null {
+  const geometry = selectRouteGeometry(state);
+  if (!geometry || geometry.coordinates.length === 0) return null;
+
+  let minLng = Number.POSITIVE_INFINITY;
+  let minLat = Number.POSITIVE_INFINITY;
+  let maxLng = Number.NEGATIVE_INFINITY;
+  let maxLat = Number.NEGATIVE_INFINITY;
+  let sumLng = 0;
+  let sumLat = 0;
+
+  for (const [lng, lat] of geometry.coordinates) {
+    minLng = Math.min(minLng, lng);
+    minLat = Math.min(minLat, lat);
+    maxLng = Math.max(maxLng, lng);
+    maxLat = Math.max(maxLat, lat);
+    sumLng += lng;
+    sumLat += lat;
+  }
+
+  const count = geometry.coordinates.length;
+  return {
+    center: { lng: sumLng / count, lat: sumLat / count },
+    bbox: [minLng, minLat, maxLng, maxLat],
+  };
 }

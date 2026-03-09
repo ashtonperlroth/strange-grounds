@@ -6,10 +6,17 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { Loader2 } from 'lucide-react';
 import { useMapStore } from '@/stores/map-store';
 import { usePlanningStore } from '@/stores/planning-store';
+import { useRouteStore } from '@/stores/route-store';
 import { MapControls } from './MapControls';
 import { AvalancheZones } from './layers/AvalancheZones';
 import { FirePerimeters } from './layers/FirePerimeters';
 import { SlopeAngleShading } from './layers/SlopeAngleShading';
+import { RouteLayer } from './layers/RouteLayer';
+import { RouteDrawing } from './interactions/RouteDrawing';
+import { ROUTE_WAYPOINTS_CIRCLE_LAYER_ID } from './route-constants';
+import { RouteToolbar } from '@/components/routes/RouteToolbar';
+import { WaypointPopup } from '@/components/routes/WaypointPopup';
+import { ElevationProfile } from '@/components/routes/ElevationProfile';
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY ?? '';
 
@@ -158,6 +165,15 @@ export function Map() {
     });
 
     map.on('click', (e) => {
+      if (useRouteStore.getState().isDrawing) return;
+
+      const clickedWaypoint = map.getLayer(ROUTE_WAYPOINTS_CIRCLE_LAYER_ID)
+        ? map.queryRenderedFeatures(e.point, {
+            layers: [ROUTE_WAYPOINTS_CIRCLE_LAYER_ID],
+          }).length > 0
+        : false;
+      if (clickedWaypoint) return;
+
       const lat = e.lngLat.lat;
       const lng = e.lngLat.lng;
 
@@ -235,6 +251,11 @@ export function Map() {
       )}
 
       <MapControls onStyleChange={handleStyleChange} />
+      <RouteToolbar />
+      <RouteLayer map={mapInstance} />
+      <RouteDrawing map={mapInstance} />
+      <WaypointPopup map={mapInstance} />
+      <ElevationProfile />
       <AvalancheZones
         map={mapInstance}
         visible={activeOverlays.has('avalanche-zones')}

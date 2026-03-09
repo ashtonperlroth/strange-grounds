@@ -45,7 +45,16 @@ export const generateBriefing = inngest.createFunction(
   { id: "generate-briefing" },
   { event: "briefing/requested" },
   async ({ event, step }) => {
-    const { briefingId, lat, lng, startDate, endDate, activity } =
+    const {
+      briefingId,
+      lat,
+      lng,
+      routeGeometry,
+      routeBbox,
+      startDate,
+      endDate,
+      activity,
+    } =
       event.data;
     const pipelineStart = Date.now();
     console.log(`[briefing] pipeline started for briefing=${briefingId}`);
@@ -154,6 +163,13 @@ export const generateBriefing = inngest.createFunction(
           raw_data: {
             ...fullConditions,
             unavailableSources,
+            route: routeGeometry
+              ? {
+                  geometry: routeGeometry,
+                  bbox: routeBbox ?? null,
+                  center: { lat, lng },
+                }
+              : null,
           },
           readiness: briefingResult.readiness ?? readiness,
         })

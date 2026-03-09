@@ -55,6 +55,15 @@ export const briefingsRouter = router({
         tripId: z.string().uuid(),
         lat: z.number().min(-90).max(90),
         lng: z.number().min(-180).max(180),
+        routeGeometry: z
+          .object({
+            type: z.literal("LineString"),
+            coordinates: z.array(z.tuple([z.number(), z.number()])).min(2),
+          })
+          .optional(),
+        routeBbox: z
+          .tuple([z.number(), z.number(), z.number(), z.number()])
+          .optional(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -99,6 +108,8 @@ export const briefingsRouter = router({
           briefingId: data.id,
           lat: input.lat,
           lng: input.lng,
+          routeGeometry: input.routeGeometry,
+          routeBbox: input.routeBbox,
           startDate: trip.start_date,
           endDate: trip.end_date,
           activity: trip.activity,

@@ -18,6 +18,7 @@ import { AuthModal } from '@/components/auth/AuthModal';
 export function GenerateButton() {
   const {
     location,
+    routeContext,
     dateRange,
     activity,
     isReadyToGenerate,
@@ -54,7 +55,7 @@ export function GenerateButton() {
   const generateBriefing = trpc.briefings.generate.useMutation();
 
   const missingItems: string[] = [];
-  if (!location) missingItems.push('location');
+  if (!location && !routeContext) missingItems.push('location or route');
   if (!dateRange) missingItems.push('date range');
   if (!activity) missingItems.push('activity');
 
@@ -62,7 +63,10 @@ export function GenerateButton() {
   const hasError = !!displayError;
 
   const handleClick = async () => {
-    if (!ready || !location || !dateRange || isGenerating) return;
+    if (!ready || !dateRange || isGenerating) return;
+
+    const target = routeContext?.center ?? location;
+    if (!target) return;
 
     setIsGenerating(true);
     setMutationError(null);
@@ -72,9 +76,11 @@ export function GenerateButton() {
       resetBriefingPolling();
 
       const trip = await createTrip.mutateAsync({
-        location_name: location.name ?? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`,
-        latitude: location.lat,
-        longitude: location.lng,
+        location_name:
+          location?.name ??
+          (routeContext ? 'Route center' : `${target.lat.toFixed(4)}, ${target.lng.toFixed(4)}`),
+        latitude: target.lat,
+        longitude: target.lng,
         start_date: format(dateRange.start, 'yyyy-MM-dd'),
         end_date: format(dateRange.end, 'yyyy-MM-dd'),
         activity,
@@ -84,8 +90,17 @@ export function GenerateButton() {
 
       const briefing = await generateBriefing.mutateAsync({
         tripId: trip.id,
-        lat: location.lat,
-        lng: location.lng,
+        lat: target.lat,
+        lng: target.lng,
+        routeGeometry: routeContext
+          ? {
+              type: 'LineString',
+              coordinates: routeContext.geometry.coordinates.map(
+                (coord) => [coord[0], coord[1]] as [number, number],
+              ),
+            }
+          : undefined,
+        routeBbox: routeContext?.bbox,
       });
 
       setActiveBriefingId(briefing.id);
