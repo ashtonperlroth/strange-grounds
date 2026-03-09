@@ -7,6 +7,7 @@ import {
   Footprints,
   MapPin,
   Bookmark,
+  BookmarkCheck,
   Share2,
   Compass,
   Flame,
@@ -25,6 +26,7 @@ import { usePlanningStore } from '@/stores/planning-store';
 import { useBriefingPolling, resetBriefingPolling } from '@/hooks/useBriefingPolling';
 import { useBriefingStore, type ConditionStatus, type ConditionCardData } from '@/stores/briefing-store';
 import { trpc } from '@/lib/trpc/client';
+import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { ReadinessIndicator } from './ReadinessIndicator';
 import { BriefingSummary } from './BriefingSummary';
@@ -299,10 +301,12 @@ interface PanelFooterProps {
   onRegenerate?: () => void;
   isRegenerating?: boolean;
   onSave?: () => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
   onShare?: () => void;
 }
 
-function PanelFooter({ onRegenerate, isRegenerating, onSave, onShare }: PanelFooterProps) {
+function PanelFooter({ onRegenerate, isRegenerating, onSave, isSaving, isSaved, onShare }: PanelFooterProps) {
   return (
     <div className="flex items-center gap-2 pt-2">
       <Button
@@ -322,11 +326,22 @@ function PanelFooter({ onRegenerate, isRegenerating, onSave, onShare }: PanelFoo
       <Button
         variant="outline"
         size="sm"
-        className="flex-1 border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-800 focus-visible:ring-emerald-500"
+        className={`flex-1 border-stone-200 transition-colors focus-visible:ring-emerald-500 ${
+          isSaved
+            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+            : 'bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-800'
+        }`}
         onClick={onSave}
+        disabled={isSaving || isSaved}
       >
-        <Bookmark className="size-3.5" />
-        Save
+        {isSaving ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : isSaved ? (
+          <BookmarkCheck className="size-3.5" />
+        ) : (
+          <Bookmark className="size-3.5" />
+        )}
+        {isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save'}
       </Button>
       <Button
         variant="outline"
@@ -357,6 +372,8 @@ interface BriefingFullViewProps {
   onRegenerate?: () => void;
   isRegenerating?: boolean;
   onSave?: () => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
   onShare?: () => void;
 }
 
@@ -389,6 +406,8 @@ function BriefingFullView({
   onRegenerate,
   isRegenerating,
   onSave,
+  isSaving,
+  isSaved,
   onShare,
 }: BriefingFullViewProps) {
   const snotelData = conditions?.snowpack as SnotelData | undefined;
@@ -563,6 +582,8 @@ function BriefingFullView({
           onRegenerate={onRegenerate}
           isRegenerating={isRegenerating}
           onSave={onSave}
+          isSaving={isSaving}
+          isSaved={isSaved}
           onShare={onShare}
         />
       </div>
@@ -587,13 +608,18 @@ export function BriefingPanel() {
     useBriefingPolling(activeBriefingId);
   const { setConditionCards, getWarningCount, getCriticalCount } = useBriefingStore();
 
+  const { user } = useAuth();
+
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalConfig, setAuthModalConfig] = useState<{
     title: string;
     description: string;
   }>({ title: 'Sign up to continue', description: '' });
   const generateBriefing = trpc.briefings.generate.useMutation();
+  const saveTrip = trpc.trips.save.useMutation();
 
   const handleRetry = useCallback(async () => {
     if (!activeTripId || !location || isRegenerating) return;
@@ -661,13 +687,33 @@ export function BriefingPanel() {
     [],
   );
 
-  const handleSave = useCallback(() => {
-    requireAuth('Sign up to save trips', 'Create a free account to save trips and track conditions over time.');
-  }, [requireAuth]);
+  const handleSave = useCallback(async () => {
+    if (!activeTripId) return;
+
+    if (!user) {
+      requireAuth('Sign up to save trips', 'Create a free account to save trips and track conditions over time.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await saveTrip.mutateAsync({ id: activeTripId });
+      setIsSaved(true);
+    } catch (err) {
+      console.error('Failed to save trip:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [activeTripId, user, requireAuth, saveTrip]);
 
   const handleShare = useCallback(() => {
     requireAuth('Sign up to share briefings', 'Create a free account to share briefings with your trip partners.');
   }, [requireAuth]);
+
+  useEffect(() => {
+    setIsSaved(false);
+    setIsSaving(false);
+  }, [activeTripId]);
 
   if (!activeBriefingId && !isGenerating) {
     return <BriefingEmptyState />;
@@ -716,6 +762,8 @@ export function BriefingPanel() {
         onRegenerate={handleRetry}
         isRegenerating={isRegenerating}
         onSave={handleSave}
+        isSaving={isSaving}
+        isSaved={isSaved}
         onShare={handleShare}
       />
       <AuthModal
