@@ -70,10 +70,10 @@ export function TopBar() {
 
           {user ? (
             <Link
-              href="/dashboard"
+              href="/trips"
               className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 transition-colors hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1"
-              title="Account"
-              aria-label="Account"
+              title="Saved trips"
+              aria-label="Saved trips"
             >
               <User className="h-3.5 w-3.5" />
             </Link>
@@ -126,9 +126,9 @@ export function TopBar() {
             </button>
             {user ? (
               <Link
-                href="/dashboard"
+                href="/trips"
                 className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 transition-colors hover:bg-emerald-200"
-                aria-label="Account"
+                aria-label="Saved trips"
               >
                 <User className="h-3.5 w-3.5" />
               </Link>
