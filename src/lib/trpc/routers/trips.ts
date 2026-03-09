@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, protectedProcedure } from "../init";
-import { checkAnonymousRateLimit } from "../rate-limit";
 
 function parseLocation(location: unknown): { lat: number; lng: number } {
   if (!location) return { lat: 0, lng: 0 };
@@ -88,8 +87,6 @@ export const tripsRouter = router({
         await ctx.adminSupabase
           .from("profiles")
           .upsert({ id: userId }, { onConflict: "id" });
-      } else {
-        await checkAnonymousRateLimit(ctx.adminSupabase, ctx.ip);
       }
 
       const { latitude, longitude, ...rest } = input;
@@ -106,6 +103,19 @@ export const tripsRouter = router({
         .single();
 
       if (error) {
+        const message = (error.message ?? "").toLowerCase();
+        // Some deployed DBs keep trips.user_id as NOT NULL; surface a clear auth error.
+        if (
+          !userId &&
+          message.includes("null value in column") &&
+          message.includes("user_id")
+        ) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Please sign in to generate briefings.",
+          });
+        }
+
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message,

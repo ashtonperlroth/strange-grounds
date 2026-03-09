@@ -14,6 +14,7 @@ import { trpc } from '@/lib/trpc/client';
 import { format } from 'date-fns';
 import { resetBriefingPolling } from '@/hooks/useBriefingPolling';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { useAuth } from '@/hooks/useAuth';
 
 export function GenerateButton() {
   const {
@@ -35,6 +36,7 @@ export function GenerateButton() {
   const [authModalMessage, setAuthModalMessage] = useState<string | undefined>();
   const [shouldPulse, setShouldPulse] = useState(false);
   const prevLocationRef = useRef(location);
+  const { user } = useAuth();
 
   const ready = isReadyToGenerate();
 
@@ -64,6 +66,11 @@ export function GenerateButton() {
 
   const handleClick = async () => {
     if (!ready || !dateRange || isGenerating) return;
+    if (!user) {
+      setAuthModalMessage('Please sign in to generate and save trip briefings.');
+      setShowAuthModal(true);
+      return;
+    }
 
     const target = routeContext?.center ?? location;
     if (!target) return;
@@ -111,12 +118,19 @@ export function GenerateButton() {
       const isRateLimit =
         message.includes('TOO_MANY_REQUESTS') ||
         message.includes('free briefings');
+      const isAuthRequired =
+        message.toLowerCase().includes('unauthorized') ||
+        message.toLowerCase().includes('sign in');
       if (isRateLimit) {
         setAuthModalMessage(
           "You've used your 3 free briefings today. Sign up for unlimited access.",
         );
         setShowAuthModal(true);
         setMutationError(message);
+      } else if (isAuthRequired) {
+        setAuthModalMessage('Please sign in to generate and save trip briefings.');
+        setShowAuthModal(true);
+        setMutationError('Sign in required');
       } else {
         setMutationError(message);
       }
