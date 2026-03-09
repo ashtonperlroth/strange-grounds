@@ -3,13 +3,36 @@ import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, protectedProcedure } from "../init";
 import { checkAnonymousRateLimit } from "../rate-limit";
 
+function parseLocation(location: unknown): { lat: number; lng: number } {
+  if (!location) return { lat: 0, lng: 0 };
+
+  if (typeof location === "object" && location !== null) {
+    const geo = location as Record<string, unknown>;
+    if (geo.type === "Point" && Array.isArray(geo.coordinates)) {
+      return { lng: geo.coordinates[0] as number, lat: geo.coordinates[1] as number };
+    }
+  }
+
+  if (typeof location === "string") {
+    const match = location.match(/POINT\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/);
+    if (match) {
+      return { lng: parseFloat(match[1]), lat: parseFloat(match[2]) };
+    }
+  }
+
+  return { lat: 0, lng: 0 };
+}
+
 export const tripsRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
-    const { data, error } = await ctx.supabase
+    const { data, error } = await ctx.adminSupabase
       .from("trips")
-      .select("*")
+      .select("*, briefings(id, readiness, created_at)")
       .eq("user_id", ctx.user.id)
-      .order("created_at", { ascending: false });
+      .not("saved_at", "is", null)
+      .order("saved_at", { ascending: false })
+      .order("created_at", { referencedTable: "briefings", ascending: false })
+      .limit(1, { referencedTable: "briefings" });
 
     if (error) {
       throw new TRPCError({
@@ -18,13 +41,16 @@ export const tripsRouter = router({
       });
     }
 
-    return data;
+    return (data ?? []).map((trip) => {
+      const coords = parseLocation(trip.location);
+      return { ...trip, latitude: coords.lat, longitude: coords.lng };
+    });
   }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase
+      const { data, error } = await ctx.adminSupabase
         .from("trips")
         .select("*")
         .eq("id", input.id)
@@ -38,7 +64,9 @@ export const tripsRouter = router({
         });
       }
 
-      return data;
+      const coords = parseLocation(data.location);
+
+      return { ...data, latitude: coords.lat, longitude: coords.lng };
     }),
 
   create: publicProcedure
@@ -87,6 +115,62 @@ export const tripsRouter = router({
       return data;
     }),
 
+  save: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        name: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { data: trip, error: fetchError } = await ctx.adminSupabase
+        .from("trips")
+        .select("id, user_id, location_name, start_date")
+        .eq("id", input.id)
+        .single();
+
+      if (fetchError || !trip) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Trip not found",
+        });
+      }
+
+      if (trip.user_id && trip.user_id !== ctx.user.id) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Trip belongs to another user",
+        });
+      }
+
+      const autoName = `${trip.location_name} — ${trip.start_date}`;
+      const tripName = input.name?.trim() || autoName;
+
+      const { data, error } = await ctx.adminSupabase
+        .from("trips")
+        .update({
+          user_id: ctx.user.id,
+          saved_at: new Date().toISOString(),
+          name: tripName,
+        })
+        .eq("id", input.id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+
+      await ctx.adminSupabase
+        .from("profiles")
+        .upsert({ id: ctx.user.id }, { onConflict: "id" });
+
+      return data;
+    }),
+
   update: protectedProcedure
     .input(
       z.object({
@@ -130,7 +214,7 @@ export const tripsRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {
-      const { error } = await ctx.supabase
+      const { error } = await ctx.adminSupabase
         .from("trips")
         .delete()
         .eq("id", input.id)
