@@ -1368,7 +1368,7 @@ async function seedRoutes(sql: postgres.Sql): Promise<void> {
           ${route.totalDistanceM}, ${route.elevationGainM}, ${route.elevationLossM},
           ${route.maxElevationM}, ${route.minElevationM},
           ${route.activity}, ${route.difficulty}, ${route.region}, ${route.state},
-          ${sql.array(route.bestMonths)}::integer[], ${route.seasonNotes},
+          ${`{${route.bestMonths.join(",")}}`}::integer[], ${route.seasonNotes},
           ${route.estimatedDays}, ${route.permitRequired}, ${route.permitInfo},
           ${route.trailheadName}, ${trailheadWKT}::geometry,
           ${route.isFeatured}, true,
