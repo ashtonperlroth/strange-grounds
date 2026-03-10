@@ -1,6 +1,8 @@
 import type { Activity } from "@/stores/planning-store";
 import type { ConditionsBundle } from "./conditions";
 import { buildConditionCards } from "./conditions";
+import type { RouteSegment } from "@/lib/types/route";
+import type { SegmentConditions } from "@/lib/types/briefing";
 
 // ── Activity-specific emphasis ──────────────────────────────────────
 
@@ -219,6 +221,166 @@ function serializeConditions(conditions: ConditionsBundle): string {
   return sections.join("\n\n");
 }
 
+// ── Route-aware system prompt ────────────────────────────────────────
+
+const ROUTE_AWARE_SYSTEM_PROMPT = `You are an experienced backcountry guide delivering a pre-trip safety briefing for a specific planned route. You have detailed conditions data for each segment of the route.
+
+Your briefing must:
+1. Start with a BOTTOM LINE — one sentence: is this route good to go, proceed with caution, or recommend postponing/rerouting?
+2. Walk through the route chronologically, segment by segment, calling out:
+   - What the user will encounter in each section
+   - Specific hazards with distance markers ("At mile 4.2, you'll enter a NW-facing bowl...")
+   - Cross-referenced data ("The 35° slope at mile 6 combined with 18" of new snow and Considerable danger...")
+   - Timing recommendations ("Start before 6am to cross the bowl segment before solar warming")
+3. Highlight the CRITICAL SECTIONS — the 2-3 segments that require the most attention
+4. End with ALTERNATIVE ROUTE suggestions if any segments are rated High or Extreme
+5. Include a gear/preparation checklist specific to the route conditions
+
+Tone: Direct, opinionated, specific. Like a local guide who knows this terrain. Never hedge with "conditions may vary" — be prescriptive based on the data.
+
+CALIBRATION — MATCH YOUR TONE TO THE ACTUAL CONDITIONS:
+When conditions are good, SAY SO clearly and with confidence. A route with Low/Moderate hazard across all segments is a GOOD route day — communicate that. "Clean conditions along the full route — get after it" is the right energy. Do NOT pad with generic cautions unsupported by the data.
+
+When conditions are dangerous, be specific about which segments are the problem and which are fine. Even on tough days, there may be safe segments — frame it as: "Segments 1-3 are straightforward, but segment 4 is where you need to pay attention."
+
+BAD example (generic):
+"Exercise caution on avalanche terrain. Conditions may be variable."
+
+GOOD example (specific, cross-referenced):
+"The NW bowl at mile 4.2-5.1 is the crux today — 35° slopes loaded with 14" of new snow on a Considerable day. Drop to the valley floor alternate (adds 1.5mi) or commit to crossing before 9am while the surface is still frozen. The rest of the route is clean."
+
+SNOTEL/WEATHER INTERPRETATION:
+- Rapid SWE increase = new loading = storm slab risk on steep segments
+- Declining snow depth may mean settlement (good) or melt — distinguish using temperature data
+- Connect wind forecast to specific exposed segments (ridges, bowls)
+
+OUTPUT FORMAT:
+You MUST respond with ONLY a JSON object (no markdown fences, no preamble). The JSON must match this schema:
+
+{
+  "bottomLine": "One sentence go/no-go verdict. Be specific and opinionated.",
+  "overallReadiness": "green | yellow | orange | red",
+  "routeWalkthrough": [
+    {
+      "segmentOrder": 0,
+      "mileRange": "0.0 - 2.3",
+      "title": "Short descriptive name for this segment",
+      "narrative": "2-4 sentences. What the user encounters, specific hazards with mile markers, cross-referenced data. Write in natural prose.",
+      "hazardLevel": "low | moderate | considerable | high | extreme",
+      "keyCallouts": ["Bullet point callouts for quick scanning"],
+      "timingAdvice": "Timing recommendation if time-sensitive, or null"
+    }
+  ],
+  "criticalSections": [
+    {
+      "segmentOrder": 0,
+      "title": "Name of the critical segment",
+      "whyCritical": "Specific reason this segment demands attention",
+      "recommendation": "What to do about it"
+    }
+  ],
+  "alternativeRoutes": [
+    {
+      "description": "Description of the alternative",
+      "benefit": "What hazard this avoids and tradeoff"
+    }
+  ],
+  "gearChecklist": ["Route-specific gear items driven by actual conditions"],
+  "narrative": "Full narrative summary, 3-4 paragraphs. For backward compatibility."
+}
+
+READINESS MAPPING:
+- All segments Low/Moderate with no identified problems: overallReadiness = "green"
+- Some Moderate with identified problems, or 1 Considerable segment: overallReadiness = "yellow"
+- Multiple Considerable or any High segments: overallReadiness = "orange"
+- Any Extreme segments or multiple High: overallReadiness = "red"
+
+RULES:
+- routeWalkthrough MUST have one entry per segment, in order
+- criticalSections should contain 0-3 entries (only the segments that actually need attention)
+- alternativeRoutes should be null if no segments are High or Extreme
+- gearChecklist should be route-specific based on actual data, NOT generic (no "bring a map" — only items driven by conditions like "ice axe for the frozen traverse at mile 6.2")
+- Do NOT fabricate data. Only reference conditions data that was provided.
+- Do NOT discuss Remoteness, Wildlife, Insects, or Footing — no data for these.`;
+
+// ── Segment conditions serialization ────────────────────────────────
+
+function serializeSegmentConditions(
+  segment: RouteSegment,
+  conditions: SegmentConditions,
+  cumulativeDistanceMi: number,
+): string {
+  const startMi = cumulativeDistanceMi.toFixed(1);
+  const segDistMi = segment.distanceM * 0.000621371;
+  const endMi = (cumulativeDistanceMi + segDistMi).toFixed(1);
+  const elevGainFt = Math.round(segment.elevationGainM * 3.281);
+  const elevLossFt = Math.round(segment.elevationLossM * 3.281);
+
+  const lines: string[] = [];
+  lines.push(
+    `Segment ${conditions.segmentOrder + 1} (${segment.terrainType}, Mile ${startMi}-${endMi}, ${elevGainFt}ft gain / ${elevLossFt}ft loss, ${segment.dominantAspect} aspect, max slope ${segment.maxSlopeDegrees}°):`,
+  );
+
+  const cond = conditions.conditions;
+
+  if (cond.weather && cond.weather.periods.length > 0) {
+    const periods = cond.weather.periods.slice(0, 3);
+    const summary = periods
+      .map(
+        (p) =>
+          `${p.temperature}°${p.temperatureUnit} ${p.shortForecast} wind ${p.windSpeed} ${p.windDirection}`,
+      )
+      .join("; ");
+    lines.push(`  Weather: ${summary}`);
+  } else {
+    lines.push(`  Weather: Data unavailable`);
+  }
+
+  if (cond.avalanche) {
+    const problems =
+      cond.avalanche.problems.length > 0
+        ? cond.avalanche.problems.map((p) => p.name).join(", ")
+        : "none identified";
+    lines.push(
+      `  Avalanche: ${cond.avalanche.dangerLabel} (${cond.avalanche.dangerLevel}/5), problems: ${problems}`,
+    );
+  }
+
+  if (cond.snowpack && cond.snowpack.stations.length > 0) {
+    const nearest = cond.snowpack.nearest ?? cond.snowpack.stations[0];
+    const depth =
+      nearest.latest.snowDepthIn !== null
+        ? `${nearest.latest.snowDepthIn}" depth`
+        : "no depth data";
+    lines.push(`  Snowpack: ${depth}, trend ${nearest.trend}`);
+  }
+
+  if (cond.streamFlow && cond.streamFlow.stations.length > 0) {
+    const nearest = cond.streamFlow.nearest ?? cond.streamFlow.stations[0];
+    const cfs =
+      nearest.current.dischargeCfs !== null
+        ? `${Math.round(nearest.current.dischargeCfs)} cfs`
+        : "N/A";
+    const pct =
+      cond.streamFlow.summary.maxPercentOfMedian !== null
+        ? ` (${cond.streamFlow.summary.maxPercentOfMedian}% of median)`
+        : "";
+    lines.push(`  Stream Flow: ${cfs}${pct}`);
+  }
+
+  if (cond.wind) {
+    lines.push(
+      `  Wind: avg ${cond.wind.avgWindMph} mph, gusts ${cond.wind.maxGustMph} mph, dominant ${cond.wind.dominantDirection}`,
+    );
+  }
+
+  lines.push(
+    `  Hazard Level: ${conditions.hazardLevel} — Factors: ${conditions.hazardFactors.length > 0 ? conditions.hazardFactors.join(", ") : "none"}`,
+  );
+
+  return lines.join("\n");
+}
+
 // ── Prompt assembly ─────────────────────────────────────────────────
 
 interface PromptLocation {
@@ -284,6 +446,110 @@ Remember: respond with ONLY a valid JSON object, no markdown, no preamble.`;
 
   return {
     system: SYSTEM_PROMPT,
+    user,
+  };
+}
+
+// ── Route-aware prompt assembly ─────────────────────────────────────
+
+export interface RoutePromptData {
+  routeName: string | null;
+  totalDistanceM: number;
+  elevationGainM: number;
+  segments: RouteSegment[];
+  segmentConditions: SegmentConditions[];
+}
+
+export function promptForRouteActivity(
+  activity: Activity,
+  pointConditions: ConditionsBundle,
+  location: PromptLocation,
+  dates: PromptDates,
+  routeData: RoutePromptData,
+  unavailableSources: string[] = [],
+): AssembledPrompt {
+  const emphasis = ACTIVITY_EMPHASIS[activity];
+
+  const totalDistMi = (routeData.totalDistanceM * 0.000621371).toFixed(1);
+  const elevGainFt = Math.round(routeData.elevationGainM * 3.281);
+
+  const dayCount = Math.max(
+    1,
+    Math.ceil(
+      (new Date(dates.end).getTime() - new Date(dates.start).getTime()) /
+        (1000 * 60 * 60 * 24),
+    ),
+  );
+
+  let cumulativeDistanceMi = 0;
+  const segmentSections: string[] = [];
+  for (let i = 0; i < routeData.segments.length; i++) {
+    const seg = routeData.segments[i];
+    const sc = routeData.segmentConditions.find(
+      (c) => c.segmentOrder === seg.segmentOrder,
+    );
+    if (!sc) continue;
+
+    segmentSections.push(
+      serializeSegmentConditions(seg, sc, cumulativeDistanceMi),
+    );
+    cumulativeDistanceMi += seg.distanceM * 0.000621371;
+  }
+
+  const routeWideLines: string[] = [];
+  if (pointConditions.daylight) {
+    const d = pointConditions.daylight;
+    routeWideLines.push(
+      `  Daylight: Sunrise ${d.sunrise}, Sunset ${d.sunset}, ${d.daylightHours}h total`,
+    );
+  }
+  if (pointConditions.fires) {
+    const f = pointConditions.fires;
+    if (f.nearbyCount > 0) {
+      const names = f.fires
+        .slice(0, 3)
+        .map((fire) => fire.name)
+        .join(", ");
+      routeWideLines.push(
+        `  Active Fires: ${f.nearbyCount} within 50mi (${names})`,
+      );
+    } else {
+      routeWideLines.push(`  Active Fires: None within 50 miles`);
+    }
+  }
+
+  const routeName = routeData.routeName ?? "Unnamed Route";
+  const locationLabel = location.name
+    ? `${location.name}`
+    : `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`;
+
+  const unavailableNote =
+    unavailableSources.length > 0
+      ? `\nNote: The following data sources were unavailable: [${unavailableSources.join(", ")}].\nDo NOT fabricate or guess data for unavailable sources.\n`
+      : "";
+
+  const user = `Route: ${routeName}
+Activity: ${activity}
+Location: ${locationLabel}
+Dates: ${dates.start} to ${dates.end}
+Total Distance: ${totalDistMi}mi | Elevation Gain: ${elevGainFt}ft | Estimated: ${dayCount} day${dayCount !== 1 ? "s" : ""}
+
+ACTIVITY-SPECIFIC GUIDANCE:
+  ${emphasis.primaryHazards}
+  ${emphasis.secondaryFocus}
+  Cross-reference: ${emphasis.crossReferenceHints}
+
+SEGMENT-BY-SEGMENT CONDITIONS:
+
+${segmentSections.join("\n\n")}
+
+ROUTE-WIDE DATA:
+${routeWideLines.length > 0 ? routeWideLines.join("\n") : "  No additional route-wide data available."}
+${unavailableNote}
+Remember: respond with ONLY a valid JSON object, no markdown, no preamble.`;
+
+  return {
+    system: ROUTE_AWARE_SYSTEM_PROMPT,
     user,
   };
 }

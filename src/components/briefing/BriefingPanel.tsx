@@ -51,7 +51,14 @@ import {
   ConditionCardErrorFallback,
 } from '@/components/layout/ErrorBoundary';
 import { HazardSummaryCard } from './cards/HazardSummaryCard';
+import { RouteWalkthrough } from './RouteWalkthrough';
 import type { RouteAnalysis } from '@/lib/types/briefing';
+import type {
+  RouteWalkthroughSegment,
+  CriticalSection,
+  AlternativeRoute,
+  OverallReadiness,
+} from '@/lib/types/route-briefing';
 
 interface StubCard {
   category: string;
@@ -358,6 +365,14 @@ function PanelFooter({ onRegenerate, isRegenerating, onSave, isSaving, isSaved, 
   );
 }
 
+interface RouteWalkthroughData {
+  routeWalkthrough: RouteWalkthroughSegment[];
+  criticalSections: CriticalSection[];
+  alternativeRoutes: AlternativeRoute[] | null;
+  gearChecklist: string[];
+  overallReadiness: OverallReadiness;
+}
+
 interface BriefingFullViewProps {
   locationName: string | null;
   dateRange: { start: Date; end: Date };
@@ -372,6 +387,7 @@ interface BriefingFullViewProps {
   isNarrativeLoading?: boolean;
   conditions?: Record<string, unknown>;
   routeAnalysis?: RouteAnalysis | null;
+  routeWalkthroughData?: RouteWalkthroughData | null;
   onRegenerate?: () => void;
   isRegenerating?: boolean;
   onSave?: () => void;
@@ -407,6 +423,7 @@ function BriefingFullView({
   isNarrativeLoading = false,
   conditions,
   routeAnalysis,
+  routeWalkthroughData,
   onRegenerate,
   isRegenerating,
   onSave,
@@ -434,18 +451,38 @@ function BriefingFullView({
           activity={activity}
         />
 
-        <ReadinessIndicator
-          readiness={readiness}
-          warningCount={warningCount}
-          criticalCount={criticalCount}
-        />
+        {!routeWalkthroughData && (
+          <ReadinessIndicator
+            readiness={readiness}
+            warningCount={warningCount}
+            criticalCount={criticalCount}
+          />
+        )}
 
-        <BriefingSummary
-          bottomLine={bottomLine}
-          narrative={narrative}
-          readinessRationale={readinessRationale}
-          isLoading={isNarrativeLoading}
-        />
+        {routeWalkthroughData &&
+          routeWalkthroughData.routeWalkthrough.length > 0 ? (
+          <ErrorBoundary
+            fallback={(reset) => (
+              <ConditionCardErrorFallback category="Route Walkthrough" reset={reset} />
+            )}
+          >
+            <RouteWalkthrough
+              bottomLine={bottomLine ?? ''}
+              overallReadiness={routeWalkthroughData.overallReadiness}
+              routeWalkthrough={routeWalkthroughData.routeWalkthrough}
+              criticalSections={routeWalkthroughData.criticalSections}
+              alternativeRoutes={routeWalkthroughData.alternativeRoutes}
+              gearChecklist={routeWalkthroughData.gearChecklist}
+            />
+          </ErrorBoundary>
+        ) : (
+          <BriefingSummary
+            bottomLine={bottomLine}
+            narrative={narrative}
+            readinessRationale={readinessRationale}
+            isLoading={isNarrativeLoading}
+          />
+        )}
 
         <Separator className="bg-stone-200" />
 
@@ -759,6 +796,17 @@ export function BriefingPanel() {
   const weatherData = (briefing?.conditions?.weather as NWSForecastData) ?? null;
   const routeAnalysis = (briefing?.conditions?.routeAnalysis as RouteAnalysis | undefined) ?? null;
 
+  const conditionsObj = briefing?.conditions as Record<string, unknown> | undefined;
+  const routeWalkthroughData = conditionsObj?.routeWalkthrough
+    ? {
+        routeWalkthrough: conditionsObj.routeWalkthrough as RouteWalkthroughSegment[],
+        criticalSections: (conditionsObj.criticalSections as CriticalSection[]) ?? [],
+        alternativeRoutes: (conditionsObj.alternativeRoutes as AlternativeRoute[] | null) ?? null,
+        gearChecklist: (conditionsObj.gearChecklist as string[]) ?? [],
+        overallReadiness: (conditionsObj.overallReadiness as OverallReadiness) ?? 'yellow',
+      }
+    : null;
+
   return (
     <>
       <BriefingFullView
@@ -773,8 +821,9 @@ export function BriefingPanel() {
         warningCount={getWarningCount()}
         criticalCount={getCriticalCount()}
         isNarrativeLoading={isLoading}
-        conditions={briefing?.conditions as Record<string, unknown> | undefined}
+        conditions={conditionsObj}
         routeAnalysis={routeAnalysis}
+        routeWalkthroughData={routeWalkthroughData}
         onRegenerate={handleRetry}
         isRegenerating={isRegenerating}
         onSave={handleSave}

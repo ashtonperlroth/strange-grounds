@@ -1,4 +1,9 @@
-export { generateBriefing, generateBriefingText } from "./briefing";
+export {
+  generateBriefing,
+  generateBriefingText,
+  generateRouteAwareBriefing,
+  generateRouteAwareBriefingText,
+} from "./briefing";
 export type { BriefingResult, SynthesisResult } from "./briefing";
 
 export {
@@ -14,5 +19,5 @@ export {
 } from "./conditions";
 export type { ConditionsBundle, DaylightData, Readiness } from "./conditions";
 
-export { promptForActivity } from "./prompts";
-export type { AssembledPrompt } from "./prompts";
+export { promptForActivity, promptForRouteActivity } from "./prompts";
+export type { AssembledPrompt, RoutePromptData } from "./prompts";
