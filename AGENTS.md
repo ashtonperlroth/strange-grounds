@@ -39,3 +39,10 @@ npm run lint
 - Tailwind utility classes only — no CSS modules or styled-components
 - Environment variables: server-only vars have no prefix, client vars use `NEXT_PUBLIC_` prefix
 - Copy `.env.local.example` to `.env.local` and fill in values before running
+
+### Testing rules
+
+- Run `npm run build` and `npm run lint` on every issue. This is mandatory.
+- Only do visual browser testing for issues tagged with `polish` or `map-layers` labels.
+- For all other issues (backend, data pipeline, new API routes), build verification is sufficient. Do NOT start the dev server.
+- When you do visual test: take ONE screenshot of the relevant change. Do NOT record video. Do NOT navigate through the whole app.
