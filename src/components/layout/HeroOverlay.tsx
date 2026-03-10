@@ -79,7 +79,7 @@ export function HeroOverlay() {
         elevationGainM: parsed.elevationGain,
         elevationLossM: parsed.elevationLoss,
         maxElevationM: Math.max(...parsed.coordinates.map((c) => c[2] ?? 0)),
-        minElevationM: Math.min(...parsed.coordinates.map((c) => c[2] ?? Infinity)),
+        minElevationM: Math.min(...parsed.coordinates.map((c) => c[2] ?? 0)),
         activity: 'backpacking' as const,
         source: 'gpx_import' as const,
         createdAt: now,
