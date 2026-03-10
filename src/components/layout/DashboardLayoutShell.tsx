@@ -4,6 +4,7 @@ import { type ReactNode } from 'react';
 import { usePlanningStore } from '@/stores/planning-store';
 import { useRouteStore } from '@/stores/route-store';
 import { TopBar } from './TopBar';
+import { Footer } from './Footer';
 import { HeroOverlay } from './HeroOverlay';
 
 export function DashboardLayoutShell({ children }: { children: ReactNode }) {
@@ -25,6 +26,8 @@ export function DashboardLayoutShell({ children }: { children: ReactNode }) {
         {children}
         <HeroOverlay />
       </main>
+
+      <Footer />
     </div>
   );
 }

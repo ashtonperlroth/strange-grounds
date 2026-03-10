@@ -37,6 +37,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlanningStore } from '@/stores/planning-store';
 import { resetBriefingPolling } from '@/hooks/useBriefingPolling';
+import { trackGenerateBriefing } from '@/lib/analytics';
 
 interface BriefingSummary {
   id: string;
@@ -277,6 +278,7 @@ export default function TripsPage() {
         lng: trip.longitude,
       });
 
+      trackGenerateBriefing(false);
       setActiveBriefingId(briefing.id);
       router.push('/');
     } catch (err) {
