@@ -1,13 +1,9 @@
 'use client';
 
 import { type ReactNode, useState, useEffect, useCallback, useRef } from 'react';
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from '@/components/ui/resizable';
 import { BottomDrawer } from './BottomDrawer';
 import { usePlanningStore } from '@/stores/planning-store';
+import { usePopularRoutesStore } from '@/stores/popular-routes-store';
 import { ChevronUp, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -102,46 +98,17 @@ function MobileBottomSheet({
 export function DashboardShell({ mapSlot, briefingSlot, routesPanelSlot, drawerSlot }: DashboardShellProps) {
   const activeBriefingId = usePlanningStore((s) => s.activeBriefingId);
   const isGenerating = usePlanningStore((s) => s.isGenerating);
-  const location = usePlanningStore((s) => s.location);
+  const routesPanelOpen = usePopularRoutesStore((s) => s.panelOpen);
   const showBriefing = activeBriefingId !== null || isGenerating;
   const layoutMode = useLayoutMode();
-  const showRoutesPanel = !showBriefing && !location && routesPanelSlot;
+  const showRoutesPanel = !showBriefing && routesPanelOpen && !!routesPanelSlot;
+  const showSidePanel = showBriefing || (showRoutesPanel && layoutMode !== 'mobile');
 
-  if (!showBriefing && !showRoutesPanel) {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1">{mapSlot}</div>
-      </div>
-    );
-  }
-
-  if (showRoutesPanel && !showBriefing) {
-    if (layoutMode === 'mobile') {
-      return (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1">{mapSlot}</div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex min-h-0 flex-1 flex-col">
-        <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1 bg-white">
-          <ResizablePanel defaultSize={65} minSize={40}>
-            <div className="h-full w-full">{mapSlot}</div>
-          </ResizablePanel>
-
-          <ResizableHandle withHandle className="bg-stone-200 transition-colors hover:bg-emerald-200" />
-
-          <ResizablePanel defaultSize={35} minSize={25}>
-            <div className="h-full overflow-y-auto bg-[#FAF7F2] p-4">
-              {routesPanelSlot}
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
-    );
-  }
+  const sidePanelContent = showBriefing
+    ? briefingSlot
+    : showRoutesPanel
+      ? routesPanelSlot
+      : null;
 
   if (layoutMode === 'mobile') {
     return (
@@ -154,35 +121,38 @@ export function DashboardShell({ mapSlot, briefingSlot, routesPanelSlot, drawerS
     );
   }
 
-  if (layoutMode === 'tablet') {
+  if (layoutMode === 'tablet' && showBriefing) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1">{mapSlot}</div>
         <div className="h-[45vh] shrink-0 overflow-y-auto border-t border-stone-200 bg-[#FAF7F2] p-4">
           {briefingSlot}
         </div>
-        <BottomDrawer>{drawerSlot}</BottomDrawer>
+        {drawerSlot && <BottomDrawer>{drawerSlot}</BottomDrawer>}
       </div>
     );
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1 bg-white">
-        <ResizablePanel defaultSize={65} minSize={40}>
-          <div className="h-full w-full">{mapSlot}</div>
-        </ResizablePanel>
-
-        <ResizableHandle withHandle className="bg-stone-200 transition-colors hover:bg-emerald-200" />
-
-        <ResizablePanel defaultSize={35} minSize={25}>
-          <div className="h-full overflow-y-auto bg-[#FAF7F2] p-4">
-            {briefingSlot}
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
-
-      <BottomDrawer>{drawerSlot}</BottomDrawer>
+      <div className="flex min-h-0 flex-1">
+        <div className="min-h-0 flex-1">{mapSlot}</div>
+        <div
+          className={cn(
+            'shrink-0 overflow-hidden transition-[width,border-width,padding] duration-300 ease-out',
+            showSidePanel
+              ? 'w-[35%] max-w-md border-l border-stone-200 bg-[#FAF7F2] p-4'
+              : 'w-0 border-l-0 p-0',
+          )}
+        >
+          {showSidePanel && (
+            <div className="h-full overflow-y-auto">
+              {sidePanelContent}
+            </div>
+          )}
+        </div>
+      </div>
+      {showBriefing && drawerSlot && <BottomDrawer>{drawerSlot}</BottomDrawer>}
     </div>
   );
 }
