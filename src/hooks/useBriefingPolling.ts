@@ -24,6 +24,7 @@ interface Briefing {
   raw_data: Record<string, unknown>;
   readiness: 'green' | 'yellow' | 'red' | null;
   share_token: string | null;
+  pipeline_status: string | null;
   created_at: string;
 }
 
@@ -33,9 +34,11 @@ interface PollingState {
   error: string | null;
   elapsedSeconds: number;
   isTimedOut: boolean;
+  pipelineStatus: string | null;
 }
 
-const TIMEOUT_SECONDS = 90;
+const ROUTE_TIMEOUT_SECONDS = 180;
+const POINT_TIMEOUT_SECONDS = 90;
 
 let pollingState: PollingState = {
   briefing: null,
@@ -43,6 +46,7 @@ let pollingState: PollingState = {
   error: null,
   elapsedSeconds: 0,
   isTimedOut: false,
+  pipelineStatus: null,
 };
 let listeners: Array<() => void> = [];
 let activeInterval: ReturnType<typeof setInterval> | null = null;
@@ -82,10 +86,17 @@ function resetState() {
     error: null,
     elapsedSeconds: 0,
     isTimedOut: false,
+    pipelineStatus: null,
   });
 }
 
-export function useBriefingPolling(briefingId: string | null) {
+export function useBriefingPolling(
+  briefingId: string | null,
+  options?: { isRoute?: boolean },
+) {
+  const isRoute = options?.isRoute ?? false;
+  const timeoutSeconds = isRoute ? ROUTE_TIMEOUT_SECONDS : POINT_TIMEOUT_SECONDS;
+
   const subscribe = useCallback((onStoreChange: () => void) => {
     listeners.push(onStoreChange);
     return () => {
@@ -110,6 +121,7 @@ export function useBriefingPolling(briefingId: string | null) {
         error: null,
         elapsedSeconds: 0,
         isTimedOut: false,
+        pipelineStatus: null,
       });
       return;
     }
@@ -121,6 +133,7 @@ export function useBriefingPolling(briefingId: string | null) {
       error: null,
       elapsedSeconds: 0,
       isTimedOut: false,
+      pipelineStatus: null,
     });
 
     const supabase = createClient();
@@ -130,7 +143,47 @@ export function useBriefingPolling(briefingId: string | null) {
         ? Math.floor((Date.now() - startedAt) / 1000)
         : 0;
 
-      if (elapsed >= TIMEOUT_SECONDS) {
+      if (elapsed >= timeoutSeconds) {
+        // Before declaring timeout, check if the pipeline is still actively running
+        // by reading pipeline_status. If it's still updating, extend the timeout.
+        const { data: check } = await supabase
+          .from('briefings')
+          .select('pipeline_status, narrative')
+          .eq('id', briefingId)
+          .single();
+
+        if (check?.narrative !== null) {
+          // Actually completed while we were checking
+          const { data: fullData } = await supabase
+            .from('briefings')
+            .select('*')
+            .eq('id', briefingId)
+            .single();
+          if (fullData) {
+            setState({
+              briefing: fullData as Briefing,
+              isLoading: false,
+              elapsedSeconds: elapsed,
+              pipelineStatus: 'complete',
+            });
+          }
+          stopPolling();
+          return;
+        }
+
+        if (
+          check?.pipeline_status &&
+          check.pipeline_status !== 'complete' &&
+          check.pipeline_status !== pollingState.pipelineStatus
+        ) {
+          // Pipeline is still making progress — don't timeout yet
+          setState({
+            elapsedSeconds: elapsed,
+            pipelineStatus: check.pipeline_status,
+          });
+          return;
+        }
+
         stopPolling();
         setState({
           isLoading: false,
@@ -154,7 +207,11 @@ export function useBriefingPolling(briefingId: string | null) {
       }
 
       if (data) {
-        setState({ briefing: data as Briefing });
+        const briefing = data as Briefing;
+        setState({
+          briefing,
+          pipelineStatus: briefing.pipeline_status ?? pollingState.pipelineStatus,
+        });
         if (data.narrative !== null) {
           stopPolling();
           setState({ isLoading: false, elapsedSeconds: elapsed });
@@ -175,7 +232,7 @@ export function useBriefingPolling(briefingId: string | null) {
       stopPolling();
       activeBriefingId = null;
     };
-  }, [briefingId]);
+  }, [briefingId, timeoutSeconds]);
 
   return state;
 }

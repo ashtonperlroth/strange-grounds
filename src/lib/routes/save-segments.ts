@@ -47,18 +47,83 @@ function mapSegment(row: Record<string, unknown>): RouteSegment {
 }
 
 /**
+ * Compute a fast hash of a LineString geometry for cache invalidation.
+ * Uses a simple FNV-1a-inspired hash of coordinate values rounded to 6 decimals.
+ */
+export function computeGeometryHash(geometry: LineString): string {
+  const coords = geometry.coordinates;
+  let h = 0x811c9dc5; // FNV offset basis (32-bit)
+  for (const c of coords) {
+    for (const v of c) {
+      const rounded = Math.round(v * 1e6);
+      h ^= rounded & 0xff;
+      h = Math.imul(h, 0x01000193);
+      h ^= (rounded >> 8) & 0xff;
+      h = Math.imul(h, 0x01000193);
+      h ^= (rounded >> 16) & 0xff;
+      h = Math.imul(h, 0x01000193);
+      h ^= (rounded >> 24) & 0xff;
+      h = Math.imul(h, 0x01000193);
+    }
+  }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+
+/**
+ * Check whether existing cached segments are still valid for the given geometry.
+ * Returns the cached segments if valid, or null if recomputation is needed.
+ */
+export async function loadCachedSegments(
+  supabase: SupabaseClient,
+  routeId: string,
+  currentGeometry: LineString,
+): Promise<RouteSegment[] | null> {
+  const { data: route } = await supabase
+    .from('routes')
+    .select('geometry_hash')
+    .eq('id', routeId)
+    .single();
+
+  const currentHash = computeGeometryHash(currentGeometry);
+
+  if (route?.geometry_hash === currentHash) {
+    const segments = await loadSegments(supabase, routeId);
+    if (segments.length > 0) {
+      console.log(
+        `[save-segments] Cache hit for route=${routeId} (hash=${currentHash}, ${segments.length} segments)`,
+      );
+      return segments;
+    }
+  }
+
+  console.log(
+    `[save-segments] Cache miss for route=${routeId} (stored=${route?.geometry_hash ?? 'none'}, current=${currentHash})`,
+  );
+  return null;
+}
+
+/**
  * Save computed segments to the route_segments table.
  * Deletes all existing segments for the route and inserts new ones.
+ * Also stores the geometry hash for future cache invalidation.
  */
 export async function saveSegments(
   supabase: SupabaseClient,
   routeId: string,
   segments: ComputedSegment[],
+  geometryHash?: string,
 ): Promise<RouteSegment[]> {
   await supabase
     .from('route_segments')
     .delete()
     .eq('route_id', routeId);
+
+  if (geometryHash) {
+    await supabase
+      .from('routes')
+      .update({ geometry_hash: geometryHash })
+      .eq('id', routeId);
+  }
 
   if (segments.length === 0) return [];
 

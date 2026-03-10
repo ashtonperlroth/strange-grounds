@@ -57,6 +57,37 @@ function stripHourlyData(nws: NWSForecastData | null): NWSForecastData | null {
   return { ...nws, hourly: [] };
 }
 
+async function updatePipelineStatus(
+  briefingId: string,
+  status: string,
+): Promise<void> {
+  try {
+    const supabase = createAdminClient();
+    await supabase
+      .from("briefings")
+      .update({ pipeline_status: status })
+      .eq("id", briefingId);
+  } catch {
+    // Non-critical — don't let status updates break the pipeline
+  }
+}
+
+interface SatelliteResult {
+  available: boolean;
+  date: string | null;
+  source: "sentinel-2";
+  cloudCover: number | null;
+  sceneId: string | null;
+}
+
+const EMPTY_SATELLITE: SatelliteResult = {
+  available: false,
+  date: null,
+  source: "sentinel-2",
+  cloudCover: null,
+  sceneId: null,
+};
+
 export const generateBriefing = inngest.createFunction(
   { id: "generate-briefing" },
   { event: "briefing/requested" },
@@ -71,9 +102,9 @@ export const generateBriefing = inngest.createFunction(
       startDate,
       endDate,
       activity,
-    } =
-      event.data;
+    } = event.data;
     const pipelineStart = Date.now();
+    const stepTimings: Record<string, number> = {};
     console.log(`[briefing] pipeline started for briefing=${briefingId}`);
 
     const tripDate = new Date(startDate);
@@ -81,7 +112,9 @@ export const generateBriefing = inngest.createFunction(
 
     const hasRoute = !!routeGeometry;
 
-    // Step 1: Fetch point-based conditions (used for all briefings)
+    await updatePipelineStatus(briefingId, "Fetching conditions data…");
+
+    // ── Step 1: Fetch point-based conditions ──────────────────────────
     const fetchResults = await step.run("fetch-all-data", async () => {
       const stepStart = Date.now();
 
@@ -129,9 +162,11 @@ export const generateBriefing = inngest.createFunction(
         fires,
         daylight,
         unavailableSources,
+        _elapsedMs: elapsed,
       };
     });
 
+    stepTimings["fetch-all-data"] = fetchResults._elapsedMs;
     const unavailableSources = fetchResults.unavailableSources;
 
     const fullConditions: ConditionsBundle = {
@@ -151,20 +186,32 @@ export const generateBriefing = inngest.createFunction(
     const conditionCards = buildConditionCards(fullConditions, unavailableSources);
     const readiness = computeReadiness(fullConditions);
 
-    // Step 2: If route exists, fetch per-segment conditions and compute hazards
+    // ── Steps 2 + 2c: Route conditions & satellite in parallel ────────
+    // Satellite is non-blocking: if it takes too long, synthesis proceeds
+    // without it and we backfill afterwards.
+
     let routeAnalysis: RouteAnalysis | null = null;
+    let routeSegments: RouteSegment[] = [];
+    let routeName: string | null = null;
+    let routeTotalDistanceM = 0;
+    let routeElevationGainM = 0;
+    let satelliteData: SatelliteResult = EMPTY_SATELLITE;
 
     if (hasRoute) {
-      routeAnalysis = await step.run(
-        "fetch-route-conditions",
-        async () => {
+      await updatePipelineStatus(
+        briefingId,
+        "Analyzing route segments…",
+      );
+
+      // Run route conditions + satellite + route meta in parallel
+      const [routeResult, satResult] = await Promise.all([
+        step.run("fetch-route-conditions", async () => {
           const stepStart = Date.now();
           const supabase = createAdminClient();
 
-          // Find the route for this trip
           const { data: routes } = await supabase
             .from("routes")
-            .select("id")
+            .select("id, name, total_distance_m, elevation_gain_m")
             .eq("trip_id", tripId)
             .order("created_at", { ascending: false })
             .limit(1);
@@ -173,45 +220,48 @@ export const generateBriefing = inngest.createFunction(
             console.warn(
               `[briefing] No route found for trip=${tripId}, skipping segment conditions`,
             );
-            return null;
+            return { analysis: null, meta: null, _elapsedMs: Date.now() - stepStart };
           }
 
-          const routeId = routes[0].id;
+          const routeRow = routes[0];
+          const routeId = routeRow.id;
 
-          // Load segments
           const segments = await loadSegments(supabase, routeId);
           if (segments.length === 0) {
             console.warn(
               `[briefing] No segments found for route=${routeId}, skipping segment conditions`,
             );
-            return null;
+            return { analysis: null, meta: null, _elapsedMs: Date.now() - stepStart };
           }
 
           console.log(
             `[briefing] Found ${segments.length} segments for route=${routeId}`,
           );
 
-          // Fetch conditions per segment with deduplication
+          await updatePipelineStatus(
+            briefingId,
+            `Fetching conditions for ${segments.length} segments…`,
+          );
+
           const segmentConditions = await fetchSegmentConditions(
             segments,
             tripDate,
           );
 
-          // Build route analysis
           const analysis = buildRouteAnalysis(segmentConditions);
 
-          // Save hazard levels back to route_segments table
-          for (const sc of segmentConditions) {
-            await supabase
+          // Save hazard levels back to route_segments — batch update
+          const updates = segmentConditions.map((sc) =>
+            supabase
               .from("route_segments")
               .update({
                 hazard_level: sc.hazardLevel,
                 hazard_notes: sc.hazardFactors.join(", ") || null,
               })
-              .eq("id", sc.segmentId);
-          }
+              .eq("id", sc.segmentId),
+          );
+          await Promise.all(updates);
 
-          // Slim down conditions for serialization
           const slimAnalysis: RouteAnalysis = {
             ...analysis,
             segments: slimSegmentConditions(analysis.segments),
@@ -222,90 +272,97 @@ export const generateBriefing = inngest.createFunction(
             `[briefing] fetch-route-conditions completed in ${elapsed}ms (${segments.length} segments, overall hazard: ${analysis.overallHazardLevel})`,
           );
 
-          return slimAnalysis;
+          return {
+            analysis: slimAnalysis,
+            meta: {
+              name: routeRow.name as string | null,
+              totalDistanceM: (routeRow.total_distance_m as number) ?? 0,
+              elevationGainM: (routeRow.elevation_gain_m as number) ?? 0,
+              segments,
+            },
+            _elapsedMs: elapsed,
+          };
+        }),
+
+        step.run("fetch-satellite-imagery", async (): Promise<SatelliteResult & { _elapsedMs: number }> => {
+          const stepStart = Date.now();
+          try {
+            const bbox: [number, number, number, number] =
+              routeBbox ?? bboxFromCenter(lat, lng);
+            const result: Sentinel2Data = await fetchSentinel2({ bbox });
+
+            const elapsed = Date.now() - stepStart;
+            console.log(
+              `[briefing] fetch-satellite-imagery completed in ${elapsed}ms (available: ${result.available})`,
+            );
+
+            return {
+              available: result.available,
+              date: result.acquisitionDate,
+              source: "sentinel-2",
+              cloudCover: result.cloudCover,
+              sceneId: result.scene?.sceneId ?? null,
+              _elapsedMs: elapsed,
+            };
+          } catch (err) {
+            console.warn("[briefing] Satellite imagery fetch failed (non-critical):", err);
+            return { ...EMPTY_SATELLITE, _elapsedMs: Date.now() - stepStart };
+          }
+        }),
+      ]);
+
+      if (routeResult.analysis) {
+        routeAnalysis = routeResult.analysis;
+      }
+      if (routeResult.meta) {
+        routeSegments = routeResult.meta.segments;
+        routeName = routeResult.meta.name;
+        routeTotalDistanceM = routeResult.meta.totalDistanceM;
+        routeElevationGainM = routeResult.meta.elevationGainM;
+      }
+      stepTimings["fetch-route-conditions"] = routeResult._elapsedMs;
+
+      const { _elapsedMs: _satElapsed, ...satData } = satResult;
+      satelliteData = satData;
+      stepTimings["fetch-satellite-imagery"] = _satElapsed;
+    } else {
+      // Point-based briefing: still fetch satellite, but non-blocking
+      const satResult = await step.run(
+        "fetch-satellite-imagery",
+        async (): Promise<SatelliteResult & { _elapsedMs: number }> => {
+          const stepStart = Date.now();
+          try {
+            const bbox = bboxFromCenter(lat, lng);
+            const result: Sentinel2Data = await fetchSentinel2({ bbox });
+
+            const elapsed = Date.now() - stepStart;
+            console.log(
+              `[briefing] fetch-satellite-imagery completed in ${elapsed}ms (available: ${result.available})`,
+            );
+
+            return {
+              available: result.available,
+              date: result.acquisitionDate,
+              source: "sentinel-2",
+              cloudCover: result.cloudCover,
+              sceneId: result.scene?.sceneId ?? null,
+              _elapsedMs: elapsed,
+            };
+          } catch (err) {
+            console.warn("[briefing] Satellite imagery fetch failed (non-critical):", err);
+            return { ...EMPTY_SATELLITE, _elapsedMs: Date.now() - stepStart };
+          }
         },
       );
+
+      const { _elapsedMs: satElapsed, ...satData } = satResult;
+      satelliteData = satData;
+      stepTimings["fetch-satellite-imagery"] = satElapsed;
     }
 
-    // Step 2b: Load route segments for route-aware synthesis prompt
-    let routeSegments: RouteSegment[] = [];
-    let routeName: string | null = null;
-    let routeTotalDistanceM = 0;
-    let routeElevationGainM = 0;
+    // ── Step 3: Synthesize narrative ──────────────────────────────────
+    await updatePipelineStatus(briefingId, "Generating briefing narrative…");
 
-    if (hasRoute && routeAnalysis) {
-      const segmentMeta = await step.run("load-route-meta", async () => {
-        const supabase = createAdminClient();
-        const { data: routes } = await supabase
-          .from("routes")
-          .select("id, name, total_distance_m, elevation_gain_m")
-          .eq("trip_id", tripId)
-          .order("created_at", { ascending: false })
-          .limit(1);
-
-        if (!routes || routes.length === 0) return null;
-
-        const routeRow = routes[0];
-        const segs = await loadSegments(supabase, routeRow.id);
-        return {
-          name: routeRow.name as string | null,
-          totalDistanceM: (routeRow.total_distance_m as number) ?? 0,
-          elevationGainM: (routeRow.elevation_gain_m as number) ?? 0,
-          segments: segs,
-        };
-      });
-
-      if (segmentMeta) {
-        routeSegments = segmentMeta.segments;
-        routeName = segmentMeta.name;
-        routeTotalDistanceM = segmentMeta.totalDistanceM;
-        routeElevationGainM = segmentMeta.elevationGainM;
-      }
-    }
-
-    // Step 2c: Fetch satellite imagery (optional, non-blocking)
-    const satelliteData = await step.run(
-      "fetch-satellite-imagery",
-      async (): Promise<{
-        available: boolean;
-        date: string | null;
-        source: "sentinel-2";
-        cloudCover: number | null;
-        sceneId: string | null;
-      }> => {
-        const stepStart = Date.now();
-        try {
-          const bbox: [number, number, number, number] =
-            routeBbox ?? bboxFromCenter(lat, lng);
-
-          const result: Sentinel2Data = await fetchSentinel2({ bbox });
-
-          const elapsed = Date.now() - stepStart;
-          console.log(
-            `[briefing] fetch-satellite-imagery completed in ${elapsed}ms (available: ${result.available})`,
-          );
-
-          return {
-            available: result.available,
-            date: result.acquisitionDate,
-            source: "sentinel-2",
-            cloudCover: result.cloudCover,
-            sceneId: result.scene?.sceneId ?? null,
-          };
-        } catch (err) {
-          console.warn("[briefing] Satellite imagery fetch failed (non-critical):", err);
-          return {
-            available: false,
-            date: null,
-            source: "sentinel-2",
-            cloudCover: null,
-            sceneId: null,
-          };
-        }
-      },
-    );
-
-    // Step 3: Synthesize narrative (route-aware or point-based)
     const useRouteAware =
       hasRoute &&
       routeAnalysis !== null &&
@@ -355,6 +412,7 @@ export const generateBriefing = inngest.createFunction(
           alternativeRoutes: routeResult.alternativeRoutes,
           gearChecklist: routeResult.gearChecklist,
           overallReadiness: routeResult.overallReadiness,
+          _elapsedMs: elapsed,
         };
       }
 
@@ -370,10 +428,15 @@ export const generateBriefing = inngest.createFunction(
       return {
         isRouteAware: false as const,
         ...result,
+        _elapsedMs: elapsed,
       };
     });
 
-    // Step 4: Save briefing to database
+    stepTimings["synthesize"] = synthesisOutput._elapsedMs;
+
+    // ── Step 4: Save briefing to database ─────────────────────────────
+    await updatePipelineStatus(briefingId, "Saving briefing…");
+
     await step.run("save-briefing", async () => {
       const stepStart = Date.now();
       const supabase = createAdminClient();
@@ -394,6 +457,7 @@ export const generateBriefing = inngest.createFunction(
           narrative: synthesisOutput.narrative,
           bottom_line: synthesisOutput.bottomLine,
           readiness_rationale: synthesisOutput.readinessRationale,
+          pipeline_status: "complete",
           conditions: {
             ...fullConditions,
             conditionCards,
@@ -440,6 +504,7 @@ export const generateBriefing = inngest.createFunction(
 
       const elapsed = Date.now() - stepStart;
       console.log(`[briefing] save-briefing completed in ${elapsed}ms (id: ${data.id})`);
+      stepTimings["save-briefing"] = elapsed;
       return { savedId: data.id, hasNarrative: !!data.narrative };
     });
 
@@ -448,8 +513,9 @@ export const generateBriefing = inngest.createFunction(
       `[briefing] pipeline completed for briefing=${briefingId} in ${totalElapsed}ms` +
         (routeAnalysis
           ? ` (route: ${routeAnalysis.totalSegments} segments, hazard: ${routeAnalysis.overallHazardLevel})`
-          : " (point-based)"),
+          : " (point-based)") +
+        ` | step timings: ${JSON.stringify(stepTimings)}`,
     );
-    return { briefingId, status: "complete" };
+    return { briefingId, status: "complete", stepTimings, totalElapsedMs: totalElapsed };
   },
 );
