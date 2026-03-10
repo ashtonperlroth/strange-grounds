@@ -11,6 +11,13 @@ import { buildConditionCards, computeReadiness } from "@/lib/synthesis/condition
 import type { ConditionsBundle } from "@/lib/synthesis/conditions";
 import type { NWSForecastData } from "@/lib/data-sources/nws";
 import type { Activity } from "@/stores/planning-store";
+import { loadSegments } from "@/lib/routes/save-segments";
+import {
+  fetchSegmentConditions,
+  buildRouteAnalysis,
+  slimSegmentConditions,
+} from "@/lib/routes/segment-conditions";
+import type { RouteAnalysis } from "@/lib/types/briefing";
 
 const DEFAULT_TIMEOUT_MS = 8_000;
 const AVALANCHE_TIMEOUT_MS = 10_000;
@@ -47,6 +54,7 @@ export const generateBriefing = inngest.createFunction(
   async ({ event, step }) => {
     const {
       briefingId,
+      tripId,
       lat,
       lng,
       routeGeometry,
@@ -62,6 +70,9 @@ export const generateBriefing = inngest.createFunction(
     const tripDate = new Date(startDate);
     tripDate.setUTCHours(12, 0, 0, 0);
 
+    const hasRoute = !!routeGeometry;
+
+    // Step 1: Fetch point-based conditions (used for all briefings)
     const fetchResults = await step.run("fetch-all-data", async () => {
       const stepStart = Date.now();
 
@@ -131,6 +142,83 @@ export const generateBriefing = inngest.createFunction(
     const conditionCards = buildConditionCards(fullConditions, unavailableSources);
     const readiness = computeReadiness(fullConditions);
 
+    // Step 2: If route exists, fetch per-segment conditions and compute hazards
+    let routeAnalysis: RouteAnalysis | null = null;
+
+    if (hasRoute) {
+      routeAnalysis = await step.run(
+        "fetch-route-conditions",
+        async () => {
+          const stepStart = Date.now();
+          const supabase = createAdminClient();
+
+          // Find the route for this trip
+          const { data: routes } = await supabase
+            .from("routes")
+            .select("id")
+            .eq("trip_id", tripId)
+            .order("created_at", { ascending: false })
+            .limit(1);
+
+          if (!routes || routes.length === 0) {
+            console.warn(
+              `[briefing] No route found for trip=${tripId}, skipping segment conditions`,
+            );
+            return null;
+          }
+
+          const routeId = routes[0].id;
+
+          // Load segments
+          const segments = await loadSegments(supabase, routeId);
+          if (segments.length === 0) {
+            console.warn(
+              `[briefing] No segments found for route=${routeId}, skipping segment conditions`,
+            );
+            return null;
+          }
+
+          console.log(
+            `[briefing] Found ${segments.length} segments for route=${routeId}`,
+          );
+
+          // Fetch conditions per segment with deduplication
+          const segmentConditions = await fetchSegmentConditions(
+            segments,
+            tripDate,
+          );
+
+          // Build route analysis
+          const analysis = buildRouteAnalysis(segmentConditions);
+
+          // Save hazard levels back to route_segments table
+          for (const sc of segmentConditions) {
+            await supabase
+              .from("route_segments")
+              .update({
+                hazard_level: sc.hazardLevel,
+                hazard_notes: sc.hazardFactors.join(", ") || null,
+              })
+              .eq("id", sc.segmentId);
+          }
+
+          // Slim down conditions for serialization
+          const slimAnalysis: RouteAnalysis = {
+            ...analysis,
+            segments: slimSegmentConditions(analysis.segments),
+          };
+
+          const elapsed = Date.now() - stepStart;
+          console.log(
+            `[briefing] fetch-route-conditions completed in ${elapsed}ms (${segments.length} segments, overall hazard: ${analysis.overallHazardLevel})`,
+          );
+
+          return slimAnalysis;
+        },
+      );
+    }
+
+    // Step 3: Synthesize narrative
     const briefingResult = await step.run("synthesize", async () => {
       const stepStart = Date.now();
       const result = await synthesize(
@@ -145,6 +233,7 @@ export const generateBriefing = inngest.createFunction(
       return result;
     });
 
+    // Step 4: Save briefing to database
     await step.run("save-briefing", async () => {
       const stepStart = Date.now();
       const supabase = createAdminClient();
@@ -159,6 +248,7 @@ export const generateBriefing = inngest.createFunction(
             ...fullConditions,
             conditionCards,
             unavailableSources,
+            ...(routeAnalysis && { routeAnalysis }),
           },
           raw_data: {
             ...fullConditions,
@@ -170,6 +260,14 @@ export const generateBriefing = inngest.createFunction(
                   center: { lat, lng },
                 }
               : null,
+            ...(routeAnalysis && {
+              routeAnalysis: {
+                overallHazardLevel: routeAnalysis.overallHazardLevel,
+                highestHazardSegment: routeAnalysis.highestHazardSegment,
+                totalSegments: routeAnalysis.totalSegments,
+                hazardDistribution: routeAnalysis.hazardDistribution,
+              },
+            }),
           },
           readiness: briefingResult.readiness ?? readiness,
         })
@@ -193,7 +291,12 @@ export const generateBriefing = inngest.createFunction(
     });
 
     const totalElapsed = Date.now() - pipelineStart;
-    console.log(`[briefing] pipeline completed for briefing=${briefingId} in ${totalElapsed}ms`);
+    console.log(
+      `[briefing] pipeline completed for briefing=${briefingId} in ${totalElapsed}ms` +
+        (routeAnalysis
+          ? ` (route: ${routeAnalysis.totalSegments} segments, hazard: ${routeAnalysis.overallHazardLevel})`
+          : " (point-based)"),
+    );
     return { briefingId, status: "complete" };
   },
 );
