@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button';
 export function HeroOverlay() {
   const location = usePlanningStore((s) => s.location);
   const hasRoute = useRouteStore((s) => s.currentRoute !== null);
-  const isVisible = location === null && !hasRoute;
+  const routesPanelOpen = usePopularRoutesStore((s) => s.panelOpen);
+  const isVisible = location === null && !hasRoute && !routesPanelOpen;
   const importRef = useRef<HTMLInputElement>(null);
 
   const handleImportClick = () => {
