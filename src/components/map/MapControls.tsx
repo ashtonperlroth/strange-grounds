@@ -42,6 +42,8 @@ const OVERLAY_LAYERS: OverlayDef[] = [
   { id: 'avalanche-zones', label: 'Avy Zones', color: '#eab308' },
   { id: 'fire-perimeters', label: 'Active Fires', color: '#f97316' },
   { id: 'slope-angle', label: 'Slope Angle', color: '#ef4444' },
+  { id: 'satellite-imagery', label: 'Satellite Imagery', color: '#6366f1' },
+  { id: 'satellite-snow', label: 'Snow Coverage (Satellite)', color: '#e0f2fe' },
 ];
 
 interface MapControlsProps {

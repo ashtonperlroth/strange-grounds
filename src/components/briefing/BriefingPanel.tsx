@@ -51,6 +51,7 @@ import {
   ConditionCardErrorFallback,
 } from '@/components/layout/ErrorBoundary';
 import { HazardSummaryCard } from './cards/HazardSummaryCard';
+import { SatelliteCard, type SatelliteCardData } from './cards/SatelliteCard';
 import { RouteWalkthrough } from './RouteWalkthrough';
 import type { RouteAnalysis } from '@/lib/types/briefing';
 import type {
@@ -436,6 +437,7 @@ function BriefingFullView({
   const usgsData = conditions?.streamFlow as UsgsData | undefined;
   const daylightData = conditions?.daylight as DaylightData | undefined;
   const fireData = conditions?.fires as FireData | undefined;
+  const satelliteData = conditions?.satellite as SatelliteCardData | undefined;
   const unavailableSources = (conditions?.unavailableSources as string[] | undefined) ?? [];
   const sortAvyToTop = getAvalancheSortPriority(avalancheData ?? null) > 0;
 
@@ -608,6 +610,15 @@ function BriefingFullView({
                 unavailable={isSourceUnavailable('Daylight')}
               />
             </ErrorBoundary>
+            {satelliteData?.available && (
+              <ErrorBoundary
+                fallback={(reset) => (
+                  <ConditionCardErrorFallback category="Satellite Overview" reset={reset} />
+                )}
+              >
+                <SatelliteCard data={satelliteData ?? null} />
+              </ErrorBoundary>
+            )}
             {STUB_CARDS.map((card) => (
               <ErrorBoundary
                 key={card.category}
