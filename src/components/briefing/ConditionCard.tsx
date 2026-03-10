@@ -19,7 +19,7 @@ const STATUS_CONFIG: Record<
   },
   caution: {
     label: 'Caution',
-    className: 'border-yellow-600/20 bg-yellow-50 text-yellow-700',
+    className: 'border-amber-600/20 bg-amber-50 text-amber-700',
     srText: 'Status: use caution',
   },
   concern: {
@@ -89,7 +89,7 @@ export function ConditionCard({
       </AccordionTrigger>
       <AccordionContent className="text-stone-600">
         {detail && (
-          <p className="mb-3 text-sm leading-relaxed text-stone-600">
+          <p className="mb-3 text-base leading-relaxed text-stone-600">
             {detail}
           </p>
         )}

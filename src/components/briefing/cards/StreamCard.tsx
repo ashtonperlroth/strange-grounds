@@ -14,14 +14,14 @@ interface StreamCardProps {
 function getFlowColor(percentOfMedian: number | null): string {
   if (percentOfMedian === null) return 'text-stone-500';
   if (percentOfMedian <= 120) return 'text-emerald-600';
-  if (percentOfMedian <= 180) return 'text-yellow-600';
+  if (percentOfMedian <= 180) return 'text-amber-600';
   return 'text-red-600';
 }
 
 function getFlowBg(percentOfMedian: number | null): string {
   if (percentOfMedian === null) return 'bg-stone-100';
   if (percentOfMedian <= 120) return 'bg-emerald-50';
-  if (percentOfMedian <= 180) return 'bg-yellow-50';
+  if (percentOfMedian <= 180) return 'bg-amber-50';
   return 'bg-red-50';
 }
 

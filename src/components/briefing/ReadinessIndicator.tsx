@@ -29,8 +29,8 @@ const CONFIG: Record<Readiness, ReadinessConfig> = {
   yellow: {
     label: 'CAUTION',
     Icon: AlertTriangle,
-    badgeClass: 'border-yellow-600/20 bg-yellow-50 text-yellow-700',
-    iconClass: 'text-yellow-600',
+    badgeClass: 'border-amber-600/20 bg-amber-50 text-amber-700',
+    iconClass: 'text-amber-600',
   },
   red: {
     label: 'CONCERN',

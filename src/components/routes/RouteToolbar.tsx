@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, type ChangeEvent } from 'react';
 import { ArrowRightLeft, Download, Magnet, MapPinned, Pencil, Trash2, Undo2 } from 'lucide-react';
 import { lineString, length as turfLength, bbox as turfBbox, center as turfCenter } from '@turf/turf';
+import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc/client';
 import { fetchElevationsForPositions } from '@/lib/routes/elevation';
 import { parseGPX, parseKML, type ParsedRoute } from '@/lib/routes/parsers/gpx';
@@ -156,14 +157,6 @@ function buildImportWaypoints(coordinates: [number, number, number?][]): Array<{
   });
 }
 
-function formatImportSuccessMessage(route: ParsedRoute): string {
-  const distanceMi = route.totalDistance * 0.000621371;
-  const elevationGainFt = route.elevationGain * 3.28084;
-  return `Imported ${route.name} — ${distanceMi.toFixed(1)} mi, ${Math.round(
-    elevationGainFt,
-  ).toLocaleString()} ft gain`;
-}
-
 function getImportedRouteName(route: ParsedRoute): string {
   if (route.name.trim()) return route.name.trim();
   const start = route.coordinates[0];
@@ -250,10 +243,6 @@ export function RouteToolbar() {
   const deleteRouteMutation = trpc.routes.delete.useMutation();
   const autosaveSignatureRef = useRef<string | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
-  const [importNotice, setImportNotice] = useState<{
-    type: 'success' | 'error';
-    message: string;
-  } | null>(null);
 
   const sortedWaypoints = useMemo(
     () => [...waypoints].sort((a, b) => a.sortOrder - b.sortOrder),
@@ -436,12 +425,6 @@ export function RouteToolbar() {
     updateRouteMutation,
   ]);
 
-  useEffect(() => {
-    if (!importNotice) return;
-    const timer = setTimeout(() => setImportNotice(null), 5000);
-    return () => clearTimeout(timer);
-  }, [importNotice]);
-
   const handleSnapRouteToTrails = () => {
     const trailNetwork = useRouteStore.getState().trailNetwork;
     if (!trailNetwork.features.length || sortedWaypoints.length === 0) return;
@@ -522,12 +505,13 @@ export function RouteToolbar() {
     });
 
     const snappedCount = Object.keys(snaps).length;
-    setImportNotice({
-      type: snappedCount > 0 ? 'success' : 'error',
-      message: snappedCount > 0
-        ? `Snapped ${snappedCount} of ${sortedWaypoints.length} waypoints to trails`
-        : 'No nearby trails found — zoom in or enable the trails overlay',
-    });
+    if (snappedCount > 0) {
+      toast.success(`Snapped ${snappedCount} of ${sortedWaypoints.length} waypoints to trails`);
+    } else {
+      toast.error('No nearby trails found', {
+        description: 'Zoom in or enable the trails overlay',
+      });
+    }
   };
 
   const handleUndo = () => {
@@ -607,9 +591,8 @@ export function RouteToolbar() {
           elevationM: waypoint.elevationM,
         })),
       });
-      setImportNotice({
-        type: 'success',
-        message: formatImportSuccessMessage({ ...parsedRoute, name: routeName }),
+      toast.success(`Imported ${routeName}`, {
+        description: `${(parsedRoute.totalDistance / 1609).toFixed(1)} mi · ${Math.round(parsedRoute.elevationGain * 3.281)} ft gain`,
       });
 
       const saved = await createRoute.mutateAsync({
@@ -644,10 +627,7 @@ export function RouteToolbar() {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to import route file';
-      setImportNotice({
-        type: 'error',
-        message: `Imported locally but could not save: ${message}`,
-      });
+      toast.error('Import failed', { description: message });
     }
   };
 
@@ -661,7 +641,7 @@ export function RouteToolbar() {
         <Button
           size="sm"
           onClick={() => setIsDrawing(!isDrawing)}
-          className="h-8 bg-emerald-600 text-xs hover:bg-emerald-500"
+          className="h-8 bg-emerald-600 text-xs hover:bg-emerald-700"
         >
           <Pencil className="size-3.5" />
           {isDrawing ? 'Finish' : 'Draw Route'}
@@ -757,17 +737,6 @@ export function RouteToolbar() {
         </div>
       </div>
 
-      {importNotice && (
-        <div
-          className={`rounded-md px-2 py-1 text-[11px] ${
-            importNotice.type === 'success'
-              ? 'border border-emerald-300/40 bg-emerald-500/15 text-emerald-100'
-              : 'border border-red-300/50 bg-red-500/20 text-red-100'
-          }`}
-        >
-          {importNotice.message}
-        </div>
-      )}
     </div>
   );
 }

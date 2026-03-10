@@ -42,9 +42,9 @@ const READINESS_CONFIG: Record<
   },
   yellow: {
     label: 'PROCEED WITH CAUTION',
-    bg: 'bg-yellow-50',
-    border: 'border-yellow-200',
-    text: 'text-yellow-800',
+    bg: 'bg-amber-50',
+    border: 'border-amber-200',
+    text: 'text-amber-800',
   },
   orange: {
     label: 'SIGNIFICANT CONCERNS',
@@ -82,7 +82,7 @@ function BottomLineCard({ bottomLine, overallReadiness }: BottomLineCardProps) {
           {config.label}
         </span>
       </div>
-      <p className={cn('text-sm font-semibold leading-relaxed', config.text)}>
+      <p className={cn('text-base font-medium leading-relaxed', config.text)}>
         {bottomLine}
       </p>
     </div>
@@ -123,7 +123,7 @@ function SegmentCard({ segment, isCritical, onZoomToSegment }: SegmentCardProps)
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-stone-800">
+            <span className="text-base font-semibold text-stone-800">
               {segment.title}
             </span>
             {isCritical && (
@@ -152,15 +152,15 @@ function SegmentCard({ segment, isCritical, onZoomToSegment }: SegmentCardProps)
 
       {expanded && (
         <div className="border-t border-stone-100 px-4 pb-4 pt-3">
-          <p className="mb-3 text-sm leading-relaxed text-stone-600">
+          <p className="mb-3 text-base leading-relaxed text-stone-600">
             {segment.narrative}
           </p>
 
           {segment.keyCallouts.length > 0 && (
             <ul className="mb-3 space-y-1">
               {segment.keyCallouts.map((callout, i) => (
-                <li key={i} className="flex items-start gap-2 text-xs text-stone-600">
-                  <span className="mt-1 inline-block size-1.5 shrink-0 rounded-full bg-stone-400" />
+                <li key={i} className="flex items-start gap-2 text-sm text-stone-600">
+                  <span className="mt-1.5 inline-block size-1.5 shrink-0 rounded-full bg-stone-400" />
                   {callout}
                 </li>
               ))}
@@ -217,11 +217,11 @@ function CriticalSectionsPanel({ sections, onZoomToSegment }: CriticalSectionsPr
             className="w-full rounded-lg border border-red-200 bg-red-50 p-3 text-left transition-colors hover:bg-red-100"
             onClick={() => onZoomToSegment(section.segmentOrder)}
           >
-            <div className="mb-1 text-sm font-semibold text-red-800">
+            <div className="mb-1 text-base font-semibold text-red-800">
               {section.title}
             </div>
-            <p className="mb-1 text-xs text-red-700">{section.whyCritical}</p>
-            <p className="text-xs font-medium text-red-900">
+            <p className="mb-1 text-sm text-red-700">{section.whyCritical}</p>
+            <p className="text-base font-medium text-red-900">
               {section.recommendation}
             </p>
           </button>
@@ -252,7 +252,7 @@ function AlternativeRoutesPanel({ routes }: AlternativeRoutesProps) {
             key={i}
             className="rounded-lg border border-stone-200 bg-stone-50 p-3"
           >
-            <p className="text-sm text-stone-700">{route.description}</p>
+            <p className="text-base text-stone-600">{route.description}</p>
             <p className="mt-1 text-xs font-medium text-emerald-600">
               {route.benefit}
             </p>
@@ -307,10 +307,10 @@ function GearChecklist({ items }: GearChecklistProps) {
             )}
             <span
               className={cn(
-                'text-sm',
+                'text-base',
                 checked.has(i)
                   ? 'text-stone-400 line-through'
-                  : 'text-stone-700',
+                  : 'text-stone-600',
               )}
             >
               {item}

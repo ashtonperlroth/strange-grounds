@@ -266,18 +266,27 @@ export function PopularRoutesPanel() {
         <div className="space-y-2 py-3">
           {isLoading ? (
             <div className="flex flex-col items-center gap-2 py-12 text-stone-400">
-              <Loader2 className="size-5 animate-spin" />
+              <Loader2 className="size-4 animate-spin text-emerald-600" />
               <span className="text-xs">Loading routes...</span>
             </div>
           ) : filteredRoutes.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-center">
               <Compass className="size-8 text-stone-300" />
-              <p className="text-sm font-medium text-stone-500">
-                No routes found
+              <p className="text-sm font-medium text-stone-600">
+                {isSearching ? 'No routes found' : 'No routes match your filters'}
               </p>
               <p className="max-w-[200px] text-xs text-stone-400">
                 Try adjusting your filters or search query
               </p>
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="mt-1 text-xs font-medium text-emerald-600 hover:text-emerald-700"
+                >
+                  Clear all filters
+                </button>
+              )}
             </div>
           ) : (
             filteredRoutes.map((route) => (

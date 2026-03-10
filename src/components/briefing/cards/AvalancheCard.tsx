@@ -15,7 +15,7 @@ const DANGER_BADGE_COLORS: Record<DangerLevel, string> = {
   0: 'bg-stone-100 text-stone-500 border-stone-300',
   1: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   2: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  3: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  3: 'bg-amber-50 text-amber-700 border-amber-200',
   4: 'bg-red-50 text-red-700 border-red-200',
   5: 'bg-red-50 text-red-700 border-red-200',
 };
@@ -119,7 +119,7 @@ export function AvalancheCard({ data, unavailable }: AvalancheCardProps) {
         </div>
 
         {data.discussion && (
-          <p className="text-sm leading-relaxed text-stone-600">
+          <p className="text-base leading-relaxed text-stone-600">
             {data.discussion}
           </p>
         )}

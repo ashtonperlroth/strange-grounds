@@ -169,7 +169,7 @@ export function SnowpackCard({ data, unavailable, children }: SnowpackCardProps)
                   data.summary.percentOfNormal >= 80
                     ? 'font-medium text-emerald-600'
                     : data.summary.percentOfNormal >= 50
-                      ? 'font-medium text-yellow-600'
+                      ? 'font-medium text-amber-600'
                       : 'font-medium text-red-600'
                 }
               >
