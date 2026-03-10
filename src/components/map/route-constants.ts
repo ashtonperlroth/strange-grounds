@@ -12,3 +12,9 @@ export const ROUTE_GHOST_LAYER_ID = 'route-ghost-layer';
 
 export const ROUTE_PROFILE_HOVER_SOURCE_ID = 'route-profile-hover-source';
 export const ROUTE_PROFILE_HOVER_LAYER_ID = 'route-profile-hover-layer';
+
+export const SEGMENT_SOURCE_ID = 'route-segments-source';
+export const SEGMENT_CASING_LAYER_ID = 'route-segments-casing-layer';
+export const SEGMENT_LINE_LAYER_ID = 'route-segments-line-layer';
+export const SEGMENT_BOUNDARY_SOURCE_ID = 'route-segments-boundary-source';
+export const SEGMENT_BOUNDARY_LAYER_ID = 'route-segments-boundary-layer';

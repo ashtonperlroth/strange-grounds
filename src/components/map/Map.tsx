@@ -15,10 +15,13 @@ import { TrailLayer } from './layers/TrailLayer';
 import { RouteLayer } from './layers/RouteLayer';
 import { RouteDrawing } from './interactions/RouteDrawing';
 import { PopularRoutePreview } from './layers/PopularRoutePreview';
+import { SegmentLayer } from './layers/SegmentLayer';
 import { ROUTE_WAYPOINTS_CIRCLE_LAYER_ID } from './route-constants';
 import { RouteToolbar } from '@/components/routes/RouteToolbar';
 import { WaypointPopup } from '@/components/routes/WaypointPopup';
 import { ElevationProfile } from '@/components/routes/ElevationProfile';
+import { useSegmentation } from '@/hooks/useSegmentation';
+import { useSegmentStore } from '@/stores/segment-store';
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY ?? '';
 
@@ -79,6 +82,9 @@ export function Map() {
   const { viewport, setViewport, flyToTarget, clearFlyTo } = useMapStore();
   const activeOverlays = useMapStore((s) => s.activeOverlays);
   const location = usePlanningStore((s) => s.location);
+  const isSegmenting = useSegmentStore((s) => s.isSegmenting);
+
+  useSegmentation();
 
   const handleStyleChange = useCallback((styleUrl: string) => {
     const map = mapRef.current;
@@ -256,6 +262,7 @@ export function Map() {
       <RouteToolbar />
       <TrailLayer map={mapInstance} visible={activeOverlays.has('trails')} />
       <RouteLayer map={mapInstance} />
+      <SegmentLayer map={mapInstance} />
       <PopularRoutePreview map={mapInstance} />
       <RouteDrawing map={mapInstance} />
       <WaypointPopup map={mapInstance} />
@@ -272,6 +279,15 @@ export function Map() {
         map={mapInstance}
         visible={activeOverlays.has('slope-angle')}
       />
+
+      {isSegmenting && (
+        <div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2">
+          <div className="flex items-center gap-2 rounded-full bg-stone-900/80 px-4 py-1.5 text-xs text-white shadow-lg backdrop-blur-sm">
+            <Loader2 className="size-3 animate-spin" />
+            Analyzing terrain&hellip;
+          </div>
+        </div>
+      )}
     </div>
   );
 }
