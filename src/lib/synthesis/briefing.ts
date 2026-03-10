@@ -2,8 +2,14 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { Activity } from "@/stores/planning-store";
 import type { ConditionsBundle } from "./conditions";
 import { computeReadiness, buildConditionCards } from "./conditions";
-import { promptForActivity } from "./prompts";
+import { promptForActivity, promptForRouteActivity } from "./prompts";
+import type { RoutePromptData } from "./prompts";
 import type { ConditionCardData } from "@/stores/briefing-store";
+import type {
+  RouteAwareSynthesisResult,
+  RouteAwareBriefing,
+  OverallReadiness,
+} from "@/lib/types/route-briefing";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -149,6 +155,141 @@ export async function generateBriefing(
     narrative: synthesis.narrative,
     readiness: readinessMap[synthesis.readiness] ?? fallbackReadiness,
     readinessRationale: synthesis.readinessRationale,
+    conditionCards,
+  };
+}
+
+// ── Route-aware parsing ─────────────────────────────────────────────
+
+const VALID_READINESS = new Set<OverallReadiness>(["green", "yellow", "orange", "red"]);
+
+function parseRouteAwareSynthesisResponse(
+  responseText: string,
+): RouteAwareSynthesisResult {
+  const cleaned = responseText.replace(/```json\n?|```\n?/g, "").trim();
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    throw new Error(
+      `Failed to parse route-aware synthesis JSON: ${cleaned.slice(0, 200)}`,
+    );
+  }
+
+  const obj = parsed as Record<string, unknown>;
+  if (typeof obj.bottomLine !== "string" || typeof obj.narrative !== "string") {
+    throw new Error(
+      `Route-aware synthesis JSON missing required fields: ${JSON.stringify(Object.keys(obj))}`,
+    );
+  }
+
+  const readiness = (
+    typeof obj.overallReadiness === "string"
+      ? obj.overallReadiness.toLowerCase()
+      : "yellow"
+  ) as OverallReadiness;
+
+  return {
+    bottomLine: obj.bottomLine,
+    overallReadiness: VALID_READINESS.has(readiness) ? readiness : "yellow",
+    routeWalkthrough: Array.isArray(obj.routeWalkthrough)
+      ? obj.routeWalkthrough.map((s: Record<string, unknown>) => ({
+          segmentOrder: typeof s.segmentOrder === "number" ? s.segmentOrder : 0,
+          mileRange: typeof s.mileRange === "string" ? s.mileRange : "",
+          title: typeof s.title === "string" ? s.title : "",
+          narrative: typeof s.narrative === "string" ? s.narrative : "",
+          hazardLevel: typeof s.hazardLevel === "string" ? s.hazardLevel : "low",
+          keyCallouts: Array.isArray(s.keyCallouts)
+            ? s.keyCallouts.filter((c: unknown): c is string => typeof c === "string")
+            : [],
+          timingAdvice: typeof s.timingAdvice === "string" ? s.timingAdvice : null,
+        }))
+      : [],
+    criticalSections: Array.isArray(obj.criticalSections)
+      ? obj.criticalSections.map((s: Record<string, unknown>) => ({
+          segmentOrder: typeof s.segmentOrder === "number" ? s.segmentOrder : 0,
+          title: typeof s.title === "string" ? s.title : "",
+          whyCritical: typeof s.whyCritical === "string" ? s.whyCritical : "",
+          recommendation: typeof s.recommendation === "string" ? s.recommendation : "",
+        }))
+      : [],
+    alternativeRoutes: Array.isArray(obj.alternativeRoutes)
+      ? obj.alternativeRoutes.map((r: Record<string, unknown>) => ({
+          description: typeof r.description === "string" ? r.description : "",
+          benefit: typeof r.benefit === "string" ? r.benefit : "",
+        }))
+      : null,
+    gearChecklist: Array.isArray(obj.gearChecklist)
+      ? obj.gearChecklist.filter((g: unknown): g is string => typeof g === "string")
+      : [],
+    narrative: obj.narrative,
+  };
+}
+
+// ── Route-aware generation ──────────────────────────────────────────
+
+const ROUTE_MAX_TOKENS = 3000;
+
+export async function generateRouteAwareBriefingText(
+  conditions: ConditionsBundle,
+  activity: Activity,
+  location: BriefingLocation,
+  dates: BriefingDates,
+  routeData: RoutePromptData,
+  unavailableSources: string[] = [],
+): Promise<RouteAwareSynthesisResult> {
+  const { system, user } = promptForRouteActivity(
+    activity,
+    conditions,
+    location,
+    dates,
+    routeData,
+    unavailableSources,
+  );
+
+  const client = getClient();
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: ROUTE_MAX_TOKENS,
+    messages: [{ role: "user", content: user }],
+    system,
+  });
+
+  const textBlock = response.content.find((block) => block.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    throw new Error("Claude response contained no text content");
+  }
+
+  return parseRouteAwareSynthesisResponse(textBlock.text);
+}
+
+export async function generateRouteAwareBriefing(
+  conditions: ConditionsBundle,
+  activity: Activity,
+  location: BriefingLocation,
+  dates: BriefingDates,
+  routeData: RoutePromptData,
+  unavailableSources: string[] = [],
+): Promise<RouteAwareBriefing> {
+  const conditionCards = buildConditionCards(conditions, unavailableSources);
+  const synthesis = await generateRouteAwareBriefingText(
+    conditions,
+    activity,
+    location,
+    dates,
+    routeData,
+    unavailableSources,
+  );
+
+  return {
+    bottomLine: synthesis.bottomLine,
+    overallReadiness: synthesis.overallReadiness,
+    routeWalkthrough: synthesis.routeWalkthrough,
+    criticalSections: synthesis.criticalSections,
+    alternativeRoutes: synthesis.alternativeRoutes,
+    gearChecklist: synthesis.gearChecklist,
+    narrative: synthesis.narrative,
     conditionCards,
   };
 }
