@@ -5,6 +5,7 @@ import maplibregl from 'maplibre-gl';
 import type { Feature, FeatureCollection, LineString } from 'geojson';
 import { useSegmentStore } from '@/stores/segment-store';
 import { useBriefingStore } from '@/stores/briefing-store';
+import { useRouteStore } from '@/stores/route-store';
 import { HAZARD_COLORS, HAZARD_LABELS } from '@/lib/routes/hazard-colors';
 import type { HazardLevel, SegmentConditions } from '@/lib/types/briefing';
 import {
@@ -12,6 +13,7 @@ import {
   HAZARD_CASING_LAYER_ID,
   HAZARD_LINE_LAYER_ID,
 } from '@/components/map/route-constants';
+import { getCursorManager } from '@/lib/map/cursor-manager';
 
 interface HazardLayerProps {
   map: maplibregl.Map | null;
@@ -167,12 +169,15 @@ export function HazardLayer({ map, visible }: HazardLayerProps) {
   useEffect(() => {
     if (!map) return;
 
+    const cursorMgr = getCursorManager(map!);
+
     const onMouseEnter = () => {
-      map!.getCanvas().style.cursor = 'pointer';
+      if (useRouteStore.getState().isDrawing) return;
+      cursorMgr.request('hover-feature', 'pointer');
     };
 
     const onMouseLeave = () => {
-      map!.getCanvas().style.cursor = '';
+      cursorMgr.release('hover-feature');
       popupRef.current?.remove();
       popupRef.current = null;
     };
@@ -225,6 +230,7 @@ export function HazardLayer({ map, visible }: HazardLayerProps) {
       map.off('mouseenter', HAZARD_LINE_LAYER_ID, onMouseEnter);
       map.off('mouseleave', HAZARD_LINE_LAYER_ID, onMouseLeave);
       map.off('mousemove', HAZARD_LINE_LAYER_ID, onMouseMove);
+      cursorMgr.release('hover-feature');
       popupRef.current?.remove();
       popupRef.current = null;
     };

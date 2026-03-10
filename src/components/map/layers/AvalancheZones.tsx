@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
+import { useRouteStore } from '@/stores/route-store';
+import { getCursorManager } from '@/lib/map/cursor-manager';
 
 const SOURCE_ID = 'avalanche-zones';
 const FILL_LAYER_ID = 'avalanche-zones-fill';
@@ -147,6 +149,7 @@ export function AvalancheZones({ map, visible }: AvalancheZonesProps) {
 
     function handleClick(e: maplibregl.MapMouseEvent) {
       if (!map) return;
+      if (useRouteStore.getState().isDrawing) return;
 
       const features = map.queryRenderedFeatures(e.point, {
         layers: [FILL_LAYER_ID],
@@ -211,12 +214,15 @@ export function AvalancheZones({ map, visible }: AvalancheZonesProps) {
       e.originalEvent.stopPropagation();
     }
 
+    const cursorMgr = map ? getCursorManager(map) : null;
+
     function handleMouseEnter() {
-      if (map) map.getCanvas().style.cursor = 'pointer';
+      if (useRouteStore.getState().isDrawing) return;
+      cursorMgr?.request('hover-feature', 'pointer');
     }
 
     function handleMouseLeave() {
-      if (map) map.getCanvas().style.cursor = '';
+      cursorMgr?.release('hover-feature');
     }
 
     if (map.isStyleLoaded()) {
@@ -237,6 +243,7 @@ export function AvalancheZones({ map, visible }: AvalancheZonesProps) {
 
     return () => {
       abortRef.current?.abort();
+      cursorMgr?.release('hover-feature');
       if (map) {
         map.off('moveend', loadData);
         map.off('click', FILL_LAYER_ID, handleClick);

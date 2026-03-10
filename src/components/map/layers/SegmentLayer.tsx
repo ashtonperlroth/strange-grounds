@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import type { Feature, FeatureCollection, LineString, Point } from 'geojson';
 import { useSegmentStore } from '@/stores/segment-store';
+import { useRouteStore } from '@/stores/route-store';
 import {
   SEGMENT_CASING_LAYER_ID,
   SEGMENT_LINE_LAYER_ID,
@@ -11,6 +12,7 @@ import {
   SEGMENT_BOUNDARY_LAYER_ID,
   SEGMENT_BOUNDARY_SOURCE_ID,
 } from '@/components/map/route-constants';
+import { getCursorManager } from '@/lib/map/cursor-manager';
 
 const TERRAIN_COLORS: Record<string, string> = {
   approach: '#9ca3af',
@@ -210,12 +212,15 @@ export function SegmentLayer({ map }: SegmentLayerProps) {
         .join(' ');
     }
 
+    const cursorMgr = getCursorManager(map!);
+
     const onMouseEnter = () => {
-      map!.getCanvas().style.cursor = 'pointer';
+      if (useRouteStore.getState().isDrawing) return;
+      cursorMgr.request('hover-feature', 'pointer');
     };
 
     const onMouseLeave = () => {
-      map!.getCanvas().style.cursor = '';
+      cursorMgr.release('hover-feature');
       popupRef.current?.remove();
       popupRef.current = null;
     };
@@ -263,6 +268,7 @@ export function SegmentLayer({ map }: SegmentLayerProps) {
       map.off('mouseenter', SEGMENT_LINE_LAYER_ID, onMouseEnter);
       map.off('mouseleave', SEGMENT_LINE_LAYER_ID, onMouseLeave);
       map.off('mousemove', SEGMENT_LINE_LAYER_ID, onMouseMove);
+      cursorMgr.release('hover-feature');
       popupRef.current?.remove();
       popupRef.current = null;
     };
