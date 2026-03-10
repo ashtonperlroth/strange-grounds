@@ -109,7 +109,7 @@ function buildOverpassQuery(bbox: Bbox): string {
 [out:json][timeout:25];
 (
   way["highway"~"path|track|footway|bridleway"]["access"!="private"](${overpassBbox});
-  relation["route"~"hiking|foot"]["name"](${overpassBbox});
+  relation["route"~"hiking|foot"](${overpassBbox});
 );
 (._;>;);
 out body geom;

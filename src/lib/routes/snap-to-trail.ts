@@ -21,7 +21,7 @@ function getTrailId(trail: Feature<LineString>, index: number): string {
 export function findNearestTrailSnap(
   target: [number, number],
   trails: FeatureCollection<LineString>,
-  maxDistance = 50,
+  maxDistance = 100,
 ): TrailSnapResult | null {
   if (!trails.features.length) return null;
 
@@ -51,7 +51,7 @@ export function findNearestTrailSnap(
 export function snapToTrail(
   pointCoordinates: [number, number],
   trails: FeatureCollection<LineString>,
-  maxDistance = 50,
+  maxDistance = 100,
 ): [number, number] | null {
   return findNearestTrailSnap(pointCoordinates, trails, maxDistance)?.coordinates ?? null;
 }
