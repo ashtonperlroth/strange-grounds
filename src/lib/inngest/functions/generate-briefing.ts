@@ -7,6 +7,11 @@ import { fetchUsgs } from "@/lib/data-sources/usgs";
 import { fetchFires } from "@/lib/data-sources/fires";
 import { computeDaylight } from "@/lib/data-sources/daylight";
 import {
+  fetchSentinel2,
+  bboxFromCenter,
+} from "@/lib/data-sources/sentinel2";
+import type { Sentinel2Data } from "@/lib/data-sources/sentinel2";
+import {
   generateBriefing as synthesize,
   generateRouteAwareBriefing as synthesizeRoute,
 } from "@/lib/synthesis/briefing";
@@ -258,6 +263,48 @@ export const generateBriefing = inngest.createFunction(
       }
     }
 
+    // Step 2c: Fetch satellite imagery (optional, non-blocking)
+    const satelliteData = await step.run(
+      "fetch-satellite-imagery",
+      async (): Promise<{
+        available: boolean;
+        date: string | null;
+        source: "sentinel-2";
+        cloudCover: number | null;
+        sceneId: string | null;
+      }> => {
+        const stepStart = Date.now();
+        try {
+          const bbox: [number, number, number, number] =
+            routeBbox ?? bboxFromCenter(lat, lng);
+
+          const result: Sentinel2Data = await fetchSentinel2({ bbox });
+
+          const elapsed = Date.now() - stepStart;
+          console.log(
+            `[briefing] fetch-satellite-imagery completed in ${elapsed}ms (available: ${result.available})`,
+          );
+
+          return {
+            available: result.available,
+            date: result.acquisitionDate,
+            source: "sentinel-2",
+            cloudCover: result.cloudCover,
+            sceneId: result.scene?.sceneId ?? null,
+          };
+        } catch (err) {
+          console.warn("[briefing] Satellite imagery fetch failed (non-critical):", err);
+          return {
+            available: false,
+            date: null,
+            source: "sentinel-2",
+            cloudCover: null,
+            sceneId: null,
+          };
+        }
+      },
+    );
+
     // Step 3: Synthesize narrative (route-aware or point-based)
     const useRouteAware =
       hasRoute &&
@@ -351,12 +398,14 @@ export const generateBriefing = inngest.createFunction(
             ...fullConditions,
             conditionCards,
             unavailableSources,
+            satellite: satelliteData,
             ...(routeAnalysis && { routeAnalysis }),
             ...routeAwareFields,
           },
           raw_data: {
             ...fullConditions,
             unavailableSources,
+            satellite: satelliteData,
             route: routeGeometry
               ? {
                   geometry: routeGeometry,
