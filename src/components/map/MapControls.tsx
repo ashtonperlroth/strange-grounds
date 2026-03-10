@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMapStore } from '@/stores/map-store';
 import { usePlanningStore } from '@/stores/planning-store';
@@ -58,6 +59,7 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
   const toggleOverlay = useMapStore((s) => s.toggleOverlay);
   const hasLocation = usePlanningStore((s) => s.location !== null);
   const hasRoute = useRouteStore((s) => s.currentRoute !== null);
+  const isDrawing = useRouteStore((s) => s.isDrawing);
   const isActive = hasLocation || hasRoute;
 
   const handleStyleSelect = (style: MapStyle) => {
@@ -66,10 +68,47 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
     onStyleChange(style.url);
   };
 
+  const handleStartDrawing = () => {
+    const routeStore = useRouteStore.getState();
+    if (!routeStore.currentRoute) {
+      const routeId = `temp-${crypto.randomUUID()}`;
+      const now = new Date().toISOString();
+      routeStore.setRoute({
+        id: routeId,
+        tripId: null,
+        name: 'Drawn route',
+        description: null,
+        geometry: { type: 'LineString', coordinates: [] },
+        totalDistanceM: 0,
+        elevationGainM: 0,
+        elevationLossM: 0,
+        maxElevationM: 0,
+        minElevationM: 0,
+        activity: 'backpacking',
+        source: 'manual',
+        createdAt: now,
+        updatedAt: now,
+      }, []);
+    }
+    routeStore.setIsDrawing(true);
+  };
+
   if (!isActive) return null;
+
+  const showDrawButton = !hasRoute && !isDrawing;
 
   return (
     <div className="absolute right-3 top-3 z-10 flex flex-col gap-2" role="toolbar" aria-label="Map controls">
+      {showDrawButton && (
+        <button
+          type="button"
+          onClick={handleStartDrawing}
+          className="flex items-center gap-1.5 rounded-lg border border-white/20 bg-black/70 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-black/80"
+        >
+          <Pencil className="size-3.5" />
+          Draw Route
+        </button>
+      )}
       <div className="rounded-lg border border-white/20 bg-black/70 p-1 shadow-lg backdrop-blur-sm" role="radiogroup" aria-label="Map style">
         {MAP_STYLES.map((style) => (
           <button

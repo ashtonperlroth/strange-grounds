@@ -33,6 +33,7 @@ export function GenerateButton() {
 
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalTitle, setAuthModalTitle] = useState('Sign in required');
   const [authModalMessage, setAuthModalMessage] = useState<string | undefined>();
   const [shouldPulse, setShouldPulse] = useState(false);
   const prevLocationRef = useRef(location);
@@ -67,6 +68,7 @@ export function GenerateButton() {
   const handleClick = async () => {
     if (!ready || !dateRange || isGenerating) return;
     if (!user) {
+      setAuthModalTitle('Sign in required');
       setAuthModalMessage('Please sign in to generate and save trip briefings.');
       setShowAuthModal(true);
       return;
@@ -122,12 +124,14 @@ export function GenerateButton() {
         message.toLowerCase().includes('unauthorized') ||
         message.toLowerCase().includes('sign in');
       if (isRateLimit) {
+        setAuthModalTitle('Free briefing limit reached');
         setAuthModalMessage(
           "You've used your 3 free briefings today. Sign up for unlimited access.",
         );
         setShowAuthModal(true);
         setMutationError(message);
       } else if (isAuthRequired) {
+        setAuthModalTitle('Sign in required');
         setAuthModalMessage('Please sign in to generate and save trip briefings.');
         setShowAuthModal(true);
         setMutationError('Sign in required');
@@ -198,7 +202,7 @@ export function GenerateButton() {
       <AuthModal
         open={showAuthModal}
         onOpenChange={setShowAuthModal}
-        title="Free briefing limit reached"
+        title={authModalTitle}
         description={authModalMessage}
       />
     </>
