@@ -50,6 +50,8 @@ import {
   ErrorBoundary,
   ConditionCardErrorFallback,
 } from '@/components/layout/ErrorBoundary';
+import { HazardSummaryCard } from './cards/HazardSummaryCard';
+import type { RouteAnalysis } from '@/lib/types/briefing';
 
 interface StubCard {
   category: string;
@@ -369,6 +371,7 @@ interface BriefingFullViewProps {
   criticalCount?: number;
   isNarrativeLoading?: boolean;
   conditions?: Record<string, unknown>;
+  routeAnalysis?: RouteAnalysis | null;
   onRegenerate?: () => void;
   isRegenerating?: boolean;
   onSave?: () => void;
@@ -403,6 +406,7 @@ function BriefingFullView({
   criticalCount = 0,
   isNarrativeLoading = false,
   conditions,
+  routeAnalysis,
   onRegenerate,
   isRegenerating,
   onSave,
@@ -444,6 +448,16 @@ function BriefingFullView({
         />
 
         <Separator className="bg-stone-200" />
+
+        {routeAnalysis && routeAnalysis.segments.length > 0 && (
+          <ErrorBoundary
+            fallback={(reset) => (
+              <ConditionCardErrorFallback category="Hazard Assessment" reset={reset} />
+            )}
+          >
+            <HazardSummaryCard routeAnalysis={routeAnalysis} />
+          </ErrorBoundary>
+        )}
 
         <div className="space-y-1">
           <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400">
@@ -743,6 +757,7 @@ export function BriefingPanel() {
 
   const readiness = briefing?.readiness as 'green' | 'yellow' | 'red' | null;
   const weatherData = (briefing?.conditions?.weather as NWSForecastData) ?? null;
+  const routeAnalysis = (briefing?.conditions?.routeAnalysis as RouteAnalysis | undefined) ?? null;
 
   return (
     <>
@@ -759,6 +774,7 @@ export function BriefingPanel() {
         criticalCount={getCriticalCount()}
         isNarrativeLoading={isLoading}
         conditions={briefing?.conditions as Record<string, unknown> | undefined}
+        routeAnalysis={routeAnalysis}
         onRegenerate={handleRetry}
         isRegenerating={isRegenerating}
         onSave={handleSave}
