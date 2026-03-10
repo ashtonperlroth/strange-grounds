@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { resetBriefingPolling } from '@/hooks/useBriefingPolling';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
+import { trackGenerateBriefing } from '@/lib/analytics';
 
 export function GenerateButton() {
   const {
@@ -112,6 +113,7 @@ export function GenerateButton() {
         routeBbox: routeContext?.bbox,
       });
 
+      trackGenerateBriefing(!!routeContext);
       setActiveBriefingId(briefing.id);
     } catch (err) {
       console.error('Failed to generate briefing:', err);
@@ -119,14 +121,17 @@ export function GenerateButton() {
         err instanceof Error ? err.message : 'Failed to generate briefing';
       const isRateLimit =
         message.includes('TOO_MANY_REQUESTS') ||
+        message.includes('Rate limited') ||
         message.includes('free briefings');
       const isAuthRequired =
         message.toLowerCase().includes('unauthorized') ||
         message.toLowerCase().includes('sign in');
       if (isRateLimit) {
-        setAuthModalTitle('Free briefing limit reached');
+        setAuthModalTitle('Rate limit reached');
         setAuthModalMessage(
-          "You've used your 3 free briefings today. Sign up for unlimited access.",
+          message.includes('more briefings')
+            ? message
+            : "You've reached the limit of 10 briefings per hour. Please try again later.",
         );
         setShowAuthModal(true);
         setMutationError(message);

@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../init";
 import { inngest } from "@/lib/inngest/client";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { briefingRateLimit } from "@/lib/rate-limit";
 
 export const briefingsRouter = router({
   getByTripId: publicProcedure
@@ -66,7 +67,20 @@ export const briefingsRouter = router({
           .optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      if (briefingRateLimit) {
+        const identifier =
+          ctx.user?.id ?? ctx.ip ?? "anonymous";
+        const { success, remaining } =
+          await briefingRateLimit.limit(identifier);
+        if (!success) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: `Rate limited. You can generate ${remaining} more briefings this hour.`,
+          });
+        }
+      }
+
       const admin = createAdminClient();
 
       const { data: trip } = await admin

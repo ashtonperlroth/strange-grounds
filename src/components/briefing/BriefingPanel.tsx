@@ -26,6 +26,7 @@ import { usePlanningStore } from '@/stores/planning-store';
 import { useBriefingPolling, resetBriefingPolling } from '@/hooks/useBriefingPolling';
 import { useBriefingStore, type ConditionStatus, type ConditionCardData } from '@/stores/briefing-store';
 import { trpc } from '@/lib/trpc/client';
+import { trackGenerateBriefing, trackSaveTrip } from '@/lib/analytics';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { ReadinessIndicator } from './ReadinessIndicator';
@@ -696,6 +697,7 @@ export function BriefingPanel() {
   const handleRetry = useCallback(async () => {
     if (!activeTripId || !location || isRegenerating) return;
 
+    const routeContext = usePlanningStore.getState().routeContext;
     setIsRegenerating(true);
     setGenerationError(null);
     setIsGenerating(true);
@@ -706,8 +708,18 @@ export function BriefingPanel() {
         tripId: activeTripId,
         lat: location.lat,
         lng: location.lng,
+        routeGeometry: routeContext
+          ? {
+              type: 'LineString',
+              coordinates: routeContext.geometry.coordinates.map(
+                (c) => [c[0], c[1]] as [number, number],
+              ),
+            }
+          : undefined,
+        routeBbox: routeContext?.bbox,
       });
 
+      trackGenerateBriefing(!!routeContext);
       setActiveBriefingId(briefingResult.id);
     } catch (err) {
       console.error('Failed to regenerate briefing:', err);
@@ -720,6 +732,7 @@ export function BriefingPanel() {
   }, [
     activeTripId,
     location,
+    hasRoute,
     isRegenerating,
     generateBriefing,
     setActiveBriefingId,
@@ -770,6 +783,7 @@ export function BriefingPanel() {
     setIsSaving(true);
     try {
       await saveTrip.mutateAsync({ id: activeTripId });
+      trackSaveTrip();
       setIsSaved(true);
     } catch (err) {
       console.error('Failed to save trip:', err);

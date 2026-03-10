@@ -6,6 +6,7 @@ import { lineString, length as turfLength, bbox as turfBbox, center as turfCente
 import { trpc } from '@/lib/trpc/client';
 import { fetchElevationsForPositions } from '@/lib/routes/elevation';
 import { parseGPX, parseKML, type ParsedRoute } from '@/lib/routes/parsers/gpx';
+import { trackImportGPX } from '@/lib/analytics';
 import { findNearestTrailSnap } from '@/lib/routes/snap-to-trail';
 import { interpolateAlongTrail } from '@/lib/routes/trail-interpolation';
 import type { Route, RouteWaypoint } from '@/lib/types/route';
@@ -639,6 +640,7 @@ export function RouteToolbar() {
         })),
       });
 
+      trackImportGPX();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to import route file';

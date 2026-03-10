@@ -88,6 +88,8 @@ export function HeroOverlay() {
       };
 
       useRouteStore.getState().setRoute(route, waypoints);
+      const { trackImportGPX } = await import('@/lib/analytics');
+      trackImportGPX();
     } catch (err) {
       console.error('GPX import failed:', err);
     }

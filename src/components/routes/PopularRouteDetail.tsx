@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { trpc } from '@/lib/trpc/client';
+import { trackClonePopularRoute } from '@/lib/analytics';
 import { usePopularRoutesStore } from '@/stores/popular-routes-store';
 import { useRouteStore } from '@/stores/route-store';
 import { usePlanningStore } from '@/stores/planning-store';
@@ -276,6 +277,7 @@ export function PopularRouteDetail({ slug, onBack }: PopularRouteDetailProps) {
     setPreviewRoute(null);
     usePopularRoutesStore.getState().reset();
     setIsCloning(false);
+    trackClonePopularRoute(route.name);
   };
 
   const handleGenerateBriefing = async () => {
