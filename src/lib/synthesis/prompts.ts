@@ -316,11 +316,14 @@ function serializeSegmentConditions(
   const elevGainFt = Math.round(segment.elevationGainM * 3.281);
   const elevLossFt = Math.round(segment.elevationLossM * 3.281);
 
-  const lines: string[] = [];
-  lines.push(
-    `Segment ${conditions.segmentOrder + 1} (${segment.terrainType}, Mile ${startMi}-${endMi}, ${elevGainFt}ft gain / ${elevLossFt}ft loss, ${segment.dominantAspect} aspect, max slope ${segment.maxSlopeDegrees}°):`,
-  );
+  const header = `Segment ${conditions.segmentOrder + 1} (${segment.terrainType}, Mile ${startMi}-${endMi}, ${elevGainFt}ft gain / ${elevLossFt}ft loss, ${segment.dominantAspect} aspect, max slope ${segment.maxSlopeDegrees}°):`;
 
+  // For low-hazard segments, send a compact one-line summary to reduce prompt size
+  if (conditions.hazardLevel === "low" && conditions.hazardFactors.length === 0) {
+    return `${header}\n  Hazard: LOW — no concerns. Conditions nominal.`;
+  }
+
+  const lines: string[] = [header];
   const cond = conditions.conditions;
 
   if (cond.weather && cond.weather.periods.length > 0) {
