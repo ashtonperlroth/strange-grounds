@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useMapStore } from '@/stores/map-store';
+import { usePlanningStore } from '@/stores/planning-store';
+import { useRouteStore } from '@/stores/route-store';
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY ?? '';
 
@@ -54,12 +56,17 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
   const [activeStyle, setActiveStyle] = useState('outdoor');
   const activeOverlays = useMapStore((s) => s.activeOverlays);
   const toggleOverlay = useMapStore((s) => s.toggleOverlay);
+  const hasLocation = usePlanningStore((s) => s.location !== null);
+  const hasRoute = useRouteStore((s) => s.currentRoute !== null);
+  const isActive = hasLocation || hasRoute;
 
   const handleStyleSelect = (style: MapStyle) => {
     if (style.id === activeStyle) return;
     setActiveStyle(style.id);
     onStyleChange(style.url);
   };
+
+  if (!isActive) return null;
 
   return (
     <div className="absolute right-3 top-3 z-10 flex flex-col gap-2" role="toolbar" aria-label="Map controls">
