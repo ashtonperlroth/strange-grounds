@@ -70,6 +70,24 @@ export function RouteLayer({ map }: RouteLayerProps) {
     return { type: 'FeatureCollection', features };
   }, [selectedWaypointId, snappedWaypoints, sortedWaypoints]);
 
+  const syncSourceData = useCallback(() => {
+    if (!map || !addedRef.current) return;
+
+    const state = useRouteStore.getState();
+    const geo = selectRouteGeometry(state);
+
+    const routeSource = map.getSource(ROUTE_SOURCE_ID) as
+      | maplibregl.GeoJSONSource
+      | undefined;
+    if (routeSource) {
+      const line = geo ? buildLineFeature(geo.coordinates) : null;
+      routeSource.setData({
+        type: 'FeatureCollection',
+        features: line ? [line] : [],
+      });
+    }
+  }, [map]);
+
   const ensureLayers = useCallback(() => {
     if (!map || addedRef.current) return;
 
@@ -212,7 +230,8 @@ export function RouteLayer({ map }: RouteLayerProps) {
     }
 
     addedRef.current = true;
-  }, [map]);
+    syncSourceData();
+  }, [map, syncSourceData]);
 
   useEffect(() => {
     if (!map) return;

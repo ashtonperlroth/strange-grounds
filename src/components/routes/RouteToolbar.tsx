@@ -1,14 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { ArrowRightLeft, Download, Magnet, Pencil, Trash2, Undo2 } from 'lucide-react';
+import { ArrowRightLeft, Download, Magnet, MapPinned, Pencil, Trash2, Undo2 } from 'lucide-react';
 import { lineString, length as turfLength, bbox as turfBbox, center as turfCenter } from '@turf/turf';
 import { trpc } from '@/lib/trpc/client';
 import { fetchElevationsForPositions } from '@/lib/routes/elevation';
 import { parseGPX, parseKML, type ParsedRoute } from '@/lib/routes/parsers/gpx';
+import { findNearestTrailSnap } from '@/lib/routes/snap-to-trail';
+import { interpolateAlongTrail } from '@/lib/routes/trail-interpolation';
 import type { Route, RouteWaypoint } from '@/lib/types/route';
 import { usePlanningStore } from '@/stores/planning-store';
-import { selectRouteGeometry, useRouteStore } from '@/stores/route-store';
+import { selectRouteGeometry, useRouteStore, type SnappedTrailReference } from '@/stores/route-store';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -439,6 +441,94 @@ export function RouteToolbar() {
     return () => clearTimeout(timer);
   }, [importNotice]);
 
+  const handleSnapRouteToTrails = () => {
+    const trailNetwork = useRouteStore.getState().trailNetwork;
+    if (!trailNetwork.features.length || sortedWaypoints.length === 0) return;
+
+    const snaps: Record<string, SnappedTrailReference> = {};
+    const updatedWaypoints = sortedWaypoints.map((wp) => {
+      const coord: [number, number] = [
+        wp.location.coordinates[0],
+        wp.location.coordinates[1],
+      ];
+      const snap = findNearestTrailSnap(coord, trailNetwork);
+      if (snap) {
+        snaps[wp.id] = { trailId: snap.trailId, trail: snap.trail };
+        return {
+          ...wp,
+          location: {
+            type: 'Point' as const,
+            coordinates: snap.coordinates,
+          },
+        };
+      }
+      return wp;
+    });
+
+    useRouteStore.setState((state) => {
+      const newSnaps = { ...state.snappedWaypoints, ...snaps };
+      const sorted = [...updatedWaypoints].sort((a, b) => a.sortOrder - b.sortOrder);
+      let derivedGeometry: import('geojson').LineString | null = null;
+      if (sorted.length >= 2) {
+        const coordinates: import('geojson').Position[] = [];
+        for (let i = 1; i < sorted.length; i++) {
+          const fromSnap = newSnaps[sorted[i - 1].id];
+          const toSnap = newSnaps[sorted[i].id];
+          let segment: import('geojson').LineString;
+          if (fromSnap && toSnap && fromSnap.trailId === toSnap.trailId) {
+            try {
+              const s = interpolateAlongTrail(
+                [sorted[i - 1].location.coordinates[0], sorted[i - 1].location.coordinates[1]],
+                [sorted[i].location.coordinates[0], sorted[i].location.coordinates[1]],
+                fromSnap.trail,
+              );
+              segment = s.coordinates.length >= 2 ? s : {
+                type: 'LineString',
+                coordinates: [sorted[i - 1].location.coordinates, sorted[i].location.coordinates],
+              };
+            } catch {
+              segment = {
+                type: 'LineString',
+                coordinates: [sorted[i - 1].location.coordinates, sorted[i].location.coordinates],
+              };
+            }
+          } else {
+            segment = {
+              type: 'LineString',
+              coordinates: [sorted[i - 1].location.coordinates, sorted[i].location.coordinates],
+            };
+          }
+          if (segment.coordinates.length >= 2) {
+            if (coordinates.length === 0) {
+              coordinates.push(...segment.coordinates);
+            } else {
+              coordinates.push(...segment.coordinates.slice(1));
+            }
+          }
+        }
+        derivedGeometry = coordinates.length >= 2
+          ? { type: 'LineString', coordinates }
+          : null;
+      }
+      return {
+        waypoints: updatedWaypoints,
+        snappedWaypoints: newSnaps,
+        derivedGeometry,
+        currentRoute: state.currentRoute
+          ? { ...state.currentRoute, geometry: derivedGeometry ?? state.currentRoute.geometry }
+          : null,
+      };
+    });
+
+    const snappedCount = Object.keys(snaps).length;
+    setImportNotice({
+      type: snappedCount > 0 ? 'success' : 'error',
+      message: snappedCount > 0
+        ? `Snapped ${snappedCount} of ${sortedWaypoints.length} waypoints to trails`
+        : 'No nearby trails found — zoom in or enable the trails overlay',
+    });
+  };
+
   const handleUndo = () => {
     const last = sortedWaypoints[sortedWaypoints.length - 1];
     if (!last) return;
@@ -561,6 +651,8 @@ export function RouteToolbar() {
 
   const hasWaypoints = sortedWaypoints.length > 0;
 
+  if (!currentRoute && !isDrawing) return null;
+
   return (
     <div className="absolute left-3 top-3 z-20 flex max-w-[92vw] flex-col gap-2 rounded-lg border border-white/40 bg-black/70 p-2 text-white shadow-lg backdrop-blur-sm">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -584,6 +676,16 @@ export function RouteToolbar() {
         >
           <Magnet className="size-3.5" />
           Snap to Trails
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 border-white/30 bg-transparent px-2 text-xs text-white hover:bg-white/10"
+          onClick={handleSnapRouteToTrails}
+          disabled={!hasWaypoints}
+        >
+          <MapPinned className="size-3.5" />
+          Snap Route
         </Button>
         <Button
           size="sm"

@@ -110,6 +110,8 @@ export function PopularRoutesPanel() {
     setInSeasonOnly(false);
   }, [setActivityFilter, setDifficultyFilter, setInSeasonOnly]);
 
+  const closePanel = usePopularRoutesStore((s) => s.closePanel);
+
   if (view === 'detail' && selectedSlug) {
     return <PopularRouteDetail slug={selectedSlug} onBack={goBackToList} />;
   }
@@ -117,11 +119,21 @@ export function PopularRoutesPanel() {
   return (
     <div className="flex h-full flex-col">
       <div className="shrink-0 space-y-3 border-b border-stone-200 pb-3">
-        <div className="flex items-center gap-2">
-          <Compass className="size-5 text-emerald-600" />
-          <h2 className="text-base font-semibold text-stone-800">
-            Explore Routes
-          </h2>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Compass className="size-5 text-emerald-600" />
+            <h2 className="text-base font-semibold text-stone-800">
+              Explore Routes
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={closePanel}
+            className="flex size-7 items-center justify-center rounded-md text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"
+            aria-label="Close routes panel"
+          >
+            <X className="size-4" />
+          </button>
         </div>
 
         <div className="relative">

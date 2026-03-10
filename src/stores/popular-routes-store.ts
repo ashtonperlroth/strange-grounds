@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { PopularRoute, Activity, Difficulty } from '@/lib/types/popular-route';
 
 interface PopularRoutesState {
+  panelOpen: boolean;
   view: 'list' | 'detail';
   selectedSlug: string | null;
   previewRoute: PopularRoute | null;
@@ -13,6 +14,8 @@ interface PopularRoutesState {
   };
   searchQuery: string;
 
+  openPanel: () => void;
+  closePanel: () => void;
   setView: (view: 'list' | 'detail') => void;
   setSelectedSlug: (slug: string | null) => void;
   setPreviewRoute: (route: PopularRoute | null) => void;
@@ -34,12 +37,15 @@ const initialFilters = {
 };
 
 export const usePopularRoutesStore = create<PopularRoutesState>((set) => ({
+  panelOpen: false,
   view: 'list',
   selectedSlug: null,
   previewRoute: null,
   filters: { ...initialFilters },
   searchQuery: '',
 
+  openPanel: () => set({ panelOpen: true }),
+  closePanel: () => set({ panelOpen: false }),
   setView: (view) => set({ view }),
   setSelectedSlug: (slug) => set({ selectedSlug: slug }),
   setPreviewRoute: (route) => set({ previewRoute: route }),
@@ -56,6 +62,7 @@ export const usePopularRoutesStore = create<PopularRoutesState>((set) => ({
   goBackToList: () => set({ view: 'list', selectedSlug: null }),
   reset: () =>
     set({
+      panelOpen: false,
       view: 'list',
       selectedSlug: null,
       previewRoute: null,
