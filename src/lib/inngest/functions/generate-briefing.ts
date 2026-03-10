@@ -72,6 +72,40 @@ async function updatePipelineStatus(
   }
 }
 
+async function updateBriefingProgress(
+  briefingId: string,
+  status: string,
+  progressUpdate: Record<string, unknown>,
+  conditionsUpdate?: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const supabase = createAdminClient();
+
+    const { data: current } = await supabase
+      .from("briefings")
+      .select("progress, conditions")
+      .eq("id", briefingId)
+      .single();
+
+    const mergedProgress = { ...(current?.progress ?? {}), ...progressUpdate };
+    const updatePayload: Record<string, unknown> = {
+      pipeline_status: status,
+      progress: mergedProgress,
+    };
+
+    if (conditionsUpdate) {
+      updatePayload.conditions = {
+        ...(current?.conditions ?? {}),
+        ...conditionsUpdate,
+      };
+    }
+
+    await supabase.from("briefings").update(updatePayload).eq("id", briefingId);
+  } catch (err) {
+    console.warn("[briefing] progressive write failed (non-critical):", err);
+  }
+}
+
 interface SatelliteResult {
   available: boolean;
   date: string | null;
@@ -120,19 +154,37 @@ export const generateBriefing = inngest.createFunction(
 
       const [nws, snotel, avalanche, usgs, fires, daylight] =
         await Promise.all([
-          safeAdapterCall(() => fetchNWS({ lat, lng }), "NWS"),
-          safeAdapterCall(() => fetchSnotel({ lat, lng }), "SNOTEL"),
+          safeAdapterCall(() => fetchNWS({ lat, lng }), "NWS").then((result) => {
+            updateBriefingProgress(briefingId, "Fetching conditions\u2026", { weatherFetched: true }).catch(() => {});
+            return result;
+          }),
+          safeAdapterCall(() => fetchSnotel({ lat, lng }), "SNOTEL").then((result) => {
+            updateBriefingProgress(briefingId, "Fetching conditions\u2026", { snowpackFetched: true }).catch(() => {});
+            return result;
+          }),
           safeAdapterCall(
             () => fetchAvalanche({ lat, lng }),
             "Avalanche",
             AVALANCHE_TIMEOUT_MS,
-          ),
-          safeAdapterCall(() => fetchUsgs({ lat, lng }), "USGS"),
-          safeAdapterCall(() => fetchFires({ lat, lng }), "Fires"),
+          ).then((result) => {
+            updateBriefingProgress(briefingId, "Fetching conditions\u2026", { avalancheFetched: true }).catch(() => {});
+            return result;
+          }),
+          safeAdapterCall(() => fetchUsgs({ lat, lng }), "USGS").then((result) => {
+            updateBriefingProgress(briefingId, "Fetching conditions\u2026", { streamFlowFetched: true }).catch(() => {});
+            return result;
+          }),
+          safeAdapterCall(() => fetchFires({ lat, lng }), "Fires").then((result) => {
+            updateBriefingProgress(briefingId, "Fetching conditions\u2026", { firesFetched: true }).catch(() => {});
+            return result;
+          }),
           safeAdapterCall(
             () => Promise.resolve(computeDaylight({ lat, lng, date: tripDate })),
             "Daylight",
-          ),
+          ).then((result) => {
+            updateBriefingProgress(briefingId, "Fetching conditions\u2026", { daylightFetched: true }).catch(() => {});
+            return result;
+          }),
         ]);
 
       const unavailableSources: string[] = [];
@@ -186,6 +238,39 @@ export const generateBriefing = inngest.createFunction(
     const conditionCards = buildConditionCards(fullConditions, unavailableSources);
     const readiness = computeReadiness(fullConditions);
 
+    // Progressive write: conditions + condition cards available for early UI rendering
+    await updateBriefingProgress(
+      briefingId,
+      "conditions_complete",
+      {
+        pointConditionsComplete: true,
+        weatherAvailable: !!fetchResults.nws,
+        snowpackAvailable: !!fetchResults.snotel,
+        avalancheAvailable: !!fetchResults.avalanche,
+        streamFlowAvailable: !!fetchResults.usgs,
+        firesAvailable: !!fetchResults.fires,
+        daylightAvailable: !!fetchResults.daylight,
+      },
+      {
+        conditionCards,
+        weather: fullConditions.weather,
+        snowpack: fullConditions.snowpack,
+        avalanche: fullConditions.avalanche,
+        streamFlow: fullConditions.streamFlow,
+        fires: fullConditions.fires,
+        daylight: fullConditions.daylight,
+        unavailableSources,
+      },
+    );
+
+    // Write readiness early so the UI can show the badge before narrative completes
+    try {
+      const supabase = createAdminClient();
+      await supabase.from("briefings").update({ readiness }).eq("id", briefingId);
+    } catch (err) {
+      console.warn("[briefing] early readiness write failed (non-critical):", err);
+    }
+
     // ── Steps 2 + 2c: Route conditions & satellite in parallel ────────
     // Satellite is non-blocking: if it takes too long, synthesis proceeds
     // without it and we backfill afterwards.
@@ -238,6 +323,18 @@ export const generateBriefing = inngest.createFunction(
             `[briefing] Found ${segments.length} segments for route=${routeId}`,
           );
 
+          await updateBriefingProgress(briefingId, "segments_analyzed", {
+            segmentsComplete: true,
+            segmentCount: segments.length,
+            segmentSummary: segments.map((s) => ({
+              order: s.segmentOrder,
+              type: s.terrainType,
+              distanceM: s.distanceM,
+              aspect: s.dominantAspect,
+              maxSlope: s.maxSlopeDegrees,
+            })),
+          });
+
           await updatePipelineStatus(
             briefingId,
             `Fetching conditions for ${segments.length} segments…`,
@@ -249,6 +346,20 @@ export const generateBriefing = inngest.createFunction(
           );
 
           const analysis = buildRouteAnalysis(segmentConditions);
+
+          await updateBriefingProgress(
+            briefingId,
+            "hazards_assessed",
+            {
+              hazardsComplete: true,
+              routeAnalysisSummary: {
+                overallHazardLevel: analysis.overallHazardLevel,
+                totalSegments: analysis.totalSegments,
+                hazardDistribution: analysis.hazardDistribution,
+              },
+            },
+            { routeAnalysis: analysis },
+          );
 
           // Save hazard levels back to route_segments — batch update
           const updates = segmentConditions.map((sc) =>
@@ -361,7 +472,9 @@ export const generateBriefing = inngest.createFunction(
     }
 
     // ── Step 3: Synthesize narrative ──────────────────────────────────
-    await updatePipelineStatus(briefingId, "Generating briefing narrative…");
+    await updateBriefingProgress(briefingId, "generating_narrative", {
+      synthesisStarted: true,
+    });
 
     const useRouteAware =
       hasRoute &&
@@ -487,6 +600,7 @@ export const generateBriefing = inngest.createFunction(
             }),
           },
           readiness: synthesisOutput.readiness ?? readiness,
+          progress: { complete: true },
         })
         .eq("id", briefingId)
         .select("id, narrative")
