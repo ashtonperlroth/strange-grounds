@@ -9,6 +9,7 @@ import {
   ROUTE_WAYPOINTS_CIRCLE_LAYER_ID,
 } from '@/components/map/route-constants';
 import { findNearestTrailSnap } from '@/lib/routes/snap-to-trail';
+import { getCursorManager } from '@/lib/map/cursor-manager';
 
 interface RouteDrawingProps {
   map: maplibregl.Map | null;
@@ -104,6 +105,8 @@ export function RouteDrawing({ map }: RouteDrawingProps) {
       return;
     }
 
+    const cursorMgr = getCursorManager(map);
+
     const onMove = (e: maplibregl.MapMouseEvent) => {
       const last = sortedWaypoints[sortedWaypoints.length - 1];
       const state = useRouteStore.getState();
@@ -113,7 +116,7 @@ export function RouteDrawing({ map }: RouteDrawingProps) {
           ? findNearestTrailSnap(rawPoint, state.trailNetwork, 50)
           : null;
       const previewPoint = snapResult?.coordinates ?? rawPoint;
-      map.getCanvas().style.cursor = snapResult ? 'cell' : 'crosshair';
+      cursorMgr.request('drawing', snapResult ? 'cell' : 'crosshair');
 
       source.setData({
         type: 'FeatureCollection',
@@ -142,6 +145,10 @@ export function RouteDrawing({ map }: RouteDrawingProps) {
 
     const onClick = (e: maplibregl.MapMouseEvent) => {
       if (!useRouteStore.getState().isDrawing) return;
+
+      e.preventDefault();
+      e.originalEvent.stopPropagation();
+
       const state = useRouteStore.getState();
       const rawPoint: [number, number] = [e.lngLat.lng, e.lngLat.lat];
       const snapResult =
@@ -181,15 +188,13 @@ export function RouteDrawing({ map }: RouteDrawingProps) {
     const onDoubleClick = (e: maplibregl.MapMouseEvent) => {
       if (!useRouteStore.getState().isDrawing) return;
       e.preventDefault();
-      setIsDrawing(false);
-      setSelectedWaypointId(null);
     };
 
     map.on('dblclick', onDoubleClick);
     return () => {
       map.off('dblclick', onDoubleClick);
     };
-  }, [map, setIsDrawing, setSelectedWaypointId]);
+  }, [map]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -212,9 +217,14 @@ export function RouteDrawing({ map }: RouteDrawingProps) {
 
   useEffect(() => {
     if (!map) return;
-    map.getCanvas().style.cursor = isDrawing ? 'crosshair' : '';
+    const cursorMgr = getCursorManager(map);
+    if (isDrawing) {
+      cursorMgr.request('drawing', 'crosshair');
+    } else {
+      cursorMgr.release('drawing');
+    }
     return () => {
-      map.getCanvas().style.cursor = '';
+      cursorMgr.release('drawing');
     };
   }, [isDrawing, map]);
 
@@ -244,22 +254,29 @@ export function RouteDrawing({ map }: RouteDrawingProps) {
 
   useEffect(() => {
     if (!map) return;
+    const cursorMgr = getCursorManager(map);
 
     const onHover = (e: maplibregl.MapMouseEvent) => {
       if (useRouteStore.getState().isDrawing || dragWaypointIdRef.current) return;
       const overWaypoint = Boolean(getWaypointFeature(e.point));
-      map.getCanvas().style.cursor = overWaypoint ? 'pointer' : '';
+      if (overWaypoint) {
+        cursorMgr.request('hover-feature', 'pointer');
+      } else {
+        cursorMgr.release('hover-feature');
+      }
     };
 
     map.on('mousemove', onHover);
 
     return () => {
       map.off('mousemove', onHover);
+      cursorMgr.release('hover-feature');
     };
   }, [getWaypointFeature, map]);
 
   useEffect(() => {
     if (!map) return;
+    const cursorMgr = getCursorManager(map);
 
     const onMouseDown = (e: maplibregl.MapMouseEvent) => {
       if (useRouteStore.getState().isDrawing) return;
@@ -271,7 +288,7 @@ export function RouteDrawing({ map }: RouteDrawingProps) {
       dragWaypointIdRef.current = waypointId;
       didDragRef.current = false;
       map.dragPan.disable();
-      map.getCanvas().style.cursor = 'grabbing';
+      cursorMgr.request('drag', 'grabbing');
       e.preventDefault();
       e.originalEvent.stopPropagation();
     };
@@ -287,7 +304,7 @@ export function RouteDrawing({ map }: RouteDrawingProps) {
       if (!dragWaypointIdRef.current) return;
       dragWaypointIdRef.current = null;
       map.dragPan.enable();
-      map.getCanvas().style.cursor = '';
+      cursorMgr.release('drag');
     };
 
     map.on('mousedown', onMouseDown);
@@ -298,6 +315,7 @@ export function RouteDrawing({ map }: RouteDrawingProps) {
       map.off('mousedown', onMouseDown);
       map.off('mousemove', onMouseMove);
       map.off('mouseup', onMouseUp);
+      cursorMgr.release('drag');
     };
   }, [getWaypointFeature, map, moveWaypoint]);
 

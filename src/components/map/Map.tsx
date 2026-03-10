@@ -219,13 +219,31 @@ export function Map() {
       });
     });
 
+    const container = containerRef.current;
+
+    const preventBrowserZoom = (e: WheelEvent) => {
+      e.preventDefault();
+    };
+    container.addEventListener('wheel', preventBrowserZoom, { passive: false });
+
+    const preventMultiTouchZoom = (e: TouchEvent) => {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+    container.addEventListener('touchmove', preventMultiTouchZoom, {
+      passive: false,
+    });
+
     const ro = new ResizeObserver(() => {
       map.resize();
     });
-    ro.observe(containerRef.current);
+    ro.observe(container);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      container.removeEventListener('wheel', preventBrowserZoom);
+      container.removeEventListener('touchmove', preventMultiTouchZoom);
       ro.disconnect();
       map.remove();
       mapRef.current = null;
@@ -269,7 +287,7 @@ export function Map() {
 
   return (
     <div className="relative h-full w-full">
-      <div ref={containerRef} className="h-full w-full" role="application" aria-label="Interactive map" />
+      <div ref={containerRef} className="h-full w-full touch-none" role="application" aria-label="Interactive map" />
 
       {isLoading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-stone-100/80 backdrop-blur-sm">
