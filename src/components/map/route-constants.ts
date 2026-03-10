@@ -18,3 +18,7 @@ export const SEGMENT_CASING_LAYER_ID = 'route-segments-casing-layer';
 export const SEGMENT_LINE_LAYER_ID = 'route-segments-line-layer';
 export const SEGMENT_BOUNDARY_SOURCE_ID = 'route-segments-boundary-source';
 export const SEGMENT_BOUNDARY_LAYER_ID = 'route-segments-boundary-layer';
+
+export const HAZARD_SOURCE_ID = 'hazard-segments-source';
+export const HAZARD_CASING_LAYER_ID = 'hazard-segments-casing-layer';
+export const HAZARD_LINE_LAYER_ID = 'hazard-segments-line-layer';

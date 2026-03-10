@@ -16,12 +16,16 @@ import { RouteLayer } from './layers/RouteLayer';
 import { RouteDrawing } from './interactions/RouteDrawing';
 import { PopularRoutePreview } from './layers/PopularRoutePreview';
 import { SegmentLayer } from './layers/SegmentLayer';
+import { HazardLayer } from './layers/HazardLayer';
+import { HazardMarkers } from './layers/HazardMarkers';
+import { HazardLegend } from './HazardLegend';
 import { ROUTE_WAYPOINTS_CIRCLE_LAYER_ID } from './route-constants';
 import { RouteToolbar } from '@/components/routes/RouteToolbar';
 import { WaypointPopup } from '@/components/routes/WaypointPopup';
 import { ElevationProfile } from '@/components/routes/ElevationProfile';
 import { useSegmentation } from '@/hooks/useSegmentation';
 import { useSegmentStore } from '@/stores/segment-store';
+import { useBriefingStore } from '@/stores/briefing-store';
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY ?? '';
 
@@ -83,8 +87,24 @@ export function Map() {
   const activeOverlays = useMapStore((s) => s.activeOverlays);
   const location = usePlanningStore((s) => s.location);
   const isSegmenting = useSegmentStore((s) => s.isSegmenting);
+  const briefing = useBriefingStore((s) => s.currentBriefing);
+  const toggleOverlay = useMapStore((s) => s.toggleOverlay);
+  const hazardsVisible = activeOverlays.has('hazards');
 
   useSegmentation();
+
+  useEffect(() => {
+    if (briefing?.conditions && !activeOverlays.has('hazards')) {
+      const routeAnalysis = briefing.conditions.routeAnalysis as
+        | { segments?: unknown[] }
+        | undefined;
+      if (routeAnalysis?.segments && routeAnalysis.segments.length > 0) {
+        toggleOverlay('hazards');
+      }
+    }
+    // Only run when briefing appears, not on every overlay change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [briefing?.id]);
 
   const handleStyleChange = useCallback((styleUrl: string) => {
     const map = mapRef.current;
@@ -263,6 +283,8 @@ export function Map() {
       <TrailLayer map={mapInstance} visible={activeOverlays.has('trails')} />
       <RouteLayer map={mapInstance} />
       <SegmentLayer map={mapInstance} />
+      <HazardLayer map={mapInstance} visible={hazardsVisible} />
+      <HazardMarkers map={mapInstance} visible={hazardsVisible} />
       <PopularRoutePreview map={mapInstance} />
       <RouteDrawing map={mapInstance} />
       <WaypointPopup map={mapInstance} />
@@ -279,6 +301,8 @@ export function Map() {
         map={mapInstance}
         visible={activeOverlays.has('slope-angle')}
       />
+
+      <HazardLegend visible={hazardsVisible} />
 
       {isSegmenting && (
         <div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2">

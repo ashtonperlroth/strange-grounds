@@ -38,6 +38,7 @@ interface OverlayDef {
 
 const OVERLAY_LAYERS: OverlayDef[] = [
   { id: 'trails', label: 'Show Trails', color: '#a16207' },
+  { id: 'hazards', label: 'Show Hazards', color: '#ef4444' },
   { id: 'avalanche-zones', label: 'Avy Zones', color: '#eab308' },
   { id: 'fire-perimeters', label: 'Active Fires', color: '#f97316' },
   { id: 'slope-angle', label: 'Slope Angle', color: '#ef4444' },
