@@ -134,10 +134,25 @@ function BriefingEmptyState() {
 
 interface BriefingLoadingSkeletonProps {
   elapsedSeconds: number;
+  pipelineStatus: string | null;
+  isRoute: boolean;
 }
 
-function BriefingLoadingSkeleton({ elapsedSeconds }: BriefingLoadingSkeletonProps) {
-  const progressPct = Math.min((elapsedSeconds / 90) * 100, 95);
+function BriefingLoadingSkeleton({ elapsedSeconds, pipelineStatus, isRoute }: BriefingLoadingSkeletonProps) {
+  const timeoutSeconds = isRoute ? 180 : 90;
+  const progressPct = Math.min((elapsedSeconds / timeoutSeconds) * 100, 95);
+
+  const statusText = pipelineStatus && pipelineStatus !== 'complete'
+    ? pipelineStatus
+    : elapsedSeconds < 5
+      ? 'Fetching data sources...'
+      : elapsedSeconds < 15
+        ? 'Processing weather, snow, and avalanche data...'
+        : elapsedSeconds < 40
+          ? isRoute ? 'Analyzing route segments...' : 'Synthesizing briefing with AI...'
+          : elapsedSeconds < 80
+            ? isRoute ? 'Generating route-aware briefing narrative...' : 'Almost there — finalizing briefing...'
+            : 'Almost there — finalizing briefing...';
 
   return (
     <div className="space-y-6 p-1">
@@ -151,13 +166,7 @@ function BriefingLoadingSkeleton({ elapsedSeconds }: BriefingLoadingSkeletonProp
             </span>
           </p>
           <p className="text-xs text-stone-400">
-            {elapsedSeconds < 5
-              ? 'Fetching data sources...'
-              : elapsedSeconds < 15
-                ? 'Processing weather, snow, and avalanche data...'
-                : elapsedSeconds < 40
-                  ? 'Synthesizing briefing with AI...'
-                  : 'Almost there — finalizing briefing...'}
+            {statusText}
           </p>
         </div>
       </div>
@@ -666,8 +675,9 @@ export function BriefingPanel() {
     setGenerationError,
   } = usePlanningStore();
 
-  const { briefing, isLoading, error, elapsedSeconds, isTimedOut } =
-    useBriefingPolling(activeBriefingId);
+  const hasRoute = !!usePlanningStore.getState().routeContext;
+  const { briefing, isLoading, error, elapsedSeconds, isTimedOut, pipelineStatus } =
+    useBriefingPolling(activeBriefingId, { isRoute: hasRoute });
   const { setConditionCards, getWarningCount, getCriticalCount } = useBriefingStore();
 
   const { user } = useAuth();
@@ -797,7 +807,7 @@ export function BriefingPanel() {
     return (
       <ScrollArea className="h-full">
         <div className="p-1">
-          <BriefingLoadingSkeleton elapsedSeconds={elapsedSeconds} />
+          <BriefingLoadingSkeleton elapsedSeconds={elapsedSeconds} pipelineStatus={pipelineStatus} isRoute={hasRoute} />
         </div>
       </ScrollArea>
     );
