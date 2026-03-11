@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { usePlanningStore } from '@/stores/planning-store';
-import { useBriefingPolling } from '@/hooks/useBriefingPolling';
+import { useRealtimeBriefing } from '@/hooks/useRealtimeBriefing';
 import { TempChart } from './TempChart';
 import { HydrographChart } from './HydrographChart';
 import type { NWSForecastData } from '@/lib/data-sources/nws';
@@ -13,7 +13,7 @@ type DrawerTab = 'temperature' | 'hydrograph';
 
 export function DrawerCharts() {
   const { activeBriefingId } = usePlanningStore();
-  const { briefing } = useBriefingPolling(activeBriefingId);
+  const { briefing } = useRealtimeBriefing(activeBriefingId);
   const [activeTab, setActiveTab] = useState<DrawerTab>('temperature');
 
   const weatherData = briefing?.conditions?.weather as NWSForecastData | undefined;

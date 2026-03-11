@@ -13,7 +13,7 @@ import {
 import { usePlanningStore } from '@/stores/planning-store';
 import { trpc } from '@/lib/trpc/client';
 import { format } from 'date-fns';
-import { resetBriefingPolling } from '@/hooks/useBriefingPolling';
+
 import { AuthModal } from '@/components/auth/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 import { trackGenerateBriefing } from '@/lib/analytics';
@@ -84,7 +84,7 @@ export function GenerateButton() {
     setGenerationError(null);
 
     try {
-      resetBriefingPolling();
+      setActiveBriefingId(null);
 
       const trip = await createTrip.mutateAsync({
         location_name:
