@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Mountain, User, Bell, Menu, X } from 'lucide-react';
+import { Mountain, User, Bell, Menu, X, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { LocationSearch } from '@/components/planning/LocationSearch';
 import { DateRangePicker } from '@/components/planning/DateRangePicker';
@@ -12,12 +12,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 export function TopBar() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleMonitor = () => {
-    if (!user) {
+    if (!user && !authLoading) {
       setShowAuthModal(true);
       return;
     }
@@ -88,7 +88,14 @@ export function TopBar() {
             <Bell className="h-3.5 w-3.5" />
           </button>
 
-          {user ? (
+          {authLoading ? (
+            <div
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-100"
+              aria-label="Loading user"
+            >
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-stone-400" />
+            </div>
+          ) : user ? (
             <Link
               href="/trips"
               className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 transition-colors hover:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1"
@@ -131,7 +138,14 @@ export function TopBar() {
             >
               <Bell className="h-3.5 w-3.5" />
             </button>
-            {user ? (
+            {authLoading ? (
+              <div
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-100"
+                aria-label="Loading user"
+              >
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-stone-400" />
+              </div>
+            ) : user ? (
               <Link
                 href="/trips"
                 className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 transition-colors hover:bg-emerald-200"

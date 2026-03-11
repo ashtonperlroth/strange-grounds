@@ -682,7 +682,7 @@ export function BriefingPanel() {
     useRealtimeBriefing(activeBriefingId, { isRoute: hasRoute });
   const { setConditionCards, getWarningCount, getCriticalCount } = useBriefingStore();
 
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -785,7 +785,7 @@ export function BriefingPanel() {
   const handleSave = useCallback(async () => {
     if (!activeTripId) return;
 
-    if (!user) {
+    if (!user && !authLoading) {
       requireAuth('Sign up to save trips', 'Create a free account to save trips and track conditions over time.');
       return;
     }
@@ -802,7 +802,7 @@ export function BriefingPanel() {
     } finally {
       setIsSaving(false);
     }
-  }, [activeTripId, user, requireAuth, saveTrip]);
+  }, [activeTripId, user, authLoading, requireAuth, saveTrip]);
 
   const handleShare = useCallback(() => {
     requireAuth('Sign up to share briefings', 'Create a free account to share briefings with your trip partners.');
