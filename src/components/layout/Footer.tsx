@@ -3,7 +3,7 @@ import Link from "next/link";
 export function Footer() {
   return (
     <footer
-      className="shrink-0 border-t border-stone-200 bg-white px-4 py-2"
+      className="hidden shrink-0 border-t border-stone-200 bg-white px-4 py-2 md:block"
       role="contentinfo"
     >
       <div className="flex items-center justify-center gap-4 text-xs text-stone-500">
