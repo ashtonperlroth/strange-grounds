@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { Mountain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,8 +23,6 @@ export function AuthModal({
   title = 'Sign up to continue',
   description = 'Create a free account to save trips, share briefings, and monitor conditions.',
 }: AuthModalProps) {
-  const router = useRouter();
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -43,7 +40,7 @@ export function AuthModal({
             className="w-full bg-emerald-600 hover:bg-emerald-700"
             onClick={() => {
               onOpenChange(false);
-              router.push('/signup');
+              window.location.href = '/signup';
             }}
           >
             Create account
@@ -53,7 +50,7 @@ export function AuthModal({
             className="w-full"
             onClick={() => {
               onOpenChange(false);
-              router.push('/login');
+              window.location.href = '/login';
             }}
           >
             Sign in

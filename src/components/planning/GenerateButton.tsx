@@ -39,7 +39,7 @@ export function GenerateButton() {
   const [authModalMessage, setAuthModalMessage] = useState<string | undefined>();
   const [shouldPulse, setShouldPulse] = useState(false);
   const prevLocationRef = useRef(location);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const ready = isReadyToGenerate();
 
@@ -69,7 +69,7 @@ export function GenerateButton() {
 
   const handleClick = async () => {
     if (!ready || !dateRange || isGenerating) return;
-    if (!user) {
+    if (!user && !authLoading) {
       setAuthModalTitle('Sign in required');
       setAuthModalMessage('Please sign in to generate and save trip briefings.');
       setShowAuthModal(true);
@@ -172,7 +172,7 @@ export function GenerateButton() {
   const button = (
     <Button
       size="sm"
-      disabled={!ready || isGenerating}
+      disabled={!ready || isGenerating || authLoading}
       onClick={handleClick}
       className={
         (hasError && !isGenerating

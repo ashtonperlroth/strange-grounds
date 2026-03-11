@@ -12,7 +12,6 @@ import {
   Snowflake,
   Shield,
   Play,
-  FileText,
   Loader2,
   ChevronDown,
   ChevronUp,
@@ -282,10 +281,6 @@ export function PopularRouteDetail({ slug, onBack }: PopularRouteDetailProps) {
     toast.success(`${route.name} loaded`, {
       description: 'Edit the route or generate a briefing.',
     });
-  };
-
-  const handleGenerateBriefing = async () => {
-    await handlePlanRoute();
   };
 
   if (isLoading) {
@@ -596,9 +591,9 @@ export function PopularRouteDetail({ slug, onBack }: PopularRouteDetailProps) {
           </div>
         )}
 
-        <div className="flex gap-2 pb-4">
+        <div className="pb-4">
           <Button
-            className="flex-1 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
+            className="w-full gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
             onClick={handlePlanRoute}
             disabled={isCloning}
           >
@@ -608,15 +603,6 @@ export function PopularRouteDetail({ slug, onBack }: PopularRouteDetailProps) {
               <Play className="size-4" />
             )}
             Plan This Route
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1 gap-1.5 border-stone-200 text-stone-700 hover:bg-stone-50"
-            onClick={handleGenerateBriefing}
-            disabled={isCloning}
-          >
-            <FileText className="size-4" />
-            Generate Briefing
           </Button>
         </div>
       </div>

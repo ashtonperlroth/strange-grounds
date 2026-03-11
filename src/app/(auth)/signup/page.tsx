@@ -2,7 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
+import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,16 +17,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signup } from "../actions";
 
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" className="w-full" disabled={pending}>
+      {pending ? "Creating account\u2026" : "Create account"}
+    </Button>
+  );
+}
+
 function SignupForm() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
-  const [pending, setPending] = useState(false);
-
-  async function handleSubmit(formData: FormData) {
-    setPending(true);
-    await signup(formData);
-    setPending(false);
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -42,7 +45,7 @@ function SignupForm() {
               {error}
             </div>
           )}
-          <form action={handleSubmit} className="flex flex-col gap-4">
+          <form action={signup} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -66,9 +69,7 @@ function SignupForm() {
                 autoComplete="new-password"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={pending}>
-              {pending ? "Creating account…" : "Create account"}
-            </Button>
+            <SubmitButton />
           </form>
         </CardContent>
         <CardFooter className="justify-center">
