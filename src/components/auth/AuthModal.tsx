@@ -1,7 +1,7 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Mountain } from 'lucide-react';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,6 +24,8 @@ export function AuthModal({
   title = 'Sign up to continue',
   description = 'Create a free account to save trips, share briefings, and monitor conditions.',
 }: AuthModalProps) {
+  const router = useRouter();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -37,11 +39,24 @@ export function AuthModal({
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2 pt-2">
-          <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
-            <Link href="/signup">Create account</Link>
+          <Button
+            className="w-full bg-emerald-600 hover:bg-emerald-700"
+            onClick={() => {
+              onOpenChange(false);
+              router.push('/signup');
+            }}
+          >
+            Create account
           </Button>
-          <Button asChild variant="outline" className="w-full">
-            <Link href="/login">Sign in</Link>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              onOpenChange(false);
+              router.push('/login');
+            }}
+          >
+            Sign in
           </Button>
         </div>
       </DialogContent>
