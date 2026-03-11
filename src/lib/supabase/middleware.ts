@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/", "/opengraph-image", "/twitter-image"];
+const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/", "/opengraph-image", "/twitter-image", "/conditions"];
 
 function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith("/api/")) return true;
