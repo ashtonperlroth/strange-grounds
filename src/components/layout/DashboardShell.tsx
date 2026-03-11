@@ -64,7 +64,7 @@ export function DashboardShell({ mapSlot, briefingSlot, routesPanelSlot, drawerS
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1">{mapSlot}</div>
-        <div className="h-[45vh] shrink-0 overflow-y-auto border-t border-stone-200 bg-[#FAF7F2] p-4">
+        <div className="h-[45vh] shrink-0 overflow-y-auto overscroll-contain border-t border-stone-200 bg-[#FAF7F2] p-4">
           {briefingSlot}
         </div>
         {drawerSlot && <BottomDrawer>{drawerSlot}</BottomDrawer>}
@@ -80,12 +80,12 @@ export function DashboardShell({ mapSlot, briefingSlot, routesPanelSlot, drawerS
           className={cn(
             'shrink-0 overflow-hidden transition-[width,border-width,padding] duration-300 ease-out',
             showSidePanel
-              ? 'w-[35%] max-w-md border-l border-stone-200 bg-[#FAF7F2] p-4'
+              ? 'w-[40%] max-w-lg border-l border-stone-200 bg-[#FAF7F2] p-4'
               : 'w-0 border-l-0 p-0',
           )}
         >
           {showSidePanel && (
-            <div className="h-full overflow-y-auto">
+            <div className="h-full overflow-y-auto overflow-x-hidden overscroll-contain">
               {sidePanelContent}
             </div>
           )}
