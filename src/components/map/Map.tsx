@@ -20,8 +20,10 @@ import { HazardLayer } from './layers/HazardLayer';
 import { HazardMarkers } from './layers/HazardMarkers';
 import { SatelliteImageryLayer } from './layers/SatelliteImageryLayer';
 import { SatelliteSnowLayer } from './layers/SatelliteSnowLayer';
+import { StreamGaugeLayer } from './layers/StreamGaugeLayer';
 import { HazardLegend } from './HazardLegend';
 import { ROUTE_WAYPOINTS_CIRCLE_LAYER_ID } from './route-constants';
+import { STREAM_GAUGE_CIRCLE_LAYER_ID } from './layers/StreamGaugeLayer';
 import { RouteToolbar } from '@/components/routes/RouteToolbar';
 import { WaypointPopup } from '@/components/routes/WaypointPopup';
 import { ElevationProfile } from '@/components/routes/ElevationProfile';
@@ -204,6 +206,18 @@ export function Map() {
         : false;
       if (clickedWaypoint) return;
 
+      const tolerance = 12;
+      const gaugeBbox: [maplibregl.PointLike, maplibregl.PointLike] = [
+        [e.point.x - tolerance, e.point.y - tolerance],
+        [e.point.x + tolerance, e.point.y + tolerance],
+      ];
+      const clickedGauge = map.getLayer(STREAM_GAUGE_CIRCLE_LAYER_ID)
+        ? map.queryRenderedFeatures(gaugeBbox, {
+            layers: [STREAM_GAUGE_CIRCLE_LAYER_ID],
+          }).length > 0
+        : false;
+      if (clickedGauge) return;
+
       const lat = e.lngLat.lat;
       const lng = e.lngLat.lng;
 
@@ -328,6 +342,10 @@ export function Map() {
       <SatelliteSnowLayer
         map={mapInstance}
         visible={activeOverlays.has('satellite-snow')}
+      />
+      <StreamGaugeLayer
+        map={mapInstance}
+        visible={activeOverlays.has('stream-gauges')}
       />
 
       <HazardLegend visible={hazardsVisible} />
