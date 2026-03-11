@@ -211,6 +211,144 @@ async function setCachedData(
   }
 }
 
+// ── Sentinel Hub Processing API ──────────────────────────────────────
+
+const PROCESSING_API_URL =
+  "https://sh.dataspace.copernicus.eu/api/v1/process";
+
+const TRUE_COLOR_EVALSCRIPT = `//VERSION=3
+function setup() {
+  return { input: ["B04", "B03", "B02"], output: { bands: 3 } };
+}
+function evaluatePixel(sample) {
+  return [2.5 * sample.B04, 2.5 * sample.B03, 2.5 * sample.B02];
+}`;
+
+const NDSI_EVALSCRIPT = `//VERSION=3
+function setup() {
+  return { input: ["B03", "B04", "B02", "B11"], output: { bands: 4 } };
+}
+function evaluatePixel(sample) {
+  let ndsi = (sample.B03 - sample.B11) / (sample.B03 + sample.B11);
+  if (ndsi > 0.4) {
+    return [0.2, 0.4, 1.0, 0.85];
+  }
+  return [2.5 * sample.B04, 2.5 * sample.B03, 2.5 * sample.B02, 0.4];
+}`;
+
+function buildProcessingBody(
+  bbox: [number, number, number, number],
+  dateFrom: string,
+  dateTo: string,
+  evalscript: string,
+): Record<string, unknown> {
+  return {
+    input: {
+      bounds: {
+        bbox,
+        properties: {
+          crs: "http://www.opengis.net/def/crs/EPSG/0/4326",
+        },
+      },
+      data: [
+        {
+          type: "sentinel-2-l2a",
+          dataFilter: {
+            timeRange: { from: dateFrom, to: dateTo },
+            maxCloudCoverage: 40,
+          },
+        },
+      ],
+    },
+    output: {
+      width: 512,
+      height: 512,
+      responses: [{ identifier: "default", format: { type: "image/png" } }],
+    },
+    evalscript,
+  };
+}
+
+function arrayBufferToBase64DataUrl(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return `data:image/png;base64,${btoa(binary)}`;
+}
+
+async function renderProcessingImage(
+  token: string,
+  bbox: [number, number, number, number],
+  dateFrom: string,
+  dateTo: string,
+  evalscript: string,
+  label: string,
+): Promise<string | null> {
+  const body = buildProcessingBody(bbox, dateFrom, dateTo, evalscript);
+
+  console.log(`[sentinel2] Rendering ${label} via Processing API...`);
+  const res = await fetch(PROCESSING_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "image/png",
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(20_000),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error(
+      `[sentinel2] Processing API ${label} failed: ${res.status} ${text}`,
+    );
+    return null;
+  }
+
+  const buffer = await res.arrayBuffer();
+  if (buffer.byteLength < 100) {
+    console.warn(`[sentinel2] Processing API ${label}: response too small`);
+    return null;
+  }
+
+  console.log(
+    `[sentinel2] ${label} rendered (${(buffer.byteLength / 1024).toFixed(0)} KB)`,
+  );
+  return arrayBufferToBase64DataUrl(buffer);
+}
+
+async function renderSceneImages(
+  scene: Sentinel2Scene,
+  bbox: [number, number, number, number],
+): Promise<{ trueColorUrl: string | null; ndsiUrl: string | null }> {
+  let token: string;
+  try {
+    token = await getCdseToken();
+  } catch (err) {
+    console.warn("[sentinel2] Token acquisition failed, skipping rendering:", err);
+    return { trueColorUrl: null, ndsiUrl: null };
+  }
+
+  const acqDate = new Date(scene.acquisitionDate);
+  const dateFrom = new Date(acqDate.getTime() - 12 * 60 * 60 * 1000).toISOString();
+  const dateTo = new Date(acqDate.getTime() + 12 * 60 * 60 * 1000).toISOString();
+
+  const buffered = bufferBbox(bbox);
+
+  const [trueColorResult, ndsiResult] = await Promise.allSettled([
+    renderProcessingImage(token, buffered, dateFrom, dateTo, TRUE_COLOR_EVALSCRIPT, "true-color"),
+    renderProcessingImage(token, buffered, dateFrom, dateTo, NDSI_EVALSCRIPT, "NDSI"),
+  ]);
+
+  return {
+    trueColorUrl: trueColorResult.status === "fulfilled" ? trueColorResult.value : null,
+    ndsiUrl: ndsiResult.status === "fulfilled" ? ndsiResult.value : null,
+  };
+}
+
 // ── Fallback ──────────────────────────────────────────────────────────
 
 function buildUnavailableData(): Sentinel2Data {
@@ -256,16 +394,18 @@ export async function fetchSentinel2(
       `[sentinel2] Best scene: ${bestScene.sceneId} (${bestScene.acquisitionDate}, cloud ${bestScene.cloudCover.toFixed(1)}%)`,
     );
 
+    const { trueColorUrl, ndsiUrl } = await renderSceneImages(bestScene, bbox);
+
     const result: Sentinel2Data = {
       source: "sentinel-2",
       available: true,
       scene: bestScene,
-      trueColorUrl: null,
-      ndsiUrl: null,
+      trueColorUrl,
+      ndsiUrl,
       bounds: bufferBbox(bbox),
       acquisitionDate: bestScene.acquisitionDate,
       cloudCover: bestScene.cloudCover,
-      processedAt: null,
+      processedAt: trueColorUrl || ndsiUrl ? new Date().toISOString() : null,
     };
 
     await setCachedData(cacheKey, result);
