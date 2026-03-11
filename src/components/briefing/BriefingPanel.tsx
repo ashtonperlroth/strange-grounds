@@ -24,7 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { usePlanningStore } from '@/stores/planning-store';
-import { useBriefingPolling, resetBriefingPolling } from '@/hooks/useBriefingPolling';
+import { useRealtimeBriefing } from '@/hooks/useRealtimeBriefing';
 import { useBriefingStore, type ConditionStatus, type ConditionCardData } from '@/stores/briefing-store';
 import { trpc } from '@/lib/trpc/client';
 import { trackGenerateBriefing, trackSaveTrip } from '@/lib/analytics';
@@ -678,8 +678,8 @@ export function BriefingPanel() {
   } = usePlanningStore();
 
   const hasRoute = !!usePlanningStore.getState().routeContext;
-  const { briefing, isLoading, error, elapsedSeconds, isTimedOut, pipelineStatus } =
-    useBriefingPolling(activeBriefingId, { isRoute: hasRoute });
+  const { briefing, isLoading, error, elapsedSeconds, pipelineStatus, reset } =
+    useRealtimeBriefing(activeBriefingId, { isRoute: hasRoute });
   const { setConditionCards, getWarningCount, getCriticalCount } = useBriefingStore();
 
   const { user } = useAuth();
@@ -702,7 +702,7 @@ export function BriefingPanel() {
     setIsRegenerating(true);
     setGenerationError(null);
     setIsGenerating(true);
-    resetBriefingPolling();
+    reset();
 
     try {
       const briefingResult = await generateBriefing.mutateAsync({
@@ -738,17 +738,18 @@ export function BriefingPanel() {
     setActiveBriefingId,
     setIsGenerating,
     setGenerationError,
+    reset,
   ]);
 
   useEffect(() => {
-    if ((isTimedOut || error) && isGenerating) {
+    if (error && !isLoading && isGenerating) {
       setIsGenerating(false);
-      setGenerationError(error ?? 'Briefing generation failed');
+      setGenerationError(error);
       toast.error('Briefing generation failed', {
         description: 'Try again or use a different location.',
       });
     }
-  }, [isTimedOut, error, isGenerating, setIsGenerating, setGenerationError]);
+  }, [error, isLoading, isGenerating, setIsGenerating, setGenerationError]);
 
   const briefingToastedRef = useRef<string | null>(null);
 
@@ -816,12 +817,12 @@ export function BriefingPanel() {
     return <BriefingEmptyState />;
   }
 
-  if (isTimedOut || error) {
+  if (error && !isLoading) {
     return (
       <BriefingErrorState
-        error={error ?? 'An unknown error occurred'}
+        error={error}
         elapsedSeconds={elapsedSeconds}
-        isTimedOut={isTimedOut}
+        isTimedOut={false}
         onRetry={handleRetry}
         isRetrying={isRegenerating}
       />
@@ -833,6 +834,9 @@ export function BriefingPanel() {
       <ScrollArea className="h-full">
         <div className="p-1">
           <BriefingLoadingSkeleton elapsedSeconds={elapsedSeconds} pipelineStatus={pipelineStatus} isRoute={hasRoute} />
+          {error && isLoading && (
+            <p className="mt-3 text-center text-xs text-amber-600">{error}</p>
+          )}
         </div>
       </ScrollArea>
     );

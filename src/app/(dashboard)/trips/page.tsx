@@ -36,7 +36,7 @@ import {
 import { trpc } from '@/lib/trpc/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlanningStore } from '@/stores/planning-store';
-import { resetBriefingPolling } from '@/hooks/useBriefingPolling';
+
 import { trackGenerateBriefing } from '@/lib/analytics';
 
 interface BriefingSummary {
@@ -256,7 +256,7 @@ export default function TripsPage() {
     setRegeneratingId(trip.id);
 
     try {
-      resetBriefingPolling();
+      setActiveBriefingId(null);
 
       setLocation({
         lat: trip.latitude,
