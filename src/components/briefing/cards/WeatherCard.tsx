@@ -72,11 +72,11 @@ function buildSummary(data: NWSForecastData): string {
 
 function AlertBanner({ event, headline }: { event: string; headline: string }) {
   return (
-    <div className="flex items-start gap-2 rounded-md bg-red-50 border border-red-200 p-2.5">
+    <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
       <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600" />
       <div>
-        <p className="text-xs font-semibold text-red-700">{event}</p>
-        <p className="text-xs text-red-600">{headline}</p>
+        <p className="text-base font-medium text-red-700">{event}</p>
+        <p className="text-sm text-red-600">{headline}</p>
       </div>
     </div>
   );

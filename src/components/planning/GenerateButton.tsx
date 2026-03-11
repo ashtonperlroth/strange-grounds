@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Loader2, Sparkles, RotateCcw } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -113,6 +114,9 @@ export function GenerateButton() {
         routeBbox: routeContext?.bbox,
       });
 
+      toast('Generating briefing…', {
+        description: 'This may take up to a minute for route-aware analysis.',
+      });
       trackGenerateBriefing(!!routeContext);
       setActiveBriefingId(briefing.id);
     } catch (err) {
@@ -127,6 +131,11 @@ export function GenerateButton() {
         message.toLowerCase().includes('unauthorized') ||
         message.toLowerCase().includes('sign in');
       if (isRateLimit) {
+        toast.error('Slow down', {
+          description: message.includes('more briefings')
+            ? message
+            : "You've reached the limit of 10 briefings per hour.",
+        });
         setAuthModalTitle('Rate limit reached');
         setAuthModalMessage(
           message.includes('more briefings')
@@ -141,6 +150,9 @@ export function GenerateButton() {
         setShowAuthModal(true);
         setMutationError('Sign in required');
       } else {
+        toast.error('Briefing generation failed', {
+          description: 'Try again or use a different location.',
+        });
         setMutationError(message);
       }
       setIsGenerating(false);
@@ -165,7 +177,7 @@ export function GenerateButton() {
       className={
         (hasError && !isGenerating
           ? 'h-7 gap-1.5 bg-red-600 px-3 text-xs font-medium text-white hover:bg-red-500 disabled:bg-stone-200 disabled:text-stone-400'
-          : 'h-7 gap-1.5 bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-500 disabled:bg-stone-200 disabled:text-stone-400'
+          : 'h-7 gap-1.5 bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-700 disabled:bg-stone-200 disabled:text-stone-400'
         ) + pulseClass
       }
     >

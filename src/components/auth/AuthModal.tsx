@@ -37,7 +37,7 @@ export function AuthModal({
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2 pt-2">
-          <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-500">
+          <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
             <Link href="/signup">Create account</Link>
           </Button>
           <Button asChild variant="outline" className="w-full">

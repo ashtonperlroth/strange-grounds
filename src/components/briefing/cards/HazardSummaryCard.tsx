@@ -89,10 +89,10 @@ export function HazardSummaryCard({ routeAnalysis }: HazardSummaryCardProps) {
 
   const scoreColor =
     routeScore >= 8
-      ? 'text-emerald-400'
+      ? 'text-emerald-600'
       : routeScore >= 5
-        ? 'text-yellow-400'
-        : 'text-red-400';
+        ? 'text-amber-600'
+        : 'text-red-600';
 
   return (
     <div className="rounded-lg border border-stone-200 bg-white p-4">

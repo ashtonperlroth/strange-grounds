@@ -16,7 +16,8 @@ import {
   Loader2,
   WifiOff,
 } from 'lucide-react';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { Accordion } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -114,7 +115,7 @@ function BriefingEmptyState() {
       <h3 className="mb-2 text-base font-semibold text-stone-800">
         No Briefing Loaded
       </h3>
-      <p className="mb-6 max-w-[260px] text-sm leading-relaxed text-stone-500">
+      <p className="mb-6 max-w-[260px] text-sm leading-relaxed text-stone-600">
         Select your trip details and generate a briefing
       </p>
       <div className="w-full max-w-[280px] space-y-3">
@@ -273,7 +274,7 @@ function BriefingErrorState({
         size="sm"
         onClick={onRetry}
         disabled={isRetrying}
-        className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
+        className="gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
       >
         {isRetrying ? (
           <Loader2 className="size-3.5 animate-spin" />
@@ -732,7 +733,6 @@ export function BriefingPanel() {
   }, [
     activeTripId,
     location,
-    hasRoute,
     isRegenerating,
     generateBriefing,
     setActiveBriefingId,
@@ -740,21 +740,30 @@ export function BriefingPanel() {
     setGenerationError,
   ]);
 
-  // Clear isGenerating and propagate error when pipeline fails or times out
   useEffect(() => {
     if ((isTimedOut || error) && isGenerating) {
       setIsGenerating(false);
       setGenerationError(error ?? 'Briefing generation failed');
+      toast.error('Briefing generation failed', {
+        description: 'Try again or use a different location.',
+      });
     }
   }, [isTimedOut, error, isGenerating, setIsGenerating, setGenerationError]);
 
-  // Clear isGenerating and generationError when briefing arrives successfully
+  const briefingToastedRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (briefing?.narrative) {
       if (isGenerating) setIsGenerating(false);
       setGenerationError(null);
+      if (briefing.id !== briefingToastedRef.current) {
+        briefingToastedRef.current = briefing.id;
+        toast.success('Briefing ready', {
+          description: 'Your conditions briefing has been generated.',
+        });
+      }
     }
-  }, [briefing?.narrative, isGenerating, setIsGenerating, setGenerationError]);
+  }, [briefing?.narrative, briefing?.id, isGenerating, setIsGenerating, setGenerationError]);
 
   useEffect(() => {
     if (!briefing?.narrative) return;
@@ -785,8 +794,10 @@ export function BriefingPanel() {
       await saveTrip.mutateAsync({ id: activeTripId });
       trackSaveTrip();
       setIsSaved(true);
+      toast.success('Trip saved');
     } catch (err) {
       console.error('Failed to save trip:', err);
+      toast.error('Failed to save trip');
     } finally {
       setIsSaving(false);
     }

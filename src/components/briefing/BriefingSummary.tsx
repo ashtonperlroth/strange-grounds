@@ -44,7 +44,7 @@ export function BriefingSummary({
     >
       {bottomLine && (
         <div className="rounded-lg border border-stone-200 bg-stone-50 px-4 py-3">
-          <p className="text-sm font-semibold leading-relaxed text-stone-800">
+          <p className="text-base font-medium leading-relaxed text-stone-800">
             {bottomLine}
           </p>
         </div>
@@ -53,7 +53,7 @@ export function BriefingSummary({
       {paragraphs.length > 0 && (
         <div className="space-y-3">
           {paragraphs.map((paragraph, i) => (
-            <p key={i} className="text-sm leading-relaxed text-stone-600">
+            <p key={i} className="text-base leading-relaxed text-stone-600">
               {paragraph.trim()}
             </p>
           ))}

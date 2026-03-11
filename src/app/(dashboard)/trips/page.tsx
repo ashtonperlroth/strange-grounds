@@ -69,7 +69,7 @@ function readinessBadge(readiness: string | null) {
       );
     case 'yellow':
       return (
-        <Badge className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-50">
+        <Badge className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100">
           Use caution
         </Badge>
       );
@@ -104,7 +104,7 @@ function TripCard({
   const latestBriefing = trip.briefings?.[0] ?? null;
 
   return (
-    <div className="group rounded-xl border border-stone-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+    <div className="group rounded-lg border border-stone-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <button
           type="button"
@@ -190,7 +190,7 @@ function EmptyTripsState() {
       </p>
       <Link
         href="/"
-        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-500"
+        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-700"
       >
         <Compass className="size-4" />
         Plan a Trip
@@ -302,7 +302,7 @@ export default function TripsPage() {
   if (authLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="size-6 animate-spin text-stone-400" />
+        <Loader2 className="size-4 animate-spin text-emerald-600" />
       </div>
     );
   }
@@ -344,7 +344,7 @@ export default function TripsPage() {
             </h2>
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-emerald-500"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-emerald-700"
             >
               <Compass className="size-3.5" />
               New Trip
@@ -356,7 +356,7 @@ export default function TripsPage() {
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-24 animate-pulse rounded-xl border border-stone-200 bg-stone-100"
+                  className="h-24 animate-pulse rounded-lg border border-stone-200 bg-stone-100"
                 />
               ))}
             </div>

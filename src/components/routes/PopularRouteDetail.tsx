@@ -26,6 +26,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -278,6 +279,9 @@ export function PopularRouteDetail({ slug, onBack }: PopularRouteDetailProps) {
     usePopularRoutesStore.getState().reset();
     setIsCloning(false);
     trackClonePopularRoute(route.name);
+    toast.success(`${route.name} loaded`, {
+      description: 'Edit the route or generate a briefing.',
+    });
   };
 
   const handleGenerateBriefing = async () => {
@@ -287,7 +291,7 @@ export function PopularRouteDetail({ slug, onBack }: PopularRouteDetailProps) {
   if (isLoading) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 text-stone-400">
-        <Loader2 className="size-5 animate-spin" />
+        <Loader2 className="size-4 animate-spin text-emerald-600" />
         <span className="text-xs">Loading route...</span>
       </div>
     );
@@ -594,7 +598,7 @@ export function PopularRouteDetail({ slug, onBack }: PopularRouteDetailProps) {
 
         <div className="flex gap-2 pb-4">
           <Button
-            className="flex-1 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-500"
+            className="flex-1 gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700"
             onClick={handlePlanRoute}
             disabled={isCloning}
           >

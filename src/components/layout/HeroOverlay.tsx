@@ -2,6 +2,7 @@
 
 import { useRef, type ChangeEvent } from 'react';
 import { Compass, Download, Mountain } from 'lucide-react';
+import { toast } from 'sonner';
 import { LocationSearch } from '@/components/planning/LocationSearch';
 import { usePlanningStore } from '@/stores/planning-store';
 import { useRouteStore } from '@/stores/route-store';
@@ -90,8 +91,15 @@ export function HeroOverlay() {
       useRouteStore.getState().setRoute(route, waypoints);
       const { trackImportGPX } = await import('@/lib/analytics');
       trackImportGPX();
+
+      toast.success(`Imported ${parsed.name || 'route'}`, {
+        description: `${(parsed.totalDistance / 1609).toFixed(1)} mi · ${Math.round(parsed.elevationGain * 3.281)} ft gain`,
+      });
     } catch (err) {
       console.error('GPX import failed:', err);
+      toast.error('Import failed', {
+        description: 'Could not parse the file. Is it a valid GPX or KML?',
+      });
     }
   };
 
