@@ -38,7 +38,7 @@ export function BriefingSummary({
   return (
     <div
       className={cn(
-        'max-w-prose space-y-4 transition-all duration-700 ease-out',
+        'max-w-prose break-words space-y-4 transition-all duration-700 ease-out',
         visible ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0',
       )}
     >

@@ -327,11 +327,11 @@ interface PanelFooterProps {
 
 function PanelFooter({ onRegenerate, isRegenerating, onSave, isSaving, isSaved, onShare }: PanelFooterProps) {
   return (
-    <div className="flex items-center gap-2 pt-2">
+    <div className="space-y-2 pt-2">
       <Button
         variant="outline"
         size="sm"
-        className="flex-1 border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-800 focus-visible:ring-emerald-500"
+        className="w-full border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-800 focus-visible:ring-emerald-500"
         onClick={onRegenerate}
         disabled={isRegenerating}
       >
@@ -342,35 +342,37 @@ function PanelFooter({ onRegenerate, isRegenerating, onSave, isSaving, isSaved, 
         )}
         {isRegenerating ? 'Regenerating...' : 'Regenerate'}
       </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className={`flex-1 border-stone-200 transition-colors focus-visible:ring-emerald-500 ${
-          isSaved
-            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-            : 'bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-800'
-        }`}
-        onClick={onSave}
-        disabled={isSaving || isSaved}
-      >
-        {isSaving ? (
-          <Loader2 className="size-3.5 animate-spin" />
-        ) : isSaved ? (
-          <BookmarkCheck className="size-3.5" />
-        ) : (
-          <Bookmark className="size-3.5" />
-        )}
-        {isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save'}
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="flex-1 border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-800 focus-visible:ring-emerald-500"
-        onClick={onShare}
-      >
-        <Share2 className="size-3.5" />
-        Share
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className={`flex-1 border-stone-200 transition-colors focus-visible:ring-emerald-500 ${
+            isSaved
+              ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+              : 'bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-800'
+          }`}
+          onClick={onSave}
+          disabled={isSaving || isSaved}
+        >
+          {isSaving ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : isSaved ? (
+            <BookmarkCheck className="size-3.5" />
+          ) : (
+            <Bookmark className="size-3.5" />
+          )}
+          {isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save'}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-800 focus-visible:ring-emerald-500"
+          onClick={onShare}
+        >
+          <Share2 className="size-3.5" />
+          Share
+        </Button>
+      </div>
     </div>
   );
 }
@@ -455,7 +457,7 @@ function BriefingFullView({
 
   return (
     <ScrollArea className="h-full">
-      <div className="space-y-5 p-1">
+      <div className="space-y-5 overflow-x-hidden p-1">
         <PanelHeader
           locationName={locationName}
           dateRange={dateRange}
