@@ -60,6 +60,9 @@ import type {
   AlternativeRoute,
   OverallReadiness,
 } from '@/lib/types/route-briefing';
+import { PipelineStatusBar } from './PipelineStatusBar';
+import { ConditionCardsSection } from './ConditionCardsSection';
+import { NarrativeSkeleton } from './NarrativeSkeleton';
 
 interface StubCard {
   category: string;
@@ -408,6 +411,113 @@ interface BriefingFullViewProps {
   onShare?: () => void;
 }
 
+interface BriefingProgressiveViewProps {
+  briefing: import('@/hooks/useRealtimeBriefing').Briefing;
+  progress: Record<string, unknown>;
+  pipelineStatus: string | null;
+  elapsedSeconds: number;
+  locationName: string | null;
+  dateRange: { start: Date; end: Date };
+  activity: string;
+  warningCount: number;
+  criticalCount: number;
+}
+
+function BriefingProgressiveView({
+  briefing,
+  progress,
+  pipelineStatus,
+  elapsedSeconds,
+  locationName,
+  dateRange,
+  activity,
+  warningCount,
+  criticalCount,
+}: BriefingProgressiveViewProps) {
+  const readiness = briefing.readiness as 'green' | 'yellow' | 'red' | null;
+  const conditionsObj = briefing.conditions as Record<string, unknown> | undefined;
+  const routeAnalysis = (conditionsObj?.routeAnalysis as RouteAnalysis | undefined) ?? null;
+  const hasConditions = !!progress.pointConditionsComplete;
+  const hasHazards = !!progress.hazardsComplete;
+  const hasSynthesisStarted = !!progress.synthesisStarted;
+
+  return (
+    <ScrollArea className="h-full">
+      <div className="space-y-5 overflow-x-hidden p-1">
+        <PipelineStatusBar
+          status={pipelineStatus}
+          elapsed={elapsedSeconds}
+          progress={progress}
+          isComplete={false}
+        />
+
+        <PanelHeader
+          locationName={locationName}
+          dateRange={dateRange}
+          activity={activity}
+        />
+
+        {readiness && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <ReadinessIndicator
+              readiness={readiness}
+              warningCount={warningCount}
+              criticalCount={criticalCount}
+            />
+          </div>
+        )}
+
+        {hasSynthesisStarted ? (
+          <NarrativeSkeleton />
+        ) : !hasConditions ? (
+          <div className="space-y-2.5">
+            <Skeleton className="h-3.5 w-full bg-stone-200" />
+            <Skeleton className="h-3.5 w-[92%] bg-stone-200" />
+            <Skeleton className="h-3.5 w-[78%] bg-stone-200" />
+          </div>
+        ) : null}
+
+        <Separator className="bg-stone-200" />
+
+        {hasHazards && routeAnalysis && routeAnalysis.segments.length > 0 && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <ErrorBoundary
+              fallback={(reset) => (
+                <ConditionCardErrorFallback category="Hazard Assessment" reset={reset} />
+              )}
+            >
+              <HazardSummaryCard routeAnalysis={routeAnalysis} />
+            </ErrorBoundary>
+          </div>
+        )}
+
+        <ConditionCardsSection
+          conditions={conditionsObj}
+          progress={progress}
+          allConditionsComplete={hasConditions}
+        />
+
+        {STUB_CARDS.map((card) => (
+          <ErrorBoundary
+            key={card.category}
+            fallback={(reset) => (
+              <ConditionCardErrorFallback category={card.category} reset={reset} />
+            )}
+          >
+            <ConditionCard
+              category={card.category}
+              icon={card.icon}
+              status={card.status}
+              summary={card.summary}
+              detail={card.detail}
+            />
+          </ErrorBoundary>
+        ))}
+      </div>
+    </ScrollArea>
+  );
+}
+
 function fireStatusSummary(data: FireData | null): string {
   if (!data) return 'No data available';
   if (data.nearbyCount === 0) return 'No active fires within 50 miles';
@@ -678,9 +788,9 @@ export function BriefingPanel() {
   } = usePlanningStore();
 
   const hasRoute = !!usePlanningStore.getState().routeContext;
-  const { briefing, isLoading, error, elapsedSeconds, pipelineStatus, reset } =
+  const { briefing, isLoading, error, elapsedSeconds, pipelineStatus, progress, reset } =
     useRealtimeBriefing(activeBriefingId, { isRoute: hasRoute });
-  const { setConditionCards, getWarningCount, getCriticalCount } = useBriefingStore();
+  const { setBriefing, setConditionCards, getWarningCount, getCriticalCount } = useBriefingStore();
 
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -760,12 +870,17 @@ export function BriefingPanel() {
   }, [briefing?.narrative, briefing?.id, isGenerating, setIsGenerating, setGenerationError]);
 
   useEffect(() => {
-    if (!briefing?.narrative) return;
-    const cards = briefing.conditions?.conditionCards as ConditionCardData[] | undefined;
+    const cards = briefing?.conditions?.conditionCards as ConditionCardData[] | undefined;
     if (cards && Array.isArray(cards)) {
       setConditionCards(cards);
     }
-  }, [briefing?.narrative, briefing?.conditions, setConditionCards]);
+  }, [briefing?.conditions, setConditionCards]);
+
+  useEffect(() => {
+    if (briefing) {
+      setBriefing(briefing as unknown as import('@/stores/briefing-store').Briefing);
+    }
+  }, [briefing, setBriefing]);
 
   const handleSave = useCallback(async () => {
     if (!activeTripId) return;
@@ -809,7 +924,11 @@ export function BriefingPanel() {
     );
   }
 
-  if ((isGenerating && !briefing?.narrative) || isLoading) {
+  const isComplete = !!briefing?.narrative;
+  const isPipelineRunning = (isGenerating && !isComplete) || (isLoading && !isComplete);
+  const hasPartialData = !!briefing && !isComplete;
+
+  if (isPipelineRunning && !hasPartialData) {
     return (
       <ScrollArea className="h-full">
         <div className="p-1">
@@ -819,6 +938,22 @@ export function BriefingPanel() {
           )}
         </div>
       </ScrollArea>
+    );
+  }
+
+  if (isPipelineRunning && hasPartialData) {
+    return (
+      <BriefingProgressiveView
+        briefing={briefing}
+        progress={progress}
+        pipelineStatus={pipelineStatus}
+        elapsedSeconds={elapsedSeconds}
+        locationName={location?.name ?? null}
+        dateRange={dateRange}
+        activity={activity}
+        warningCount={getWarningCount()}
+        criticalCount={getCriticalCount()}
+      />
     );
   }
 
