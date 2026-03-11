@@ -58,7 +58,7 @@ function CustomTooltip({
 export function TempChart({ hourly }: TempChartProps) {
   if (!hourly.length) {
     return (
-      <div className="flex h-[244px] items-center justify-center text-sm text-stone-400">
+      <div className="flex h-[180px] items-center justify-center text-sm text-stone-400 md:h-[244px]">
         No hourly temperature data available
       </div>
     );
@@ -71,7 +71,7 @@ export function TempChart({ hourly }: TempChartProps) {
   const padding = Math.max(5, Math.round((maxTemp - minTemp) * 0.15));
 
   return (
-    <div className="h-[244px] w-full">
+    <div className="h-[180px] w-full md:h-[244px]">
       <div className="mb-1 flex items-center justify-between px-1">
         <span className="text-xs font-medium text-stone-600">
           Hourly Temperature (°F)
