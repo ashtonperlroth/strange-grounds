@@ -111,12 +111,14 @@ export function HeroOverlay() {
   return (
     <div
       className={`pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center transition-all duration-700 ease-out ${
-        isVisible ? 'opacity-100' : 'pointer-events-none scale-95 opacity-0'
+        isVisible ? 'opacity-100' : 'scale-95 opacity-0'
       }`}
       role="region"
       aria-label="Get started"
     >
-      <div className="pointer-events-auto relative flex flex-col items-center gap-5 rounded-2xl bg-white/25 px-8 py-8 shadow-lg ring-1 ring-white/30 backdrop-blur-md sm:px-12">
+      <div className={`relative flex flex-col items-center gap-5 rounded-2xl bg-white/25 px-8 py-8 shadow-lg ring-1 ring-white/30 backdrop-blur-md sm:px-12 ${
+        isVisible ? 'pointer-events-auto' : 'pointer-events-none'
+      }`}>
         <div className="flex size-14 items-center justify-center rounded-2xl bg-emerald-50/80 sm:size-16">
           <Mountain className="size-8 text-emerald-600 drop-shadow-sm sm:size-10" aria-hidden="true" />
         </div>

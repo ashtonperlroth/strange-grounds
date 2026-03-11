@@ -155,7 +155,7 @@ export function Map() {
     mapRef.current = map;
     setMapInstance(map);
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-left');
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
     map.addControl(
       new maplibregl.ScaleControl({ maxWidth: 200 }),
       'bottom-left',
@@ -236,7 +236,9 @@ export function Map() {
     const container = containerRef.current;
 
     const preventBrowserZoom = (e: WheelEvent) => {
-      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+      }
     };
     container.addEventListener('wheel', preventBrowserZoom, { passive: false });
 

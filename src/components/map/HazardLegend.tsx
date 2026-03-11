@@ -17,7 +17,7 @@ export function HazardLegend({ visible }: HazardLegendProps) {
   if (!visible) return null;
 
   return (
-    <div className="absolute bottom-3 right-3 z-20 rounded-lg border border-white/20 bg-black/75 shadow-lg backdrop-blur-sm">
+    <div className="pointer-events-auto absolute bottom-3 right-3 z-20 rounded-lg border border-white/20 bg-black/75 shadow-lg backdrop-blur-sm">
       <button
         type="button"
         onClick={() => setCollapsed((v) => !v)}
