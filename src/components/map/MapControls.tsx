@@ -47,6 +47,7 @@ const OVERLAY_LAYERS: OverlayDef[] = [
   { id: 'slope-angle', label: 'Slope Angle', color: '#ef4444' },
   { id: 'satellite-imagery', label: 'Satellite Imagery', color: '#6366f1' },
   { id: 'satellite-snow', label: 'Snow Coverage (Satellite)', color: '#e0f2fe' },
+  { id: 'stream-gauges', label: 'Stream Gauges', color: '#06b6d4' },
 ];
 
 interface MapControlsProps {
