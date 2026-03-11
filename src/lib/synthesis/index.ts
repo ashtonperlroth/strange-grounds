@@ -3,6 +3,11 @@ export {
   generateBriefingText,
   generateRouteAwareBriefing,
   generateRouteAwareBriefingText,
+  parseSynthesisResponse,
+  parseRouteAwareSynthesisResponse,
+  MODEL,
+  MAX_TOKENS,
+  ROUTE_MAX_TOKENS,
 } from "./briefing";
 export type { BriefingResult, SynthesisResult } from "./briefing";
 

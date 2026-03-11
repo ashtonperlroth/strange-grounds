@@ -112,7 +112,8 @@ export function useRealtimeBriefing(
           .then(({ data }) => {
             if (!data) return;
             const updated = data as Briefing & { progress?: Record<string, unknown> };
-            const isComplete = updated.narrative !== null;
+            const isComplete =
+              updated.pipeline_status === 'complete' && updated.narrative !== null;
 
             const progressStr = JSON.stringify(updated.progress ?? {});
             if (progressStr !== lastProgressRef.current) {
@@ -161,7 +162,8 @@ export function useRealtimeBriefing(
       .then(({ data }) => {
         if (data) {
           const briefing = data as Briefing;
-          const isComplete = briefing.narrative !== null;
+          const isComplete =
+            briefing.pipeline_status === 'complete' && briefing.narrative !== null;
           const progress =
             (data as Record<string, unknown>).progress as
               | Record<string, unknown>
@@ -196,7 +198,8 @@ export function useRealtimeBriefing(
           const updated = payload.new as Briefing & {
             progress?: Record<string, unknown>;
           };
-          const isComplete = updated.narrative !== null;
+          const isComplete =
+            updated.pipeline_status === 'complete' && updated.narrative !== null;
 
           const progressStr = JSON.stringify(updated.progress ?? {});
           if (progressStr !== lastProgressRef.current) {

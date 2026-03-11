@@ -11,10 +11,6 @@ import {
   bboxFromCenter,
 } from "@/lib/data-sources/sentinel2";
 import type { Sentinel2Data } from "@/lib/data-sources/sentinel2";
-import {
-  generateBriefing as synthesize,
-  generateRouteAwareBriefing as synthesizeRoute,
-} from "@/lib/synthesis/briefing";
 import { buildConditionCards, computeReadiness } from "@/lib/synthesis/conditions";
 import type { ConditionsBundle } from "@/lib/synthesis/conditions";
 import type { NWSForecastData } from "@/lib/data-sources/nws";
@@ -471,118 +467,51 @@ export const generateBriefing = inngest.createFunction(
       stepTimings["fetch-satellite-imagery"] = satElapsed;
     }
 
-    // ── Step 3: Synthesize narrative ──────────────────────────────────
-    await updateBriefingProgress(briefingId, "generating_narrative", {
-      synthesisStarted: true,
-    });
-
+    // ── Step 3: Prepare synthesis (SSE endpoint handles actual generation) ──
     const useRouteAware =
       hasRoute &&
       routeAnalysis !== null &&
       routeSegments.length > 0 &&
       routeAnalysis.segments.length > 0;
 
-    const synthesisOutput = await step.run("synthesize", async () => {
-      const stepStart = Date.now();
-
-      if (useRouteAware) {
-        const routeResult = await synthesizeRoute(
-          synthesisConditions,
-          activity as Activity,
-          { lat, lng, name: null },
-          { start: startDate, end: endDate },
-          {
-            routeName,
-            totalDistanceM: routeTotalDistanceM,
-            elevationGainM: routeElevationGainM,
-            segments: routeSegments,
-            segmentConditions: routeAnalysis!.segments,
-          },
-          unavailableSources,
-        );
-
-        const readinessToLegacy: Record<string, "green" | "yellow" | "red"> = {
-          green: "green",
-          yellow: "yellow",
-          orange: "yellow",
-          red: "red",
-        };
-
-        const elapsed = Date.now() - stepStart;
-        console.log(
-          `[briefing] route-aware synthesize completed in ${elapsed}ms (narrative length: ${routeResult.narrative.length}, segments: ${routeResult.routeWalkthrough.length})`,
-        );
-
-        return {
-          isRouteAware: true as const,
-          bottomLine: routeResult.bottomLine,
-          narrative: routeResult.narrative,
-          readiness: readinessToLegacy[routeResult.overallReadiness] ?? "yellow",
-          readinessRationale: `Route readiness: ${routeResult.overallReadiness}`,
-          conditionCards: routeResult.conditionCards,
-          routeWalkthrough: routeResult.routeWalkthrough,
-          criticalSections: routeResult.criticalSections,
-          alternativeRoutes: routeResult.alternativeRoutes,
-          gearChecklist: routeResult.gearChecklist,
-          overallReadiness: routeResult.overallReadiness,
-          _elapsedMs: elapsed,
-        };
-      }
-
-      const result = await synthesize(
-        synthesisConditions,
-        activity as Activity,
-        { lat, lng, name: null },
-        { start: startDate, end: endDate },
-        unavailableSources,
-      );
-      const elapsed = Date.now() - stepStart;
-      console.log(`[briefing] synthesize completed in ${elapsed}ms (narrative length: ${result.narrative.length})`);
-      return {
-        isRouteAware: false as const,
-        ...result,
-        _elapsedMs: elapsed,
-      };
-    });
-
-    stepTimings["synthesize"] = synthesisOutput._elapsedMs;
-
-    // ── Step 4: Save briefing to database ─────────────────────────────
-    await updatePipelineStatus(briefingId, "Saving briefing…");
-
-    await step.run("save-briefing", async () => {
+    await step.run("prepare-synthesis", async () => {
       const stepStart = Date.now();
       const supabase = createAdminClient();
 
-      const routeAwareFields = synthesisOutput.isRouteAware
+      const synthesisInput = useRouteAware
         ? {
-            routeWalkthrough: synthesisOutput.routeWalkthrough,
-            criticalSections: synthesisOutput.criticalSections,
-            alternativeRoutes: synthesisOutput.alternativeRoutes,
-            gearChecklist: synthesisOutput.gearChecklist,
-            overallReadiness: synthesisOutput.overallReadiness,
+            type: "route" as const,
+            conditions: synthesisConditions,
+            activity: activity as Activity,
+            location: { lat, lng, name: null },
+            dates: { start: startDate, end: endDate },
+            route: {
+              routeName,
+              totalDistanceM: routeTotalDistanceM,
+              elevationGainM: routeElevationGainM,
+              segments: routeSegments,
+              segmentConditions: routeAnalysis!.segments,
+            },
+            unavailableSources,
           }
-        : {};
+        : {
+            type: "point" as const,
+            conditions: synthesisConditions,
+            activity: activity as Activity,
+            location: { lat, lng, name: null },
+            dates: { start: startDate, end: endDate },
+            unavailableSources,
+          };
 
-      const { data, error } = await supabase
+      await supabase
         .from("briefings")
         .update({
-          narrative: synthesisOutput.narrative,
-          bottom_line: synthesisOutput.bottomLine,
-          readiness_rationale: synthesisOutput.readinessRationale,
-          pipeline_status: "complete",
-          conditions: {
-            ...fullConditions,
-            conditionCards,
-            unavailableSources,
-            satellite: satelliteData,
-            ...(routeAnalysis && { routeAnalysis }),
-            ...routeAwareFields,
-          },
+          pipeline_status: "ready_for_synthesis",
           raw_data: {
             ...fullConditions,
             unavailableSources,
             satellite: satelliteData,
+            synthesisInput,
             route: routeGeometry
               ? {
                   geometry: routeGeometry,
@@ -599,37 +528,34 @@ export const generateBriefing = inngest.createFunction(
               },
             }),
           },
-          readiness: synthesisOutput.readiness ?? readiness,
-          progress: { complete: true },
+          conditions: {
+            ...fullConditions,
+            conditionCards,
+            unavailableSources,
+            satellite: satelliteData,
+            ...(routeAnalysis && { routeAnalysis }),
+          },
+          readiness,
+          progress: { synthesisReady: true },
         })
-        .eq("id", briefingId)
-        .select("id, narrative")
-        .single();
-
-      if (error) {
-        console.error(`[briefing] save-briefing failed:`, error);
-        throw new Error(`Failed to save briefing: ${error.message}`);
-      }
-
-      if (!data) {
-        console.error(`[briefing] save-briefing matched no rows for id=${briefingId}`);
-        throw new Error(`Briefing row not found for id=${briefingId}`);
-      }
+        .eq("id", briefingId);
 
       const elapsed = Date.now() - stepStart;
-      console.log(`[briefing] save-briefing completed in ${elapsed}ms (id: ${data.id})`);
-      stepTimings["save-briefing"] = elapsed;
-      return { savedId: data.id, hasNarrative: !!data.narrative };
+      console.log(
+        `[briefing] prepare-synthesis completed in ${elapsed}ms (type: ${synthesisInput.type})`,
+      );
+      stepTimings["prepare-synthesis"] = elapsed;
+      return { status: "ready_for_synthesis" };
     });
 
     const totalElapsed = Date.now() - pipelineStart;
     console.log(
-      `[briefing] pipeline completed for briefing=${briefingId} in ${totalElapsed}ms` +
+      `[briefing] pipeline ready for synthesis briefing=${briefingId} in ${totalElapsed}ms` +
         (routeAnalysis
           ? ` (route: ${routeAnalysis.totalSegments} segments, hazard: ${routeAnalysis.overallHazardLevel})`
           : " (point-based)") +
         ` | step timings: ${JSON.stringify(stepTimings)}`,
     );
-    return { briefingId, status: "complete", stepTimings, totalElapsedMs: totalElapsed };
+    return { briefingId, status: "ready_for_synthesis", stepTimings, totalElapsedMs: totalElapsed };
   },
 );

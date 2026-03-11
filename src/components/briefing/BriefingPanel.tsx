@@ -25,6 +25,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { usePlanningStore } from '@/stores/planning-store';
 import { useRealtimeBriefing } from '@/hooks/useRealtimeBriefing';
+import { useNarrativeStream } from '@/hooks/useNarrativeStream';
 import { useBriefingStore, type ConditionStatus, type ConditionCardData } from '@/stores/briefing-store';
 import { trpc } from '@/lib/trpc/client';
 import { trackGenerateBriefing, trackSaveTrip } from '@/lib/analytics';
@@ -421,6 +422,8 @@ interface BriefingProgressiveViewProps {
   activity: string;
   warningCount: number;
   criticalCount: number;
+  streamedText?: string;
+  isStreaming?: boolean;
 }
 
 function BriefingProgressiveView({
@@ -433,13 +436,16 @@ function BriefingProgressiveView({
   activity,
   warningCount,
   criticalCount,
+  streamedText,
+  isStreaming,
 }: BriefingProgressiveViewProps) {
   const readiness = briefing.readiness as 'green' | 'yellow' | 'red' | null;
   const conditionsObj = briefing.conditions as Record<string, unknown> | undefined;
   const routeAnalysis = (conditionsObj?.routeAnalysis as RouteAnalysis | undefined) ?? null;
   const hasConditions = !!progress.pointConditionsComplete;
   const hasHazards = !!progress.hazardsComplete;
-  const hasSynthesisStarted = !!progress.synthesisStarted;
+  const isSynthesisReady = !!progress.synthesisReady;
+  const showStreamingNarrative = isStreaming || (isSynthesisReady && !!streamedText);
 
   return (
     <ScrollArea className="h-full">
@@ -467,7 +473,14 @@ function BriefingProgressiveView({
           </div>
         )}
 
-        {hasSynthesisStarted ? (
+        {showStreamingNarrative ? (
+          <BriefingSummary
+            bottomLine={null}
+            narrative={null}
+            streamedText={streamedText}
+            isStreaming={isStreaming}
+          />
+        ) : isSynthesisReady ? (
           <NarrativeSkeleton />
         ) : !hasConditions ? (
           <div className="space-y-2.5">
@@ -790,6 +803,8 @@ export function BriefingPanel() {
   const hasRoute = !!usePlanningStore.getState().routeContext;
   const { briefing, isLoading, error, elapsedSeconds, pipelineStatus, progress, reset } =
     useRealtimeBriefing(activeBriefingId, { isRoute: hasRoute });
+  const { streamedText, isStreaming, reset: resetStream } =
+    useNarrativeStream(activeBriefingId, pipelineStatus);
   const { setBriefing, setConditionCards, getWarningCount, getCriticalCount } = useBriefingStore();
 
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -806,6 +821,7 @@ export function BriefingPanel() {
     setGenerationError(null);
     setIsGenerating(true);
     reset();
+    resetStream();
 
     try {
       const briefingResult = await generateBriefing.mutateAsync({
@@ -842,6 +858,7 @@ export function BriefingPanel() {
     setIsGenerating,
     setGenerationError,
     reset,
+    resetStream,
   ]);
 
   useEffect(() => {
@@ -857,7 +874,7 @@ export function BriefingPanel() {
   const briefingToastedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (briefing?.narrative) {
+    if (briefing?.narrative && briefing.pipeline_status === 'complete') {
       if (isGenerating) setIsGenerating(false);
       setGenerationError(null);
       if (briefing.id !== briefingToastedRef.current) {
@@ -867,7 +884,7 @@ export function BriefingPanel() {
         });
       }
     }
-  }, [briefing?.narrative, briefing?.id, isGenerating, setIsGenerating, setGenerationError]);
+  }, [briefing?.narrative, briefing?.pipeline_status, briefing?.id, isGenerating, setIsGenerating, setGenerationError]);
 
   useEffect(() => {
     const cards = briefing?.conditions?.conditionCards as ConditionCardData[] | undefined;
@@ -924,7 +941,8 @@ export function BriefingPanel() {
     );
   }
 
-  const isComplete = !!briefing?.narrative;
+  const isComplete =
+    !!briefing?.narrative && briefing.pipeline_status === 'complete';
   const isPipelineRunning = (isGenerating && !isComplete) || (isLoading && !isComplete);
   const hasPartialData = !!briefing && !isComplete;
 
@@ -953,6 +971,8 @@ export function BriefingPanel() {
         activity={activity}
         warningCount={getWarningCount()}
         criticalCount={getCriticalCount()}
+        streamedText={streamedText}
+        isStreaming={isStreaming}
       />
     );
   }

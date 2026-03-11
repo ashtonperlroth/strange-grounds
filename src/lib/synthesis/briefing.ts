@@ -52,7 +52,7 @@ function getClient(): Anthropic {
 
 // ── JSON parsing ────────────────────────────────────────────────────
 
-function parseSynthesisResponse(responseText: string): SynthesisResult {
+export function parseSynthesisResponse(responseText: string): SynthesisResult {
   const cleaned = responseText.replace(/```json\n?|```\n?/g, "").trim();
 
   let parsed: unknown;
@@ -91,8 +91,8 @@ function parseSynthesisResponse(responseText: string): SynthesisResult {
 
 // ── Core generation function ────────────────────────────────────────
 
-const MODEL = "claude-sonnet-4-20250514";
-const MAX_TOKENS = 1500;
+export const MODEL = "claude-sonnet-4-20250514";
+export const MAX_TOKENS = 1500;
 
 export async function generateBriefingText(
   conditions: ConditionsBundle,
@@ -163,7 +163,7 @@ export async function generateBriefing(
 
 const VALID_READINESS = new Set<OverallReadiness>(["green", "yellow", "orange", "red"]);
 
-function parseRouteAwareSynthesisResponse(
+export function parseRouteAwareSynthesisResponse(
   responseText: string,
 ): RouteAwareSynthesisResult {
   const cleaned = responseText.replace(/```json\n?|```\n?/g, "").trim();
@@ -229,7 +229,7 @@ function parseRouteAwareSynthesisResponse(
 
 // ── Route-aware generation ──────────────────────────────────────────
 
-const ROUTE_MAX_TOKENS = 3000;
+export const ROUTE_MAX_TOKENS = 3000;
 
 export async function generateRouteAwareBriefingText(
   conditions: ConditionsBundle,
