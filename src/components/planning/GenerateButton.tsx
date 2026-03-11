@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { usePlanningStore } from '@/stores/planning-store';
+import { useRouteStore } from '@/stores/route-store';
 import { trpc } from '@/lib/trpc/client';
 import { format } from 'date-fns';
 
@@ -52,6 +53,7 @@ export function GenerateButton() {
 
   const createTrip = trpc.trips.create.useMutation();
   const generateBriefing = trpc.briefings.generate.useMutation();
+  const updateRoute = trpc.routes.update.useMutation();
 
   const missingItems: string[] = [];
   if (!location && !routeContext) missingItems.push('location or route');
@@ -86,6 +88,18 @@ export function GenerateButton() {
       });
 
       setActiveTripId(trip.id);
+
+      const currentRoute = useRouteStore.getState().currentRoute;
+      if (currentRoute && !currentRoute.id.startsWith('temp-')) {
+        try {
+          await updateRoute.mutateAsync({
+            id: currentRoute.id,
+            tripId: trip.id,
+          });
+        } catch (err) {
+          console.warn('Failed to link route to trip:', err);
+        }
+      }
 
       const briefing = await generateBriefing.mutateAsync({
         tripId: trip.id,

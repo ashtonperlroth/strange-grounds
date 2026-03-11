@@ -361,7 +361,7 @@ export function RouteToolbar() {
 
       try {
         const shouldUpdateExistingRoute =
-          currentRoute && !currentRoute.id.startsWith('temp-');
+          currentRoute && !currentRoute.id.startsWith('temp-') && !updateRouteMutation.isPending;
 
         if (shouldUpdateExistingRoute) {
           const saved = await updateRouteMutation.mutateAsync({

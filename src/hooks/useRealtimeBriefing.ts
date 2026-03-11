@@ -103,6 +103,39 @@ export function useRealtimeBriefing(
       if (!startedAtRef.current) return;
       const elapsed = Math.floor((Date.now() - startedAtRef.current) / 1000);
 
+      if (elapsed > 0 && elapsed % 3 === 0) {
+        supabase
+          .from('briefings')
+          .select('*')
+          .eq('id', briefingId)
+          .single()
+          .then(({ data }) => {
+            if (!data) return;
+            const updated = data as Briefing & { progress?: Record<string, unknown> };
+            const isComplete = updated.narrative !== null;
+
+            const progressStr = JSON.stringify(updated.progress ?? {});
+            if (progressStr !== lastProgressRef.current) {
+              lastProgressRef.current = progressStr;
+              lastProgressChangeRef.current = Date.now();
+            }
+
+            setState(prev => ({
+              ...prev,
+              briefing: updated,
+              pipelineStatus: updated.pipeline_status,
+              progress: updated.progress ?? prev.progress,
+              isLoading: !isComplete,
+              error: isComplete ? null : prev.error,
+            }));
+
+            if (isComplete) {
+              channelRef.current?.unsubscribe();
+              if (timerRef.current) clearInterval(timerRef.current);
+            }
+          });
+      }
+
       setState(prev => {
         if (elapsed >= timeoutSeconds) {
           const staleDuration = Math.floor(
