@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import postgres from "postgres";
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 
 export const dynamic = "force-dynamic";
@@ -20,12 +20,9 @@ export async function POST() {
 
   try {
     const migrationsDir = join(process.cwd(), "supabase", "migrations");
-    const files = [
-      "001_initial_schema.sql",
-      "002_usgs_station_rpc.sql",
-      "003_snotel_avalanche_rpcs.sql",
-      "004_avalanche_zones_geojson.sql",
-    ];
+    const files = readdirSync(migrationsDir)
+      .filter((f) => f.endsWith(".sql"))
+      .sort();
 
     for (const file of files) {
       try {
