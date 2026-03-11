@@ -1,10 +1,10 @@
 'use client';
 
-import { type ReactNode, useState, useEffect, useCallback, useRef } from 'react';
+import { type ReactNode, useState, useEffect } from 'react';
 import { BottomDrawer } from './BottomDrawer';
+import { MobileBottomSheet } from './MobileBottomSheet';
 import { usePlanningStore } from '@/stores/planning-store';
 import { usePopularRoutesStore } from '@/stores/popular-routes-store';
-import { ChevronUp, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type LayoutMode = 'desktop' | 'tablet' | 'mobile';
@@ -32,67 +32,6 @@ interface DashboardShellProps {
   briefingSlot: ReactNode;
   routesPanelSlot?: ReactNode;
   drawerSlot?: ReactNode;
-}
-
-function MobileBottomSheet({
-  children,
-  isVisible,
-}: {
-  children: ReactNode;
-  isVisible: boolean;
-}) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const startYRef = useRef(0);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    startYRef.current = e.touches[0].clientY;
-  }, []);
-
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    const deltaY = startYRef.current - e.changedTouches[0].clientY;
-    if (deltaY > 50) setIsExpanded(true);
-    else if (deltaY < -50) setIsExpanded(false);
-  }, []);
-
-  if (!isVisible) return null;
-
-  return (
-    <div
-      ref={sheetRef}
-      className={cn(
-        'absolute inset-x-0 bottom-0 z-30 flex flex-col rounded-t-2xl bg-[#FAF7F2] shadow-[0_-4px_24px_rgba(0,0,0,0.12)] transition-[max-height] duration-300 ease-out',
-        isExpanded ? 'max-h-[85vh]' : 'max-h-[48px]',
-      )}
-    >
-      <button
-        type="button"
-        onClick={() => setIsExpanded((v) => !v)}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        className="flex shrink-0 items-center justify-center gap-2 px-4 py-3"
-        aria-label={isExpanded ? 'Collapse briefing panel' : 'Expand briefing panel'}
-      >
-        <div className="h-1 w-8 rounded-full bg-stone-300" />
-        {!isExpanded && (
-          <span className="flex items-center gap-1.5 text-xs font-medium text-stone-500">
-            <FileText className="size-3.5" />
-            Briefing
-            <ChevronUp className="size-3.5" />
-          </span>
-        )}
-      </button>
-
-      <div
-        className={cn(
-          'flex-1 overflow-y-auto overscroll-contain px-4 pb-6 transition-opacity duration-200',
-          isExpanded ? 'opacity-100' : 'pointer-events-none opacity-0',
-        )}
-      >
-        {children}
-      </div>
-    </div>
-  );
 }
 
 export function DashboardShell({ mapSlot, briefingSlot, routesPanelSlot, drawerSlot }: DashboardShellProps) {
