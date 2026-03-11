@@ -30,52 +30,6 @@ export const AVALANCHE_CENTERS = [
   "BTAC",
 ] as const;
 
-// ── Approximate bounding boxes for each avalanche center ────────────
-// [west, south, east, north] — used by findZoneByPoint to limit
-// fetches to only the 1-3 centers whose region contains the query point.
-
-type CenterBbox = [number, number, number, number];
-
-const CENTER_REGIONS: Record<string, CenterBbox> = {
-  AAIC:   [-155, 58, -145, 65],
-  CNFAIC: [-152, 59, -148, 62],
-  HAIC:   [-150, 59, -145, 64],
-  JMAC:   [-136, 57, -133, 60],
-  MARC:   [-150, 61, -144, 64],
-  TAC:    [-151, 61, -148, 63],
-  CACB:   [-140, 60, -135, 63],
-  EARAC:  [-146, 63, -143, 66],
-  CORAC:  [-148, 59, -143, 62],
-  KRAC:   [-113, 34, -110, 37],
-  SAC:    [-122, 38, -119, 42],
-  ESAC:   [-120, 36, -117, 39],
-  MSAC:   [-120, 37, -118, 39],
-  CAIC:   [-109, 36, -105, 41],
-  PAC:    [-117, 43, -113, 49],
-  IPAC:   [-116, 42, -113, 46],
-  FVAC:   [-115, 43, -113, 45],
-  GNFAC:  [-112, 44, -109, 47],
-  WCMAC:  [-116, 46, -113, 49],
-  MFAC:   [-114, 45, -112, 48],
-  MWAC:   [-72, 43, -70, 45],
-  TAOS:   [-107, 35, -104, 37],
-  OACS:   [-123, 42, -120, 46],
-  WAC:    [-123, 44, -120, 46],
-  UAC:    [-113, 37, -109, 42],
-  NWAC:   [-123, 46, -119, 49],
-  BTAC:   [-112, 42, -108, 46],
-};
-
-function findCentersForPoint(lng: number, lat: number): string[] {
-  const matches: string[] = [];
-  for (const [centerId, [west, south, east, north]] of Object.entries(CENTER_REGIONS)) {
-    if (lng >= west && lng <= east && lat >= south && lat <= north) {
-      matches.push(centerId);
-    }
-  }
-  return matches;
-}
-
 // ── Constants ───────────────────────────────────────────────────────
 
 const MAP_LAYER_URL = "https://api.avalanche.org/v2/public/products/map-layer";
@@ -240,54 +194,26 @@ export async function findZoneByPoint(
   lat: number,
   lng: number,
 ): Promise<AvalancheZoneFeature | null> {
-  const candidateCenters = findCentersForPoint(lng, lat);
-
-  if (candidateCenters.length === 0) {
-    console.warn(
-      `[avalanche-zones] No center region contains point (${lat}, ${lng})`,
-    );
-    return null;
-  }
-
-  console.log(
-    `[avalanche-zones] Point (${lat}, ${lng}) matched ${candidateCenters.length} center(s): ${candidateCenters.join(", ")}`,
-  );
-
-  const results = await Promise.allSettled(
-    candidateCenters.map((id) => fetchCenterZones(id)),
-  );
-
+  const collection = await fetchAllZones();
   const pt = point([lng, lat]);
 
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    if (result.status !== "fulfilled") {
-      console.warn(
-        `[avalanche-zones] Failed to fetch ${candidateCenters[i]}:`,
-        result.reason instanceof Error ? result.reason.message : result.reason,
-      );
-      continue;
-    }
+  for (const feature of collection.features) {
+    if (!feature.geometry) continue;
 
-    for (const feature of result.value) {
-      const normalized = normalizeFeature(feature);
-      if (!normalized.geometry) continue;
+    const geomType = feature.geometry.type;
+    if (geomType !== "Polygon" && geomType !== "MultiPolygon") continue;
 
-      const geomType = normalized.geometry.type;
-      if (geomType !== "Polygon" && geomType !== "MultiPolygon") continue;
-
-      try {
-        if (
-          booleanPointInPolygon(
-            pt,
-            normalized as Feature<Polygon | MultiPolygon>,
-          )
-        ) {
-          return normalized as AvalancheZoneFeature;
-        }
-      } catch {
-        // skip invalid geometries
+    try {
+      if (
+        booleanPointInPolygon(
+          pt,
+          feature as Feature<Polygon | MultiPolygon>,
+        )
+      ) {
+        return feature as AvalancheZoneFeature;
       }
+    } catch {
+      // skip invalid geometries
     }
   }
 

@@ -30,7 +30,6 @@ import type { RouteSegment } from "@/lib/types/route";
 
 const DEFAULT_TIMEOUT_MS = 8_000;
 const AVALANCHE_TIMEOUT_MS = 10_000;
-const SATELLITE_TIMEOUT_MS = 30_000;
 
 async function safeAdapterCall<T>(
   fn: () => Promise<T>,
@@ -113,9 +112,6 @@ interface SatelliteResult {
   source: "sentinel-2";
   cloudCover: number | null;
   sceneId: string | null;
-  trueColorUrl: string | null;
-  ndsiUrl: string | null;
-  bounds: [number, number, number, number] | null;
 }
 
 const EMPTY_SATELLITE: SatelliteResult = {
@@ -124,9 +120,6 @@ const EMPTY_SATELLITE: SatelliteResult = {
   source: "sentinel-2",
   cloudCover: null,
   sceneId: null,
-  trueColorUrl: null,
-  ndsiUrl: null,
-  bounds: null,
 };
 
 export const generateBriefing = inngest.createFunction(
@@ -407,12 +400,7 @@ export const generateBriefing = inngest.createFunction(
           try {
             const bbox: [number, number, number, number] =
               routeBbox ?? bboxFromCenter(lat, lng);
-            const result: Sentinel2Data = await Promise.race([
-              fetchSentinel2({ bbox }),
-              new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("satellite timeout")), SATELLITE_TIMEOUT_MS),
-              ),
-            ]);
+            const result: Sentinel2Data = await fetchSentinel2({ bbox });
 
             const elapsed = Date.now() - stepStart;
             console.log(
@@ -425,9 +413,6 @@ export const generateBriefing = inngest.createFunction(
               source: "sentinel-2",
               cloudCover: result.cloudCover,
               sceneId: result.scene?.sceneId ?? null,
-              trueColorUrl: result.trueColorUrl,
-              ndsiUrl: result.ndsiUrl,
-              bounds: result.bounds,
               _elapsedMs: elapsed,
             };
           } catch (err) {
@@ -459,12 +444,7 @@ export const generateBriefing = inngest.createFunction(
           const stepStart = Date.now();
           try {
             const bbox = bboxFromCenter(lat, lng);
-            const result: Sentinel2Data = await Promise.race([
-              fetchSentinel2({ bbox }),
-              new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("satellite timeout")), SATELLITE_TIMEOUT_MS),
-              ),
-            ]);
+            const result: Sentinel2Data = await fetchSentinel2({ bbox });
 
             const elapsed = Date.now() - stepStart;
             console.log(
@@ -477,9 +457,6 @@ export const generateBriefing = inngest.createFunction(
               source: "sentinel-2",
               cloudCover: result.cloudCover,
               sceneId: result.scene?.sceneId ?? null,
-              trueColorUrl: result.trueColorUrl,
-              ndsiUrl: result.ndsiUrl,
-              bounds: result.bounds,
               _elapsedMs: elapsed,
             };
           } catch (err) {
