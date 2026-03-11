@@ -7,21 +7,12 @@ import { LocationSearch } from '@/components/planning/LocationSearch';
 import { DateRangePicker } from '@/components/planning/DateRangePicker';
 import { ActivitySelector } from '@/components/planning/ActivitySelector';
 import { GenerateButton } from '@/components/planning/GenerateButton';
-import { AuthModal } from '@/components/auth/AuthModal';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 export function TopBar() {
   const { user, loading: authLoading } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-
-  const handleMonitor = () => {
-    if (!user && !authLoading) {
-      setShowAuthModal(true);
-      return;
-    }
-  };
 
   const handleResize = useCallback(() => {
     if (window.innerWidth >= 768) setMenuOpen(false);
@@ -80,7 +71,6 @@ export function TopBar() {
 
           <button
             type="button"
-            onClick={handleMonitor}
             className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-100 text-stone-500 transition-colors hover:bg-stone-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1"
             title="Monitor conditions"
             aria-label="Monitor conditions"
@@ -132,7 +122,6 @@ export function TopBar() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleMonitor}
               className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-100 text-stone-500 transition-colors hover:bg-stone-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               aria-label="Monitor conditions"
             >
@@ -164,13 +153,6 @@ export function TopBar() {
           </div>
         </div>
       </div>
-
-      <AuthModal
-        open={showAuthModal}
-        onOpenChange={setShowAuthModal}
-        title="Sign up for condition alerts"
-        description="Create a free account to monitor conditions and receive alerts for your trips."
-      />
     </>
   );
 }

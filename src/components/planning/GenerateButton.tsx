@@ -14,8 +14,6 @@ import { usePlanningStore } from '@/stores/planning-store';
 import { trpc } from '@/lib/trpc/client';
 import { format } from 'date-fns';
 
-import { AuthModal } from '@/components/auth/AuthModal';
-import { useAuth } from '@/hooks/useAuth';
 import { trackGenerateBriefing } from '@/lib/analytics';
 
 export function GenerateButton() {
@@ -34,12 +32,8 @@ export function GenerateButton() {
   } = usePlanningStore();
 
   const [mutationError, setMutationError] = useState<string | null>(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authModalTitle, setAuthModalTitle] = useState('Sign in required');
-  const [authModalMessage, setAuthModalMessage] = useState<string | undefined>();
   const [shouldPulse, setShouldPulse] = useState(false);
   const prevLocationRef = useRef(location);
-  const { user, loading: authLoading } = useAuth();
 
   const ready = isReadyToGenerate();
 
@@ -69,12 +63,6 @@ export function GenerateButton() {
 
   const handleClick = async () => {
     if (!ready || !dateRange || isGenerating) return;
-    if (!user && !authLoading) {
-      setAuthModalTitle('Sign in required');
-      setAuthModalMessage('Please sign in to generate and save trip briefings.');
-      setShowAuthModal(true);
-      return;
-    }
 
     const target = routeContext?.center ?? location;
     if (!target) return;
@@ -127,28 +115,13 @@ export function GenerateButton() {
         message.includes('TOO_MANY_REQUESTS') ||
         message.includes('Rate limited') ||
         message.includes('free briefings');
-      const isAuthRequired =
-        message.toLowerCase().includes('unauthorized') ||
-        message.toLowerCase().includes('sign in');
       if (isRateLimit) {
         toast.error('Slow down', {
           description: message.includes('more briefings')
             ? message
             : "You've reached the limit of 10 briefings per hour.",
         });
-        setAuthModalTitle('Rate limit reached');
-        setAuthModalMessage(
-          message.includes('more briefings')
-            ? message
-            : "You've reached the limit of 10 briefings per hour. Please try again later.",
-        );
-        setShowAuthModal(true);
         setMutationError(message);
-      } else if (isAuthRequired) {
-        setAuthModalTitle('Sign in required');
-        setAuthModalMessage('Please sign in to generate and save trip briefings.');
-        setShowAuthModal(true);
-        setMutationError('Sign in required');
       } else {
         toast.error('Briefing generation failed', {
           description: 'Try again or use a different location.',
@@ -172,7 +145,7 @@ export function GenerateButton() {
   const button = (
     <Button
       size="sm"
-      disabled={!ready || isGenerating || authLoading}
+      disabled={!ready || isGenerating}
       onClick={handleClick}
       className={
         (hasError && !isGenerating
@@ -213,15 +186,5 @@ export function GenerateButton() {
     button
   );
 
-  return (
-    <>
-      {wrappedButton}
-      <AuthModal
-        open={showAuthModal}
-        onOpenChange={setShowAuthModal}
-        title={authModalTitle}
-        description={authModalMessage}
-      />
-    </>
-  );
+  return wrappedButton;
 }

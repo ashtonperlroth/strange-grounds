@@ -28,8 +28,6 @@ import { useRealtimeBriefing } from '@/hooks/useRealtimeBriefing';
 import { useBriefingStore, type ConditionStatus, type ConditionCardData } from '@/stores/briefing-store';
 import { trpc } from '@/lib/trpc/client';
 import { trackGenerateBriefing, trackSaveTrip } from '@/lib/analytics';
-import { useAuth } from '@/hooks/useAuth';
-import { AuthModal } from '@/components/auth/AuthModal';
 import { ReadinessIndicator } from './ReadinessIndicator';
 import { BriefingSummary } from './BriefingSummary';
 import { ConditionCard } from './ConditionCard';
@@ -682,16 +680,9 @@ export function BriefingPanel() {
     useRealtimeBriefing(activeBriefingId, { isRoute: hasRoute });
   const { setConditionCards, getWarningCount, getCriticalCount } = useBriefingStore();
 
-  const { user, loading: authLoading } = useAuth();
-
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authModalConfig, setAuthModalConfig] = useState<{
-    title: string;
-    description: string;
-  }>({ title: 'Sign up to continue', description: '' });
   const generateBriefing = trpc.briefings.generate.useMutation();
   const saveTrip = trpc.trips.save.useMutation();
 
@@ -774,21 +765,8 @@ export function BriefingPanel() {
     }
   }, [briefing?.narrative, briefing?.conditions, setConditionCards]);
 
-  const requireAuth = useCallback(
-    (title: string, description: string) => {
-      setAuthModalConfig({ title, description });
-      setShowAuthModal(true);
-    },
-    [],
-  );
-
   const handleSave = useCallback(async () => {
     if (!activeTripId) return;
-
-    if (!user && !authLoading) {
-      requireAuth('Sign up to save trips', 'Create a free account to save trips and track conditions over time.');
-      return;
-    }
 
     setIsSaving(true);
     try {
@@ -802,11 +780,11 @@ export function BriefingPanel() {
     } finally {
       setIsSaving(false);
     }
-  }, [activeTripId, user, authLoading, requireAuth, saveTrip]);
+  }, [activeTripId, saveTrip]);
 
   const handleShare = useCallback(() => {
-    requireAuth('Sign up to share briefings', 'Create a free account to share briefings with your trip partners.');
-  }, [requireAuth]);
+    toast.info('Sharing coming soon');
+  }, []);
 
   useEffect(() => {
     setIsSaved(false);
@@ -858,35 +836,27 @@ export function BriefingPanel() {
     : null;
 
   return (
-    <>
-      <BriefingFullView
-        locationName={location?.name ?? null}
-        dateRange={dateRange}
-        activity={activity}
-        readiness={readiness}
-        narrative={briefing?.narrative ?? null}
-        bottomLine={briefing?.bottom_line ?? null}
-        readinessRationale={briefing?.readiness_rationale ?? null}
-        weatherData={weatherData}
-        warningCount={getWarningCount()}
-        criticalCount={getCriticalCount()}
-        isNarrativeLoading={isLoading}
-        conditions={conditionsObj}
-        routeAnalysis={routeAnalysis}
-        routeWalkthroughData={routeWalkthroughData}
-        onRegenerate={handleRetry}
-        isRegenerating={isRegenerating}
-        onSave={handleSave}
-        isSaving={isSaving}
-        isSaved={isSaved}
-        onShare={handleShare}
-      />
-      <AuthModal
-        open={showAuthModal}
-        onOpenChange={setShowAuthModal}
-        title={authModalConfig.title}
-        description={authModalConfig.description}
-      />
-    </>
+    <BriefingFullView
+      locationName={location?.name ?? null}
+      dateRange={dateRange}
+      activity={activity}
+      readiness={readiness}
+      narrative={briefing?.narrative ?? null}
+      bottomLine={briefing?.bottom_line ?? null}
+      readinessRationale={briefing?.readiness_rationale ?? null}
+      weatherData={weatherData}
+      warningCount={getWarningCount()}
+      criticalCount={getCriticalCount()}
+      isNarrativeLoading={isLoading}
+      conditions={conditionsObj}
+      routeAnalysis={routeAnalysis}
+      routeWalkthroughData={routeWalkthroughData}
+      onRegenerate={handleRetry}
+      isRegenerating={isRegenerating}
+      onSave={handleSave}
+      isSaving={isSaving}
+      isSaved={isSaved}
+      onShare={handleShare}
+    />
   );
 }
