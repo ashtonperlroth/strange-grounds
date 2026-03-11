@@ -35,14 +35,34 @@ export function TopBar() {
   return (
     <>
       <header
-        className="flex h-12 shrink-0 items-center justify-between border-b border-stone-200 bg-white px-4"
+        className="flex h-12 shrink-0 items-center justify-between border-b border-stone-200 bg-white px-3 md:px-4"
         role="banner"
       >
+        {/* Left: logo on desktop, hamburger on mobile */}
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 md:hidden"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
           <Mountain className="h-5 w-5 text-emerald-600" aria-hidden="true" />
-          <span className="text-sm font-semibold tracking-tight text-stone-800">
+          <span className="hidden text-sm font-semibold tracking-tight text-stone-800 md:inline">
             Strange Grounds
           </span>
+        </div>
+
+        {/* Center: compact search on mobile */}
+        <div className="mx-2 min-w-0 flex-1 md:hidden">
+          <LocationSearch />
+        </div>
+
+        {/* Right: generate button on mobile */}
+        <div className="flex shrink-0 items-center md:hidden">
+          <GenerateButton />
         </div>
 
         {/* Desktop controls */}
@@ -86,17 +106,6 @@ export function TopBar() {
             </Link>
           )}
         </div>
-
-        {/* Mobile hamburger */}
-        <button
-          type="button"
-          onClick={() => setMenuOpen((v) => !v)}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-stone-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 md:hidden"
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-          aria-expanded={menuOpen}
-        >
-          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
       </header>
 
       {/* Mobile dropdown menu */}
@@ -109,13 +118,11 @@ export function TopBar() {
         aria-label="Mobile navigation"
       >
         <div className="space-y-3 px-4 py-3">
-          <LocationSearch />
           <div className="flex flex-wrap items-center gap-2">
             <DateRangePicker />
             <ActivitySelector />
           </div>
           <div className="flex items-center gap-2">
-            <GenerateButton />
             <button
               type="button"
               onClick={handleMonitor}
