@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -9,6 +10,8 @@ interface BriefingSummaryProps {
   narrative: string | null;
   readinessRationale?: string | null;
   isLoading?: boolean;
+  streamedText?: string;
+  isStreaming?: boolean;
 }
 
 export function BriefingSummary({
@@ -16,23 +19,43 @@ export function BriefingSummary({
   narrative,
   readinessRationale,
   isLoading,
+  streamedText,
+  isStreaming,
 }: BriefingSummaryProps) {
   const [visible, setVisible] = useState(false);
 
+  const displayText = narrative ?? streamedText ?? null;
+  const hasContent = !!displayText || !!bottomLine;
+
   useEffect(() => {
-    const show = (!!narrative || !!bottomLine) && !isLoading;
+    const show = hasContent && !isLoading;
     const raf = requestAnimationFrame(() => setVisible(show));
     return () => cancelAnimationFrame(raf);
-  }, [narrative, bottomLine, isLoading]);
+  }, [hasContent, isLoading]);
 
-  if (isLoading) {
+  if (isLoading && !isStreaming && !streamedText) {
     return <BriefingSummarySkeleton />;
   }
 
-  if (!narrative && !bottomLine) return null;
+  if (!hasContent && !isStreaming) return null;
 
-  const paragraphs = narrative
-    ? narrative.split(/\n\n/).filter((p) => p.trim())
+  if (isStreaming && displayText) {
+    return (
+      <div className="max-w-prose break-words space-y-4">
+        <div className="flex items-center gap-2 text-sm text-stone-500">
+          <Loader2 className="size-3.5 animate-spin text-emerald-600" />
+          <span>Generating narrative…</span>
+        </div>
+        <div className="text-base leading-relaxed text-stone-600 whitespace-pre-wrap">
+          {displayText}
+          <span className="inline-block w-1 h-4 ml-0.5 animate-pulse bg-emerald-500 align-text-bottom" />
+        </div>
+      </div>
+    );
+  }
+
+  const paragraphs = displayText
+    ? displayText.split(/\n\n/).filter((p) => p.trim())
     : [];
 
   return (

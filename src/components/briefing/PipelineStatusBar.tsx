@@ -14,6 +14,7 @@ interface ProgressData {
   segmentsComplete?: boolean;
   hazardsComplete?: boolean;
   synthesisStarted?: boolean;
+  synthesisReady?: boolean;
 }
 
 interface PipelineStatusBarProps {
@@ -27,7 +28,7 @@ const STEPS = [
   { key: 'pointConditionsComplete', label: 'Conditions' },
   { key: 'segmentsComplete', label: 'Segments' },
   { key: 'hazardsComplete', label: 'Hazards' },
-  { key: 'synthesisStarted', label: 'Narrative' },
+  { key: 'synthesisReady', label: 'Narrative' },
 ] as const;
 
 function humanizeStatus(status: string | null): string {
@@ -41,6 +42,8 @@ function humanizeStatus(status: string | null): string {
       return 'Hazards assessed';
     case 'generating_narrative':
       return 'Generating briefing narrative…';
+    case 'ready_for_synthesis':
+      return 'Starting narrative generation…';
     case 'streaming_narrative':
       return 'Streaming narrative…';
     case 'complete':
