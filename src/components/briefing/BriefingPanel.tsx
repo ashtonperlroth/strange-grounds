@@ -1,10 +1,6 @@
 'use client';
 
 import {
-  Mountain,
-  PawPrint,
-  Bug,
-  Footprints,
   MapPin,
   Bookmark,
   BookmarkCheck,
@@ -46,7 +42,6 @@ import { type SnotelData } from '@/lib/data-sources/snotel';
 import { type AvalancheData } from '@/lib/data-sources/avalanche';
 import { type UsgsData } from '@/lib/data-sources/usgs';
 import { type DaylightData } from '@/lib/synthesis/conditions';
-import { type ReactNode } from 'react';
 import {
   ErrorBoundary,
   ConditionCardErrorFallback,
@@ -64,49 +59,6 @@ import type {
 import { PipelineStatusBar } from './PipelineStatusBar';
 import { ConditionCardsSection } from './ConditionCardsSection';
 import { NarrativeSkeleton } from './NarrativeSkeleton';
-
-interface StubCard {
-  category: string;
-  icon: ReactNode;
-  status: ConditionStatus;
-  summary: string;
-  detail: string;
-}
-
-const STUB_CARDS: StubCard[] = [
-  {
-    category: 'Remoteness',
-    icon: <Mountain className="size-4 text-stone-500" />,
-    status: 'unknown',
-    summary: 'No data available',
-    detail:
-      'No data source available for this category yet. This will be added in a future update.',
-  },
-  {
-    category: 'Wildlife',
-    icon: <PawPrint className="size-4 text-orange-500" />,
-    status: 'unknown',
-    summary: 'No data available',
-    detail:
-      'No data source available for this category yet. This will be added in a future update.',
-  },
-  {
-    category: 'Insects',
-    icon: <Bug className="size-4 text-lime-600" />,
-    status: 'unknown',
-    summary: 'No data available',
-    detail:
-      'No data source available for this category yet. This will be added in a future update.',
-  },
-  {
-    category: 'Footing',
-    icon: <Footprints className="size-4 text-stone-500" />,
-    status: 'unknown',
-    summary: 'No data available',
-    detail:
-      'No data source available for this category yet. This will be added in a future update.',
-  },
-];
 
 function BriefingEmptyState() {
   return (
@@ -509,23 +461,6 @@ function BriefingProgressiveView({
           progress={progress}
           allConditionsComplete={hasConditions}
         />
-
-        {STUB_CARDS.map((card) => (
-          <ErrorBoundary
-            key={card.category}
-            fallback={(reset) => (
-              <ConditionCardErrorFallback category={card.category} reset={reset} />
-            )}
-          >
-            <ConditionCard
-              category={card.category}
-              icon={card.icon}
-              status={card.status}
-              summary={card.summary}
-              detail={card.detail}
-            />
-          </ErrorBoundary>
-        ))}
       </div>
     </ScrollArea>
   );
@@ -753,22 +688,6 @@ function BriefingFullView({
                 <SatelliteCard data={satelliteData ?? null} />
               </ErrorBoundary>
             )}
-            {STUB_CARDS.map((card) => (
-              <ErrorBoundary
-                key={card.category}
-                fallback={(reset) => (
-                  <ConditionCardErrorFallback category={card.category} reset={reset} />
-                )}
-              >
-                <ConditionCard
-                  category={card.category}
-                  icon={card.icon}
-                  status={card.status}
-                  summary={card.summary}
-                  detail={card.detail}
-                />
-              </ErrorBoundary>
-            ))}
           </Accordion>
         </div>
 
