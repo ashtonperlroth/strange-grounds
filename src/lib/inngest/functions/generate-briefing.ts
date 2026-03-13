@@ -15,6 +15,10 @@ import { buildConditionCards, computeReadiness } from "@/lib/synthesis/condition
 import type { ConditionsBundle } from "@/lib/synthesis/conditions";
 import type { NWSForecastData } from "@/lib/data-sources/nws";
 import type { Activity } from "@/stores/planning-store";
+import {
+  generateBriefing as synthesize,
+  generateRouteAwareBriefing as synthesizeRoute,
+} from "@/lib/synthesis/briefing";
 import { loadSegments } from "@/lib/routes/save-segments";
 import {
   fetchSegmentConditions,
@@ -467,95 +471,120 @@ export const generateBriefing = inngest.createFunction(
       stepTimings["fetch-satellite-imagery"] = satElapsed;
     }
 
-    // ── Step 3: Prepare synthesis (SSE endpoint handles actual generation) ──
+    // ── Step 3: Synthesize briefing inline ─────────────────────────────
     const useRouteAware =
       hasRoute &&
       routeAnalysis !== null &&
       routeSegments.length > 0 &&
       routeAnalysis.segments.length > 0;
 
-    await step.run("prepare-synthesis", async () => {
+    await step.run("synthesize-briefing", async () => {
       const stepStart = Date.now();
       const supabase = createAdminClient();
 
-      const synthesisInput = useRouteAware
-        ? {
-            type: "route" as const,
-            conditions: synthesisConditions,
-            activity: activity as Activity,
-            location: { lat, lng, name: null },
-            dates: { start: startDate, end: endDate },
-            route: {
-              routeName,
-              totalDistanceM: routeTotalDistanceM,
-              elevationGainM: routeElevationGainM,
-              segments: routeSegments,
-              segmentConditions: routeAnalysis!.segments,
+      await updatePipelineStatus(briefingId, "Synthesizing briefing…");
+
+      const location = { lat, lng, name: null };
+      const dates = { start: startDate, end: endDate };
+
+      const updateData: Record<string, unknown> = {
+        pipeline_status: "complete",
+        raw_data: {
+          ...fullConditions,
+          unavailableSources,
+          satellite: satelliteData,
+          route: routeGeometry
+            ? {
+                geometry: routeGeometry,
+                bbox: routeBbox ?? null,
+                center: { lat, lng },
+              }
+            : null,
+          ...(routeAnalysis && {
+            routeAnalysis: {
+              overallHazardLevel: routeAnalysis.overallHazardLevel,
+              highestHazardSegment: routeAnalysis.highestHazardSegment,
+              totalSegments: routeAnalysis.totalSegments,
+              hazardDistribution: routeAnalysis.hazardDistribution,
             },
-            unavailableSources,
-          }
-        : {
-            type: "point" as const,
-            conditions: synthesisConditions,
-            activity: activity as Activity,
-            location: { lat, lng, name: null },
-            dates: { start: startDate, end: endDate },
-            unavailableSources,
-          };
+          }),
+        },
+        progress: { complete: true, synthesisReady: true },
+      };
+
+      if (useRouteAware) {
+        const result = await synthesizeRoute(
+          synthesisConditions,
+          activity as Activity,
+          location,
+          dates,
+          {
+            routeName,
+            totalDistanceM: routeTotalDistanceM,
+            elevationGainM: routeElevationGainM,
+            segments: routeSegments,
+            segmentConditions: routeAnalysis!.segments,
+          },
+          unavailableSources,
+        );
+
+        updateData.narrative = result.narrative;
+        updateData.bottom_line = result.bottomLine;
+        updateData.conditions = {
+          ...fullConditions,
+          conditionCards,
+          unavailableSources,
+          satellite: satelliteData,
+          ...(routeAnalysis && { routeAnalysis }),
+          routeWalkthrough: result.routeWalkthrough,
+          criticalSections: result.criticalSections,
+          alternativeRoutes: result.alternativeRoutes,
+          gearChecklist: result.gearChecklist,
+          overallReadiness: result.overallReadiness,
+        };
+      } else {
+        const result = await synthesize(
+          synthesisConditions,
+          activity as Activity,
+          location,
+          dates,
+          unavailableSources,
+        );
+
+        updateData.narrative = result.narrative;
+        updateData.bottom_line = result.bottomLine;
+        updateData.readiness_rationale = result.readinessRationale;
+        updateData.readiness = result.readiness;
+        updateData.conditions = {
+          ...fullConditions,
+          conditionCards,
+          unavailableSources,
+          satellite: satelliteData,
+          ...(routeAnalysis && { routeAnalysis }),
+        };
+      }
 
       await supabase
         .from("briefings")
-        .update({
-          pipeline_status: "ready_for_synthesis",
-          raw_data: {
-            ...fullConditions,
-            unavailableSources,
-            satellite: satelliteData,
-            synthesisInput,
-            route: routeGeometry
-              ? {
-                  geometry: routeGeometry,
-                  bbox: routeBbox ?? null,
-                  center: { lat, lng },
-                }
-              : null,
-            ...(routeAnalysis && {
-              routeAnalysis: {
-                overallHazardLevel: routeAnalysis.overallHazardLevel,
-                highestHazardSegment: routeAnalysis.highestHazardSegment,
-                totalSegments: routeAnalysis.totalSegments,
-                hazardDistribution: routeAnalysis.hazardDistribution,
-              },
-            }),
-          },
-          conditions: {
-            ...fullConditions,
-            conditionCards,
-            unavailableSources,
-            satellite: satelliteData,
-            ...(routeAnalysis && { routeAnalysis }),
-          },
-          readiness,
-          progress: { synthesisReady: true },
-        })
+        .update(updateData)
         .eq("id", briefingId);
 
       const elapsed = Date.now() - stepStart;
       console.log(
-        `[briefing] prepare-synthesis completed in ${elapsed}ms (type: ${synthesisInput.type})`,
+        `[briefing] synthesize-briefing completed in ${elapsed}ms (type: ${useRouteAware ? "route" : "point"})`,
       );
-      stepTimings["prepare-synthesis"] = elapsed;
-      return { status: "ready_for_synthesis" };
+      stepTimings["synthesize-briefing"] = elapsed;
+      return { status: "complete" };
     });
 
     const totalElapsed = Date.now() - pipelineStart;
     console.log(
-      `[briefing] pipeline ready for synthesis briefing=${briefingId} in ${totalElapsed}ms` +
+      `[briefing] pipeline complete briefing=${briefingId} in ${totalElapsed}ms` +
         (routeAnalysis
           ? ` (route: ${routeAnalysis.totalSegments} segments, hazard: ${routeAnalysis.overallHazardLevel})`
           : " (point-based)") +
         ` | step timings: ${JSON.stringify(stepTimings)}`,
     );
-    return { briefingId, status: "ready_for_synthesis", stepTimings, totalElapsedMs: totalElapsed };
+    return { briefingId, status: "complete", stepTimings, totalElapsedMs: totalElapsed };
   },
 );
