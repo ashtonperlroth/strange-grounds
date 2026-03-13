@@ -23,3 +23,4 @@
    - Replace YOUR_FILE.sql with the actual filename you created.
    - If the migration fails, fix the SQL and retry before proceeding with code changes.
    - Use IF NOT EXISTS / IF EXISTS guards in all DDL statements so migrations are safe to re-run.
+10. Do NOT modify files or add features not specified in the issue description. If you discover a related bug in a nearby file, note it in a commit message or PR comment — do not fix it. Scope creep is the #1 cause of regressions in this project. Only touch files explicitly listed in the issue.
