@@ -836,8 +836,17 @@ export function BriefingPanel() {
   }, [activeTripId, saveTrip]);
 
   const handleShare = useCallback(() => {
-    toast.info('Sharing coming soon');
-  }, []);
+    if (!briefing?.share_token) {
+      toast.error('Nothing to share yet');
+      return;
+    }
+    const url = `${window.location.origin}/briefing/${briefing.share_token}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast.success('Link copied to clipboard');
+    }).catch(() => {
+      toast.error('Failed to copy link');
+    });
+  }, [briefing?.share_token]);
 
   useEffect(() => {
     setIsSaved(false);
