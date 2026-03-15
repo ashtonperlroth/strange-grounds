@@ -147,7 +147,7 @@ export function LocationSearch({ variant = 'compact' }: LocationSearchProps) {
       }`;
 
   return (
-    <div ref={containerRef} className={containerClass} role="combobox" aria-expanded={showDropdown} aria-haspopup="listbox" aria-controls="location-results" data-testid="location-search">
+    <div ref={containerRef} className={containerClass} role="combobox" aria-expanded={showDropdown} aria-haspopup="listbox" aria-controls="location-results">
       <div className={inputWrapperClass}>
         {location && !focused ? (
           <>
@@ -189,6 +189,7 @@ export function LocationSearch({ variant = 'compact' }: LocationSearchProps) {
               aria-autocomplete="list"
               aria-controls="location-results"
               aria-activedescendant={highlightIndex >= 0 ? `location-result-${highlightIndex}` : undefined}
+              data-testid="location-search"
             />
             {loading && <Loader2 className={`${iconSize} shrink-0 animate-spin text-stone-400`} aria-label="Searching" />}
           </>

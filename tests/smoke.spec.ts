@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 test('landing page loads with map and search', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('[data-testid="map-container"]')).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('[data-testid="location-search"]')).toBeVisible();
+  await expect(page.locator('[data-testid="location-search"]').first()).toBeVisible();
 });
 
 // ── Briefing generation ─────────────────────────────────────────────────────
@@ -14,7 +14,7 @@ test('landing page loads with map and search', async ({ page }) => {
 
 test('can generate a briefing end-to-end', async ({ page }) => {
   await page.goto('/');
-  await page.locator('[data-testid="location-search"]').fill('Lake Tahoe');
+  await page.locator('[data-testid="location-search"]').first().fill('Lake Tahoe');
   await page.getByText(/Lake Tahoe/i).first().click({ timeout: 10_000 });
 
   const activitySelector = page.locator('[data-testid="activity-selector"]');
