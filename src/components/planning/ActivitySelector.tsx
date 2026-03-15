@@ -22,7 +22,7 @@ export function ActivitySelector() {
       >
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent position="popper" align="start">
         {ACTIVITIES.map((a) => (
           <SelectItem
             key={a}
