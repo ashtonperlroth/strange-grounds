@@ -10,6 +10,8 @@
     "seed": "npx tsx scripts/seed-stations.ts",
     "test": "npx playwright test",
     "test:smoke": "npx playwright test tests/smoke.spec.ts",
+    "test:e2e": "npx playwright test tests/briefing-e2e.spec.ts",
+    "test:all": "npx playwright test",
     "test:prod": "PLAYWRIGHT_BASE_URL=https://strange-grounds.vercel.app npx playwright test tests/smoke.spec.ts",
     "test:update-snapshots": "npx playwright test --update-snapshots"
   },

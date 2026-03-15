@@ -37,7 +37,9 @@ export default function AppPage() {
       }
       briefingSlot={
         <BriefingPanelErrorBoundary>
-          <BriefingPanel />
+          <div data-testid="briefing-panel" className="h-full">
+            <BriefingPanel />
+          </div>
         </BriefingPanelErrorBoundary>
       }
       routesPanelSlot={<PopularRoutesPanel />}

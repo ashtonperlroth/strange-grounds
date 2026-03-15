@@ -215,6 +215,7 @@ export function LocationSearch({ variant = 'compact' }: LocationSearchProps) {
               type="button"
               role="option"
               aria-selected={i === highlightIndex}
+              data-testid="search-result"
               className={dropdownItemClass(i === highlightIndex)}
               onMouseEnter={() => setHighlightIndex(i)}
               onMouseDown={(e) => {
