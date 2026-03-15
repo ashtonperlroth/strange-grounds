@@ -91,7 +91,7 @@ export function parseSynthesisResponse(responseText: string): SynthesisResult {
 
 // ── Core generation function ────────────────────────────────────────
 
-export const MODEL = "claude-sonnet-4-20250514";
+export const MODEL = "claude-sonnet-4-6";
 export const MAX_TOKENS = 1500;
 
 export async function generateBriefingText(
