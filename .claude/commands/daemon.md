@@ -87,6 +87,18 @@ Regressions detected and filed: Z
 Remaining open issues: N
 ```
 
+## When debugging production bugs
+
+Before attempting a code fix on any issue labeled "Bug", run the debug-production command to gather observability data:
+```bash
+# Check API health, Inngest status, Supabase connectivity, and network failures
+/debug-production
+```
+This checks API health, Inngest function status, Vercel logs, and network requests.
+Use the diagnostic report to identify whether the issue is:
+- A code issue (proceed to fix)
+- A configuration/environment issue (report and stop — label "HUMAN")
+
 ## Self-modification rules
 
 The daemon has FULL write access to all files in the repository, including `.claude/`.

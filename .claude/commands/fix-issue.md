@@ -6,6 +6,12 @@ Before writing any code:
 2. Read .cursor/rules/project.md for architecture conventions
 3. Read EVERY file mentioned in the issue description
 
+## When debugging production bugs
+If the issue is labeled "Bug" and describes a production failure, run `/debug-production` first:
+- Checks API health, Inngest function status, Vercel logs, and network requests
+- Use the diagnostic report to confirm whether the issue is code-related or environmental
+- If environmental (missing env var, service down), report it and stop — do not guess at code fixes
+
 Implement the changes:
 - ONLY modify files listed in the issue
 - Follow existing code patterns
