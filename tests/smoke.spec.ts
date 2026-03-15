@@ -3,8 +3,14 @@ import { test, expect } from '@playwright/test';
 // ── Core shell ──────────────────────────────────────────────────────────────
 // landing page, map, search
 
-test('landing page loads with map and search', async ({ page }) => {
+test('marketing landing page loads', async ({ page }) => {
   await page.goto('/');
+  await expect(page.locator('[data-testid="marketing-landing"]')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('[data-testid="hero-cta"]')).toBeVisible();
+});
+
+test('app page loads with map and search', async ({ page }) => {
+  await page.goto('/app');
   await expect(page.locator('[data-testid="map-container"]')).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('[data-testid="location-search-hero"]')).toBeVisible();
 });
@@ -13,7 +19,7 @@ test('landing page loads with map and search', async ({ page }) => {
 // generate, readiness, condition cards
 
 test('can generate a briefing end-to-end', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/app');
 
   // Fill and select location using the hero search (always visible on landing)
   await page.locator('[data-testid="location-search-hero"]').fill('Lake Tahoe');
@@ -50,7 +56,7 @@ test('can generate a briefing end-to-end', async ({ page }) => {
 // ── Sanity checks ───────────────────────────────────────────────────────────
 
 test('no error cards visible', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/app');
   await expect(page.getByText(/Error loading/i)).not.toBeVisible({ timeout: 3_000 });
 });
 
@@ -63,8 +69,8 @@ test('build passes', async ({}) => {
 
 test('landing page visual baseline', async ({ page }) => {
   await page.goto('/');
-  // Wait for map tiles to load
-  await page.waitForTimeout(5_000);
+  // Wait for page to render
+  await page.waitForTimeout(2_000);
   await expect(page).toHaveScreenshot('landing-page.png', {
     maxDiffPixelRatio: 0.05,
     fullPage: false,

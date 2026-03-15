@@ -189,7 +189,7 @@ function EmptyTripsState() {
         Generate a conditions briefing and save it to track conditions over time.
       </p>
       <Link
-        href="/"
+        href="/app"
         className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-700"
       >
         <Compass className="size-4" />
@@ -249,7 +249,7 @@ export default function TripsPage() {
       setActiveBriefingId(null);
     }
 
-    router.push('/');
+    router.push('/app');
   };
 
   const handleRegenerate = async (trip: Trip) => {
@@ -280,7 +280,7 @@ export default function TripsPage() {
 
       trackGenerateBriefing(false);
       setActiveBriefingId(briefing.id);
-      router.push('/');
+      router.push('/app');
     } catch (err) {
       console.error('Failed to regenerate briefing:', err);
       setIsGenerating(false);
@@ -316,7 +316,7 @@ export default function TripsPage() {
     <div className="flex h-full flex-col bg-[#FAF7F2]">
       <header className="flex h-14 shrink-0 items-center border-b border-stone-200 bg-white px-4 sm:px-6">
         <Link
-          href="/"
+          href="/app"
           className="flex items-center gap-2 text-stone-500 transition-colors hover:text-stone-800"
         >
           <ArrowLeft className="size-4" />
@@ -343,7 +343,7 @@ export default function TripsPage() {
               )}
             </h2>
             <Link
-              href="/"
+              href="/app"
               className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-emerald-700"
             >
               <Compass className="size-3.5" />
