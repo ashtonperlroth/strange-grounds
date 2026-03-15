@@ -127,7 +127,7 @@ const EMPTY_SATELLITE: SatelliteResult = {
 };
 
 export const generateBriefing = inngest.createFunction(
-  { id: "generate-briefing" },
+  { id: "generate-briefing", retries: 1 },
   { event: "briefing/requested" },
   async ({ event, step }) => {
     const {
@@ -492,43 +492,117 @@ export const generateBriefing = inngest.createFunction(
       satelliteData = satData;
       stepTimings["fetch-satellite-imagery"] = _satElapsed;
     } else {
-      // Point-based briefing: still fetch satellite, but non-blocking
-      const satResult = await step.run(
-        "fetch-satellite-imagery",
-        async (): Promise<SatelliteResult & { _elapsedMs: number }> => {
+      // Point-based: run satellite and synthesis in PARALLEL — satellite was previously
+      // sequential and could block synthesis by up to 25s on a cold cache miss.
+      await updatePipelineStatus(briefingId, "Synthesizing briefing…");
+
+      const [satResult, synthResult] = await Promise.all([
+        step.run(
+          "fetch-satellite-imagery",
+          async (): Promise<SatelliteResult & { _elapsedMs: number }> => {
+            const stepStart = Date.now();
+            try {
+              const bbox = bboxFromCenter(lat, lng);
+              const result: Sentinel2Data = await fetchSentinel2({ bbox });
+              const elapsed = Date.now() - stepStart;
+              console.log(
+                `[briefing] fetch-satellite-imagery completed in ${elapsed}ms (available: ${result.available})`,
+              );
+              return {
+                available: result.available,
+                date: result.acquisitionDate,
+                source: "sentinel-2",
+                cloudCover: result.cloudCover,
+                sceneId: result.scene?.sceneId ?? null,
+                _elapsedMs: elapsed,
+              };
+            } catch (err) {
+              console.warn("[briefing] Satellite imagery fetch failed (non-critical):", err);
+              return { ...EMPTY_SATELLITE, _elapsedMs: Date.now() - stepStart };
+            }
+          },
+        ),
+        step.run("synthesize-briefing", async () => {
           const stepStart = Date.now();
-          try {
-            const bbox = bboxFromCenter(lat, lng);
-            const result: Sentinel2Data = await fetchSentinel2({ bbox });
+          const supabase = createAdminClient();
+          const location = { lat, lng, name: null };
+          const dates = { start: startDate, end: endDate };
 
-            const elapsed = Date.now() - stepStart;
-            console.log(
-              `[briefing] fetch-satellite-imagery completed in ${elapsed}ms (available: ${result.available})`,
-            );
+          const result = await synthesize(
+            synthesisConditions,
+            activity as Activity,
+            location,
+            dates,
+            unavailableSources,
+          );
 
-            return {
-              available: result.available,
-              date: result.acquisitionDate,
-              source: "sentinel-2",
-              cloudCover: result.cloudCover,
-              sceneId: result.scene?.sceneId ?? null,
-              _elapsedMs: elapsed,
-            };
-          } catch (err) {
-            console.warn("[briefing] Satellite imagery fetch failed (non-critical):", err);
-            return { ...EMPTY_SATELLITE, _elapsedMs: Date.now() - stepStart };
-          }
-        },
-      );
+          await supabase
+            .from("briefings")
+            .update({
+              pipeline_status: "complete",
+              raw_data: {
+                ...fullConditions,
+                unavailableSources,
+                satellite: EMPTY_SATELLITE,
+                route: null,
+              },
+              progress: { complete: true, synthesisReady: true },
+              narrative: result.narrative,
+              bottom_line: result.bottomLine,
+              readiness_rationale: result.readinessRationale,
+              readiness: result.readiness,
+              conditions: {
+                ...fullConditions,
+                conditionCards,
+                unavailableSources,
+                satellite: EMPTY_SATELLITE, // backfilled below once satellite step completes
+              },
+            })
+            .eq("id", briefingId);
+
+          const elapsed = Date.now() - stepStart;
+          console.log(`[briefing] synthesize-briefing completed in ${elapsed}ms (type: point)`);
+          return { status: "complete", _elapsedMs: elapsed };
+        }),
+      ]);
 
       const { _elapsedMs: satElapsed, ...satData } = satResult;
       satelliteData = satData;
       stepTimings["fetch-satellite-imagery"] = satElapsed;
+      stepTimings["synthesize-briefing"] = (synthResult as { _elapsedMs: number })._elapsedMs;
+
+      // Backfill satellite data now that both parallel steps are done
+      if (satelliteData.available) {
+        try {
+          const supabase = createAdminClient();
+          const { data: current } = await supabase
+            .from("briefings")
+            .select("conditions, raw_data")
+            .eq("id", briefingId)
+            .single();
+          if (current) {
+            await supabase
+              .from("briefings")
+              .update({
+                conditions: { ...(current.conditions as object), satellite: satelliteData },
+                raw_data: { ...(current.raw_data as object), satellite: satelliteData },
+              })
+              .eq("id", briefingId);
+          }
+        } catch (err) {
+          console.warn("[briefing] Satellite backfill failed (non-critical):", err);
+        }
+      }
+
+      const totalElapsed = Date.now() - pipelineStart;
+      console.log(
+        `[briefing] pipeline complete briefing=${briefingId} in ${totalElapsed}ms (point-based) | step timings: ${JSON.stringify(stepTimings)}`,
+      );
+      return { briefingId, status: "complete", stepTimings, totalElapsedMs: totalElapsed };
     }
 
-    // ── Step 3: Synthesize briefing inline ─────────────────────────────
+    // ── Step 3: Route-based synthesis (point-based returned early above) ──
     const useRouteAware =
-      hasRoute &&
       routeAnalysis !== null &&
       routeSegments.length > 0 &&
       routeAnalysis.segments.length > 0;
@@ -598,6 +672,7 @@ export const generateBriefing = inngest.createFunction(
           overallReadiness: result.overallReadiness,
         };
       } else {
+        // hasRoute=true but no segment data — fall back to point synthesis
         const result = await synthesize(
           synthesisConditions,
           activity as Activity,
@@ -626,7 +701,7 @@ export const generateBriefing = inngest.createFunction(
 
       const elapsed = Date.now() - stepStart;
       console.log(
-        `[briefing] synthesize-briefing completed in ${elapsed}ms (type: ${useRouteAware ? "route" : "point"})`,
+        `[briefing] synthesize-briefing completed in ${elapsed}ms (type: ${useRouteAware ? "route" : "route-point-fallback"})`,
       );
       stepTimings["synthesize-briefing"] = elapsed;
       return { status: "complete" };
@@ -637,7 +712,7 @@ export const generateBriefing = inngest.createFunction(
       `[briefing] pipeline complete briefing=${briefingId} in ${totalElapsed}ms` +
         (routeAnalysis
           ? ` (route: ${routeAnalysis.totalSegments} segments, hazard: ${routeAnalysis.overallHazardLevel})`
-          : " (point-based)") +
+          : " (route/point-fallback)") +
         ` | step timings: ${JSON.stringify(stepTimings)}`,
     );
     return { briefingId, status: "complete", stepTimings, totalElapsedMs: totalElapsed };

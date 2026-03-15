@@ -427,9 +427,12 @@ export function promptForActivity(
       ? `\nNote: The following data sources were unavailable for this briefing: [${unavailableSources.join(", ")}].\nThe briefing is based on available data only. Do NOT fabricate or guess data for unavailable sources.\n`
       : "";
 
+  const today = new Date().toISOString().slice(0, 10);
+
   const user = `Write a conditions briefing for a ${activity.toLowerCase()} trip.
 
 TRIP DETAILS:
+  Today: ${today}
   Location: ${locationLabel}
   Dates: ${dates.start} to ${dates.end}
   Activity: ${activity}
@@ -531,9 +534,12 @@ export function promptForRouteActivity(
       ? `\nNote: The following data sources were unavailable: [${unavailableSources.join(", ")}].\nDo NOT fabricate or guess data for unavailable sources.\n`
       : "";
 
+  const today = new Date().toISOString().slice(0, 10);
+
   const user = `Route: ${routeName}
 Activity: ${activity}
 Location: ${locationLabel}
+Today: ${today}
 Dates: ${dates.start} to ${dates.end}
 Total Distance: ${totalDistMi}mi | Elevation Gain: ${elevGainFt}ft | Estimated: ${dayCount} day${dayCount !== 1 ? "s" : ""}
 
