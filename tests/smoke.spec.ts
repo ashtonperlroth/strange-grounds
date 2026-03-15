@@ -1,10 +1,16 @@
 import { test, expect } from '@playwright/test';
 
+// ── Core shell ──────────────────────────────────────────────────────────────
+// landing page, map, search
+
 test('landing page loads with map and search', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('[data-testid="map-container"]')).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('[data-testid="location-search"]')).toBeVisible();
 });
+
+// ── Briefing generation ─────────────────────────────────────────────────────
+// generate, readiness, condition cards
 
 test('can generate a briefing end-to-end', async ({ page }) => {
   await page.goto('/');
@@ -23,6 +29,14 @@ test('can generate a briefing end-to-end', async ({ page }) => {
   const text = await narrative.textContent();
   expect(text?.length).toBeGreaterThan(100);
 });
+
+// ── Route system ────────────────────────────────────────────────────────────
+// route drawing, GPX import, segments (future)
+
+// ── Sharing & export ────────────────────────────────────────────────────────
+// share links, PDF export (future)
+
+// ── Sanity checks ───────────────────────────────────────────────────────────
 
 test('no error cards visible', async ({ page }) => {
   await page.goto('/');

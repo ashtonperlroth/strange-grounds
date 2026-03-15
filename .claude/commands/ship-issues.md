@@ -10,6 +10,12 @@ Create an agent team. Assign one teammate per issue. Each teammate:
 1. Reads its issue from Linear
 2. Reads all files mentioned in the issue
 3. Implements the changes (ONLY files listed in the issue)
+3b. If the issue adds or changes user-visible behavior:
+    - Add data-testid attributes to any new UI elements
+    - Add a test to tests/smoke.spec.ts that verifies the feature works
+    - The test should follow the pattern: navigate → interact → assert
+    - Place the test under the appropriate section comment (e.g., // ── Briefing generation ──)
+    - The test must pass before committing
 4. Runs `npm run build` — fixes all errors
 5. Commits with message: `fix(ISSUE_ID): description`
 

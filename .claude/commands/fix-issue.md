@@ -14,6 +14,12 @@ Implement the changes:
 After implementation:
 1. `npm run build` — fix ALL errors
 2. `npm run lint` — fix ALL errors
+3b. If the issue adds or changes user-visible behavior:
+    - Add data-testid attributes to any new UI elements
+    - Add a test to tests/smoke.spec.ts that verifies the feature works
+    - The test should follow the pattern: navigate → interact → assert
+    - Place the test under the appropriate section comment (e.g., // ── Briefing generation ──)
+    - The test must pass before committing
 3. `npx playwright test tests/smoke.spec.ts` — if tests fail, fix implementation (NOT tests), iterate up to 3 times
 4. `git diff --name-only` — verify only expected files changed
 

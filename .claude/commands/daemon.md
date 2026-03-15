@@ -21,6 +21,12 @@ Follow the /fix-issue workflow:
 2. Read .cursor/rules/issues.md and .cursor/rules/project.md
 3. Read every file mentioned in the issue
 4. Implement changes (ONLY files listed in the issue)
+4b. If the issue adds or changes user-visible behavior:
+    - Add data-testid attributes to any new UI elements
+    - Add a test to tests/smoke.spec.ts that verifies the feature works
+    - The test should follow the pattern: navigate → interact → assert
+    - Place the test under the appropriate section comment (e.g., // ── Briefing generation ──)
+    - The test must pass before committing
 5. Run `npm run build` — fix all errors (up to 3 iterations)
 6. Run `npm run lint` — fix all errors
 7. Run `npx playwright test tests/smoke.spec.ts` — if tests fail, fix implementation (NOT tests), up to 3 iterations
