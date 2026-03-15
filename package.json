@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "npx tsx scripts/seed-stations.ts"
+    "seed": "npx tsx scripts/seed-stations.ts",
+    "test": "npx playwright test",
+    "test:smoke": "npx playwright test tests/smoke.spec.ts",
+    "test:prod": "PLAYWRIGHT_BASE_URL=https://strange-grounds.vercel.app npx playwright test tests/smoke.spec.ts",
+    "test:update-snapshots": "npx playwright test --update-snapshots"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

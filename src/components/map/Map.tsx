@@ -303,7 +303,7 @@ export function Map() {
 
   return (
     <div className="relative h-full w-full">
-      <div ref={containerRef} className="h-full w-full touch-none" role="application" aria-label="Interactive map" />
+      <div ref={containerRef} className="h-full w-full touch-none" role="application" aria-label="Interactive map" data-testid="map-container" />
 
       {isLoading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-stone-100/80 backdrop-blur-sm">

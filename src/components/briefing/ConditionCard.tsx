@@ -62,6 +62,7 @@ export function ConditionCard({
     <AccordionItem
       value={category}
       className="rounded-lg border border-stone-200 bg-white px-4 transition-shadow hover:shadow-sm last:border-b"
+      data-testid={`condition-card-${category}`}
     >
       <AccordionTrigger className="gap-3 hover:no-underline [&>svg]:text-stone-400">
         <div className="flex flex-1 items-center gap-3 overflow-hidden">

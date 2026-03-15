@@ -78,6 +78,7 @@ export function ReadinessIndicator({
       <Badge
         variant="outline"
         className={cn('gap-1.5 px-3 py-1 text-sm font-semibold', badgeClass)}
+        data-testid="readiness-badge"
       >
         <Icon className={cn('size-4', iconClass)} aria-hidden="true" />
         {label}

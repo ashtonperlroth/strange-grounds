@@ -41,7 +41,7 @@ export function BriefingSummary({
 
   if (isStreaming && displayText) {
     return (
-      <div className="max-w-prose break-words space-y-4">
+      <div className="max-w-prose break-words space-y-4" data-testid="briefing-narrative">
         <div className="flex items-center gap-2 text-sm text-stone-500">
           <Loader2 className="size-3.5 animate-spin text-emerald-600" />
           <span>Generating narrative…</span>
@@ -64,9 +64,10 @@ export function BriefingSummary({
         'max-w-prose break-words space-y-4 transition-all duration-700 ease-out',
         visible ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0',
       )}
+      data-testid="briefing-narrative"
     >
       {bottomLine && (
-        <div className="rounded-lg border border-stone-200 bg-stone-50 px-4 py-3">
+        <div className="rounded-lg border border-stone-200 bg-stone-50 px-4 py-3" data-testid="briefing-bottom-line">
           <p className="text-base font-medium leading-relaxed text-stone-800">
             {bottomLine}
           </p>

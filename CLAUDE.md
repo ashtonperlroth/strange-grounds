@@ -103,6 +103,36 @@ export async function fetch[Source](options: [Source]Options): Promise<[Source]D
 - TypeScript interfaces: `PascalCase`
 - Named exports everywhere except `page.tsx` (which needs default export)
 
+## Sub-Agent Routing Rules
+
+**Parallel dispatch** (ALL conditions must be met):
+- 3+ independent tasks with no shared files
+- No dependencies between tasks
+- Clear file boundaries with no overlap
+
+**Sequential dispatch** (ANY condition triggers):
+- Tasks have dependencies (B needs output from A)
+- Shared files or state (merge conflict risk)
+- Unclear scope (need diagnosis before implementation)
+
+**Background dispatch** (use for non-blocking work):
+- Research or analysis tasks
+- Code review after implementation
+- Running tests while working on something else
+
+## Automated Verification
+
+After every implementation, run this sequence:
+1. `npm run build` — must pass with zero errors
+2. `npm run lint` — must pass
+3. `npm run test:smoke` — Playwright smoke tests must pass
+4. If smoke tests fail, fix implementation (never modify tests), iterate up to 3 times
+
+## Slash Commands
+
+- `/fix-issue STR-XX` — Read one issue from Linear, implement with full verification
+- `/ship-issues STR-XX STR-YY STR-ZZ` — Read multiple issues, auto-detect parallelism, execute with agent team if safe
+
 ## Scope Discipline
 
 **Only modify files explicitly mentioned in the task.** If you find a related bug in a nearby file, note it in a commit message or PR comment — do not fix it. Scope creep is the #1 cause of regressions in this project.

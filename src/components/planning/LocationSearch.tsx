@@ -147,7 +147,7 @@ export function LocationSearch({ variant = 'compact' }: LocationSearchProps) {
       }`;
 
   return (
-    <div ref={containerRef} className={containerClass} role="combobox" aria-expanded={showDropdown} aria-haspopup="listbox" aria-controls="location-results">
+    <div ref={containerRef} className={containerClass} role="combobox" aria-expanded={showDropdown} aria-haspopup="listbox" aria-controls="location-results" data-testid="location-search">
       <div className={inputWrapperClass}>
         {location && !focused ? (
           <>

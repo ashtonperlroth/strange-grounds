@@ -161,6 +161,7 @@ export function GenerateButton() {
       size="sm"
       disabled={!ready || isGenerating}
       onClick={handleClick}
+      data-testid="generate-button"
       className={
         (hasError && !isGenerating
           ? 'h-7 gap-1.5 bg-red-600 px-3 text-xs font-medium text-white hover:bg-red-500 disabled:bg-stone-200 disabled:text-stone-400'
