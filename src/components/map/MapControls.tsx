@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Pencil, Layers } from 'lucide-react';
+import { Pencil, Layers, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMapStore } from '@/stores/map-store';
 import { usePlanningStore } from '@/stores/planning-store';
@@ -45,8 +45,6 @@ const OVERLAY_LAYERS: OverlayDef[] = [
   { id: 'avalanche-zones', label: 'Avy Zones', color: '#eab308' },
   { id: 'fire-perimeters', label: 'Active Fires', color: '#f97316' },
   { id: 'slope-angle', label: 'Slope Angle', color: '#ef4444' },
-  { id: 'satellite-imagery', label: 'Satellite Imagery', color: '#6366f1' },
-  { id: 'satellite-snow', label: 'Snow Coverage (Satellite)', color: '#e0f2fe' },
   { id: 'stream-gauges', label: 'Stream Gauges', color: '#06b6d4' },
 ];
 
@@ -59,6 +57,7 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
   const [mobileLayersOpen, setMobileLayersOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const activeOverlays = useMapStore((s) => s.activeOverlays);
+  const layerLoadingState = useMapStore((s) => s.layerLoadingState);
   const toggleOverlay = useMapStore((s) => s.toggleOverlay);
   const hasLocation = usePlanningStore((s) => s.location !== null);
   const hasRoute = useRouteStore((s) => s.currentRoute !== null);
@@ -164,6 +163,7 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
             <div role="group" aria-label="Map layers">
               {OVERLAY_LAYERS.map((layer) => {
                 const layerActive = activeOverlays.has(layer.id);
+                const isLoading = layerLoadingState[layer.id] ?? false;
                 return (
                   <button
                     key={layer.id}
@@ -178,14 +178,18 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
                         : 'text-white/70 hover:bg-white/10 hover:text-white',
                     )}
                   >
-                    <span
-                      className="inline-block h-2.5 w-2.5 rounded-full"
-                      style={{
-                        backgroundColor: layerActive ? layer.color : 'transparent',
-                        border: `2px solid ${layer.color}`,
-                      }}
-                      aria-hidden="true"
-                    />
+                    {isLoading ? (
+                      <Loader2 className="h-2.5 w-2.5 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full"
+                        style={{
+                          backgroundColor: layerActive ? layer.color : 'transparent',
+                          border: `2px solid ${layer.color}`,
+                        }}
+                        aria-hidden="true"
+                      />
+                    )}
                     {layer.label}
                   </button>
                 );
@@ -234,6 +238,7 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
         </div>
         {OVERLAY_LAYERS.map((layer) => {
           const layerActive = activeOverlays.has(layer.id);
+          const isLoading = layerLoadingState[layer.id] ?? false;
           return (
             <button
               key={layer.id}
@@ -248,14 +253,18 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
                   : 'text-white/70 hover:bg-white/10 hover:text-white',
               )}
             >
-              <span
-                className="inline-block h-2.5 w-2.5 rounded-full"
-                style={{
-                  backgroundColor: layerActive ? layer.color : 'transparent',
-                  border: `2px solid ${layer.color}`,
-                }}
-                aria-hidden="true"
-              />
+              {isLoading ? (
+                <Loader2 className="h-2.5 w-2.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <span
+                  className="inline-block h-2.5 w-2.5 rounded-full"
+                  style={{
+                    backgroundColor: layerActive ? layer.color : 'transparent',
+                    border: `2px solid ${layer.color}`,
+                  }}
+                  aria-hidden="true"
+                />
+              )}
               {layer.label}
             </button>
           );

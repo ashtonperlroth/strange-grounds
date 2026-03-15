@@ -21,10 +21,12 @@ export interface FlyToTarget {
 interface MapState {
   viewport: Viewport;
   activeOverlays: Set<string>;
+  layerLoadingState: Record<string, boolean>;
   selectedPoint: SelectedPoint | null;
   flyToTarget: FlyToTarget | null;
   setViewport: (viewport: Partial<Viewport>) => void;
   toggleOverlay: (overlay: string) => void;
+  setLayerLoading: (id: string, loading: boolean) => void;
   setSelectedPoint: (point: SelectedPoint | null) => void;
   flyTo: (target: FlyToTarget) => void;
   clearFlyTo: () => void;
@@ -40,6 +42,7 @@ const DEFAULT_VIEWPORT: Viewport = {
 export const useMapStore = create<MapState>((set) => ({
   viewport: DEFAULT_VIEWPORT,
   activeOverlays: new Set<string>(['trails']),
+  layerLoadingState: {},
   selectedPoint: null,
   flyToTarget: null,
 
@@ -58,6 +61,11 @@ export const useMapStore = create<MapState>((set) => ({
       }
       return { activeOverlays: next };
     }),
+
+  setLayerLoading: (id, loading) =>
+    set((state) => ({
+      layerLoadingState: { ...state.layerLoadingState, [id]: loading },
+    })),
 
   setSelectedPoint: (point) => set({ selectedPoint: point }),
 

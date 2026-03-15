@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import { useRouteStore } from '@/stores/route-store';
+import { useMapStore } from '@/stores/map-store';
 import { getCursorManager } from '@/lib/map/cursor-manager';
 
 const SOURCE_ID = 'avalanche-zones';
@@ -30,6 +31,29 @@ const DANGER_OUTLINE_COLORS: Record<number, string> = {
 
 const FETCH_URL = '/api/avalanche-zones';
 
+// Module-level cache — persists across component re-mounts and toggle cycles
+let cachedGeoJSON: GeoJSON.FeatureCollection | null = null;
+let prefetchPromise: Promise<GeoJSON.FeatureCollection> | null = null;
+
+function getPrefetchPromise(): Promise<GeoJSON.FeatureCollection> {
+  if (cachedGeoJSON) return Promise.resolve(cachedGeoJSON);
+  if (prefetchPromise) return prefetchPromise;
+  prefetchPromise = fetch(FETCH_URL)
+    .then((res) => {
+      if (!res.ok) throw new Error(`Avalanche zones ${res.status}`);
+      return res.json() as Promise<GeoJSON.FeatureCollection>;
+    })
+    .then((data) => {
+      cachedGeoJSON = data;
+      return data;
+    })
+    .catch((err) => {
+      prefetchPromise = null; // allow retry on next attempt
+      throw err;
+    });
+  return prefetchPromise;
+}
+
 function dangerColorExpression(
   property: string,
   colors: Record<number, string>,
@@ -53,8 +77,12 @@ interface AvalancheZonesProps {
 
 export function AvalancheZones({ map, visible }: AvalancheZonesProps) {
   const addedRef = useRef(false);
-  const abortRef = useRef<AbortController | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
+
+  // Kick off background prefetch on mount regardless of visibility
+  useEffect(() => {
+    getPrefetchPromise().catch(() => { /* silent background failure */ });
+  }, []);
 
   const addLayerOnce = useCallback(() => {
     if (!map || addedRef.current) return;
@@ -123,27 +151,32 @@ export function AvalancheZones({ map, visible }: AvalancheZonesProps) {
       }
     }
 
+    function applyData(data: GeoJSON.FeatureCollection) {
+      const source = map?.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+      if (source) source.setData(data);
+    }
+
     function loadData() {
       if (!map) return;
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
+      const { setLayerLoading } = useMapStore.getState();
 
-      fetch(FETCH_URL, { signal: controller.signal })
-        .then((res) => {
-          if (!res.ok) throw new Error(`Avalanche zones ${res.status}`);
-          return res.json();
-        })
-        .then((geojson) => {
-          if (controller.signal.aborted) return;
-          const source = map!.getSource(SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-          if (source) {
-            source.setData(geojson);
-          }
+      if (cachedGeoJSON) {
+        // Instant — serve from cache
+        applyData(cachedGeoJSON);
+        return;
+      }
+
+      // Not yet cached — show loading indicator and wait for prefetch
+      setLayerLoading('avalanche-zones', true);
+      getPrefetchPromise()
+        .then((data) => {
+          applyData(data);
         })
         .catch((err) => {
-          if (err instanceof DOMException && err.name === 'AbortError') return;
           console.warn('Avalanche zones fetch failed:', err);
+        })
+        .finally(() => {
+          setLayerLoading('avalanche-zones', false);
         });
     }
 
@@ -235,17 +268,14 @@ export function AvalancheZones({ map, visible }: AvalancheZonesProps) {
 
     if (visible) {
       loadData();
-      map.on('moveend', loadData);
       map.on('click', FILL_LAYER_ID, handleClick);
       map.on('mouseenter', FILL_LAYER_ID, handleMouseEnter);
       map.on('mouseleave', FILL_LAYER_ID, handleMouseLeave);
     }
 
     return () => {
-      abortRef.current?.abort();
       cursorMgr?.release('hover-feature');
       if (map) {
-        map.off('moveend', loadData);
         map.off('click', FILL_LAYER_ID, handleClick);
         map.off('mouseenter', FILL_LAYER_ID, handleMouseEnter);
         map.off('mouseleave', FILL_LAYER_ID, handleMouseLeave);
