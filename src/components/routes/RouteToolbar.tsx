@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, type ChangeEvent } from 'react';
-import { ArrowRightLeft, Download, Magnet, MapPinned, Pencil, Trash2, Undo2 } from 'lucide-react';
+import { ArrowRightLeft, Download, Magnet, MapPinned, Pencil, Undo2, X } from 'lucide-react';
 import { lineString, length as turfLength, bbox as turfBbox, center as turfCenter } from '@turf/turf';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc/client';
@@ -712,9 +712,10 @@ export function RouteToolbar() {
           className="h-8 border-red-300/40 bg-transparent px-2 text-xs text-red-100 hover:bg-red-500/20"
           onClick={handleClear}
           disabled={!hasWaypoints}
+          data-testid="clear-route-button"
         >
-          <Trash2 className="size-3.5" />
-          Clear
+          <X className="size-3.5" />
+          Clear route
         </Button>
       </div>
 

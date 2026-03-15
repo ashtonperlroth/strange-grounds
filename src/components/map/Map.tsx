@@ -88,6 +88,7 @@ export function Map() {
   const { viewport, setViewport, flyToTarget, clearFlyTo } = useMapStore();
   const activeOverlays = useMapStore((s) => s.activeOverlays);
   const location = usePlanningStore((s) => s.location);
+  const currentRoute = useRouteStore((s) => s.currentRoute);
   const isSegmenting = useSegmentStore((s) => s.isSegmenting);
   const briefing = useBriefingStore((s) => s.currentBriefing);
   const toggleOverlay = useMapStore((s) => s.toggleOverlay);
@@ -283,7 +284,7 @@ export function Map() {
     const map = mapRef.current;
     if (!map) return;
 
-    if (!location) {
+    if (!location || currentRoute) {
       markerRef.current?.remove();
       markerRef.current = null;
       return;
@@ -297,7 +298,7 @@ export function Map() {
         .setLngLat([location.lng, location.lat])
         .addTo(map);
     }
-  }, [location]);
+  }, [location, currentRoute]);
 
   return (
     <div className="relative h-full w-full">
