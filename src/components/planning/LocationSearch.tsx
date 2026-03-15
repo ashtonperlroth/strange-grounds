@@ -189,7 +189,7 @@ export function LocationSearch({ variant = 'compact' }: LocationSearchProps) {
               aria-autocomplete="list"
               aria-controls="location-results"
               aria-activedescendant={highlightIndex >= 0 ? `location-result-${highlightIndex}` : undefined}
-              data-testid="location-search"
+              data-testid={isHero ? 'location-search-hero' : 'location-search'}
             />
             {loading && <Loader2 className={`${iconSize} shrink-0 animate-spin text-stone-400`} aria-label="Searching" />}
           </>

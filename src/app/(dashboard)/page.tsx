@@ -12,7 +12,7 @@ const Map = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center bg-stone-100">
+      <div className="flex h-full w-full items-center justify-center bg-stone-100" data-testid="map-container">
         <div className="flex items-center gap-2 rounded-lg bg-white/90 px-4 py-2 shadow-sm">
           <Loader2 className="size-4 animate-spin text-emerald-600" />
           <span className="text-sm text-stone-600">Loading map&hellip;</span>
