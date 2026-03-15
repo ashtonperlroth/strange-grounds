@@ -198,7 +198,7 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
   }
 
   return (
-    <div className="absolute right-3 top-24 z-10 flex flex-col gap-2" role="toolbar" aria-label="Map controls">
+    <div className="absolute right-3 top-32 z-10 flex flex-col gap-2" role="toolbar" aria-label="Map controls">
       {showDrawButton && (
         <button
           type="button"

@@ -35,7 +35,7 @@ export const AVALANCHE_CENTERS = [
 const MAP_LAYER_URL = "https://api.avalanche.org/v2/public/products/map-layer";
 const USER_AGENT = "strange-grounds/1.0 (contact@strange-grounds.com)";
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
-const FETCH_TIMEOUT_MS = 15_000;
+const FETCH_TIMEOUT_MS = 5_000;
 
 // ── Types ───────────────────────────────────────────────────────────
 
