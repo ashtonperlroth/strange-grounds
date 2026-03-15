@@ -18,8 +18,6 @@ import { PopularRoutePreview } from './layers/PopularRoutePreview';
 import { SegmentLayer } from './layers/SegmentLayer';
 import { HazardLayer } from './layers/HazardLayer';
 import { HazardMarkers } from './layers/HazardMarkers';
-import { SatelliteImageryLayer } from './layers/SatelliteImageryLayer';
-import { SatelliteSnowLayer } from './layers/SatelliteSnowLayer';
 import { StreamGaugeLayer } from './layers/StreamGaugeLayer';
 import { HazardLegend } from './HazardLegend';
 import { ROUTE_WAYPOINTS_CIRCLE_LAYER_ID } from './route-constants';
@@ -336,14 +334,6 @@ export function Map() {
       <SlopeAngleShading
         map={mapInstance}
         visible={activeOverlays.has('slope-angle')}
-      />
-      <SatelliteImageryLayer
-        map={mapInstance}
-        visible={activeOverlays.has('satellite-imagery')}
-      />
-      <SatelliteSnowLayer
-        map={mapInstance}
-        visible={activeOverlays.has('satellite-snow')}
       />
       <StreamGaugeLayer
         map={mapInstance}
