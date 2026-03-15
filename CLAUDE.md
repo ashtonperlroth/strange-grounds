@@ -137,6 +137,10 @@ After every implementation, run this sequence:
 
 **Only modify files explicitly mentioned in the task.** If you find a related bug in a nearby file, note it in a commit message or PR comment — do not fix it. Scope creep is the #1 cause of regressions in this project.
 
+## Design System
+Read `design-system/MASTER.md` before implementing any UI changes.
+The general frontend design skill is at `.claude/skills/frontend-design/SKILL.md`.
+
 ## Migrations
 
 When creating or modifying a file in `supabase/migrations/`:
