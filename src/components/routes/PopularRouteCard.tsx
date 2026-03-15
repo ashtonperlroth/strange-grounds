@@ -15,7 +15,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: 'bg-green-100 text-green-700',
   moderate: 'bg-amber-100 text-amber-700',
-  strenuous: 'bg-orange-100 text-orange-700',
+  strenuous: 'bg-amber-100 text-amber-700',
   expert: 'bg-red-100 text-red-700',
 };
 

@@ -149,7 +149,7 @@ export function ElevationProfile() {
   if (routeCoordinates.length < 2) return null;
 
   return (
-    <div className="absolute bottom-3 left-3 z-20 w-[min(560px,calc(100%-1.5rem))] rounded-lg border border-white/40 bg-black/75 p-3 text-white shadow-lg backdrop-blur-sm">
+    <div className="absolute bottom-3 left-3 z-20 w-[min(560px,calc(100%-1.5rem))] rounded-lg border border-white/20 bg-neutral-900 p-3 text-white shadow-lg">
       <button
         type="button"
         onClick={() => setCollapsed((value) => !value)}

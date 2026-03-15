@@ -1,3 +1,4 @@
+import React from "react";
 import Link from "next/link";
 import {
   Mountain,
@@ -8,6 +9,8 @@ import {
   MapPin,
   Clock,
   Ruler,
+  Droplets,
+  Flag,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,7 +30,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: "bg-green-100 text-green-700",
   moderate: "bg-amber-100 text-amber-700",
-  strenuous: "bg-orange-100 text-orange-700",
+  strenuous: "bg-amber-100 text-amber-700",
   expert: "bg-red-100 text-red-700",
 };
 
@@ -49,9 +52,9 @@ const READINESS_CONFIG: Record<
   },
   orange: {
     label: "CAUTION",
-    bg: "bg-orange-50",
-    text: "text-orange-700",
-    border: "border-orange-200",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    border: "border-amber-200",
   },
   red: {
     label: "CONCERN",
@@ -66,15 +69,17 @@ const MONTH_NAMES = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-const WAYPOINT_ICONS: Record<string, string> = {
-  start: "🟢",
-  end: "🔴",
-  camp: "⛺",
-  pass: "🏔️",
-  water: "💧",
-  summit: "🏔️",
-  waypoint: "📍",
-};
+function getWaypointIcon(type: string): React.ReactNode {
+  switch (type) {
+    case 'start': return <Flag className="size-4 text-[#2d5016]" />;
+    case 'end': return <MapPin className="size-4 text-red-500" />;
+    case 'camp': return <Mountain className="size-4 text-[#6b6b5a]" />;
+    case 'pass': return <Mountain className="size-4 text-[#6b6b5a]" />;
+    case 'summit': return <Mountain className="size-4 text-[#1a1a1a]" />;
+    case 'water': return <Droplets className="size-4 text-[#6b6b5a]" />;
+    default: return <MapPin className="size-4 text-[#6b6b5a]" />;
+  }
+}
 
 const CARD_STATUS_STYLES: Record<string, { bg: string; border: string; dot: string }> = {
   good: { bg: "bg-emerald-50", border: "border-emerald-200", dot: "bg-emerald-500" },
@@ -129,7 +134,7 @@ function ReadinessBadge({ readiness }: { readiness: string | null }) {
             : readiness === "yellow"
               ? "bg-yellow-500"
               : readiness === "orange"
-                ? "bg-orange-500"
+                ? "bg-amber-500"
                 : "bg-red-500",
         )}
       />
@@ -322,8 +327,8 @@ export function RouteConditionsContent({
                     key={wp.id}
                     className="flex items-start gap-3 rounded-lg border border-stone-200 bg-white p-4"
                   >
-                    <span className="mt-0.5 text-lg">
-                      {WAYPOINT_ICONS[wp.waypointType] ?? "📍"}
+                    <span className="mt-0.5 flex items-center">
+                      {getWaypointIcon(wp.waypointType)}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-2">

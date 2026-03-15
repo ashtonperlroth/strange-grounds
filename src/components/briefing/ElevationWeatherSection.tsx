@@ -1,6 +1,6 @@
 'use client';
 
-import { Thermometer } from 'lucide-react';
+import { Thermometer, Snowflake } from 'lucide-react';
 import type { ElevationWeatherData } from '@/lib/utils/elevation-weather';
 
 interface ElevationWeatherSectionProps {
@@ -21,13 +21,13 @@ export function ElevationWeatherSection({ data }: ElevationWeatherSectionProps) 
     highPoint.estimatedWindChill < highPoint.estimatedLowF;
 
   return (
-    <div className="mt-3 rounded-lg border border-sky-100 bg-sky-50/60 p-3">
+    <div className="mt-3 rounded-lg border border-[#E8E3DB] bg-[#F5F0E8] p-3">
       <div className="mb-2 flex items-center gap-1.5">
-        <Thermometer className="size-3.5 text-sky-600" />
-        <span className="text-xs font-semibold text-sky-800">
+        <Thermometer className="size-3.5 text-[#6b6b5a]" />
+        <span className="text-xs font-semibold text-[#1a1a1a]">
           Elevation Estimates
         </span>
-        <span className="text-[10px] text-sky-500">(estimated)</span>
+        <span className="text-[10px] text-[#6b6b5a]">(estimated)</span>
       </div>
 
       <div className="space-y-1.5">
@@ -36,7 +36,7 @@ export function ElevationWeatherSection({ data }: ElevationWeatherSectionProps) 
             key={pt.elevationFt}
             className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
               pt.belowFreezing
-                ? 'bg-blue-100/70 text-blue-900'
+                ? 'bg-[#F0EBE3] text-[#1a1a1a]'
                 : 'bg-white/60 text-stone-700'
             }`}
           >
@@ -46,12 +46,10 @@ export function ElevationWeatherSection({ data }: ElevationWeatherSectionProps) 
                 ({formatElevation(pt.elevationFt)})
               </span>
             </span>
-            <span className="shrink-0">
+            <span className="shrink-0 flex items-center gap-1">
               {pt.estimatedHighF}° / {pt.estimatedLowF}°F
               {pt.belowFreezing && (
-                <span className="ml-1 text-[10px] font-semibold text-blue-600">
-                  ❄
-                </span>
+                <Snowflake className="size-3 text-[#6b6b5a]" aria-label="below freezing" />
               )}
             </span>
           </div>
@@ -62,7 +60,7 @@ export function ElevationWeatherSection({ data }: ElevationWeatherSectionProps) 
         {freezingLevelFt !== null && (
           <p>
             Freezing level at approximately{' '}
-            <span className="font-medium text-blue-700">
+            <span className="font-medium text-[#1a1a1a]">
               {formatElevation(freezingLevelFt)}
             </span>
           </p>

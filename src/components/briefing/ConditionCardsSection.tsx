@@ -171,7 +171,7 @@ export function ConditionCardsSection({
     'Fires',
     <ConditionCard
       category="Fires"
-      icon={<Flame className="size-4 text-orange-500" />}
+      icon={<Flame className="size-4 text-red-500" />}
       status={
         !fireData && isSourceUnavailable('Fires')
           ? 'unavailable'

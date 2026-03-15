@@ -18,14 +18,14 @@ const ACTIVITY_LABELS: Record<string, string> = {
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: "bg-green-100 text-green-700",
   moderate: "bg-amber-100 text-amber-700",
-  strenuous: "bg-orange-100 text-orange-700",
+  strenuous: "bg-amber-100 text-amber-700",
   expert: "bg-red-100 text-red-700",
 };
 
 const READINESS_STYLES: Record<string, { bg: string; dot: string; label: string }> = {
   green: { bg: "bg-emerald-50 border-emerald-200", dot: "bg-emerald-500", label: "GO" },
   yellow: { bg: "bg-yellow-50 border-yellow-200", dot: "bg-yellow-500", label: "CAUTION" },
-  orange: { bg: "bg-orange-50 border-orange-200", dot: "bg-orange-500", label: "CAUTION" },
+  orange: { bg: "bg-amber-50 border-amber-200", dot: "bg-amber-500", label: "CAUTION" },
   red: { bg: "bg-red-50 border-red-200", dot: "bg-red-500", label: "CONCERN" },
 };
 

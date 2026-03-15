@@ -162,7 +162,7 @@ function GaugeDetail({ station }: { station: UsgsStationData }) {
             station.trend === 'rising'
               ? 'text-red-500'
               : station.trend === 'falling'
-                ? 'text-blue-500'
+                ? 'text-[#6b6b5a]'
                 : 'text-stone-400'
           }
         >

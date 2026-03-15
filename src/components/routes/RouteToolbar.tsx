@@ -636,7 +636,7 @@ export function RouteToolbar() {
   if (!currentRoute && !isDrawing) return null;
 
   return (
-    <div className="absolute left-3 top-3 z-20 flex max-w-[92vw] flex-col gap-2 rounded-lg border border-white/40 bg-black/70 p-2 text-white shadow-lg backdrop-blur-sm">
+    <div className="absolute left-3 top-3 z-20 flex max-w-[92vw] flex-col gap-2 rounded-lg border border-white/20 bg-neutral-900 p-2 text-white shadow-lg">
       <div className="flex flex-wrap items-center gap-1.5">
         <Button
           size="sm"

@@ -17,7 +17,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: 'bg-green-100/80 text-green-700',
   moderate: 'bg-amber-100/80 text-amber-700',
-  strenuous: 'bg-orange-100/80 text-orange-700',
+  strenuous: 'bg-amber-100/80 text-amber-700',
   expert: 'bg-red-100/80 text-red-700',
 };
 
@@ -38,7 +38,7 @@ function FeaturedCard({ route }: { route: PopularRoute }) {
       onClick={() => openDetail(route.slug)}
       onMouseEnter={() => setPreviewRoute(route)}
       onMouseLeave={() => setPreviewRoute(null)}
-      className="group flex w-56 shrink-0 flex-col rounded-lg border border-white/40 bg-white/80 p-3 text-left shadow-sm backdrop-blur-sm transition-all hover:border-emerald-200 hover:bg-white/95 hover:shadow-md sm:w-64"
+      className="group flex w-56 shrink-0 flex-col rounded-lg border border-[#E8E3DB] bg-white p-3 text-left shadow-sm transition-colors hover:border-[#1a1a1a] hover:bg-[#FFFBF5] sm:w-64"
     >
       <div className="flex items-start justify-between gap-1">
         <h4 className="truncate text-sm font-semibold text-stone-800 group-hover:text-emerald-700">

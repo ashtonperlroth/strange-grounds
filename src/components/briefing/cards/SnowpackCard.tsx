@@ -115,7 +115,7 @@ function StationDetail({ station }: { station: SnotelStationData }) {
         <span
           className={
             station.trend === 'rising'
-              ? 'text-blue-500'
+              ? 'text-[#6b6b5a]'
               : station.trend === 'falling'
                 ? 'text-red-500'
                 : 'text-stone-400'
@@ -133,7 +133,7 @@ export function SnowpackCard({ data, unavailable, children }: SnowpackCardProps)
     return (
       <ConditionCard
         category="Snowpack"
-        icon={<Snowflake className="size-4 text-blue-500" />}
+        icon={<Snowflake className="size-4 text-[#6b6b5a]" />}
         status={unavailable ? 'unavailable' : 'unknown'}
         summary={unavailable ? 'Data temporarily unavailable' : 'Snowpack data unavailable'}
         detail={unavailable ? 'This data source did not respond. Try regenerating the briefing.' : 'No SNOTEL data could be retrieved for this location.'}
@@ -148,7 +148,7 @@ export function SnowpackCard({ data, unavailable, children }: SnowpackCardProps)
   return (
     <ConditionCard
       category="Snowpack"
-      icon={<Snowflake className="size-4 text-blue-500" />}
+      icon={<Snowflake className="size-4 text-[#6b6b5a]" />}
       status={status}
       summary={summary}
       detail={detail}

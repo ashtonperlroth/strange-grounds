@@ -305,8 +305,8 @@ export function Map() {
       <div ref={containerRef} className="h-full w-full touch-none" role="application" aria-label="Interactive map" data-testid="map-container" />
 
       {isLoading && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-stone-100/80 backdrop-blur-sm">
-          <div className="flex items-center gap-2 rounded-lg bg-white/90 px-4 py-2 shadow-sm">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-stone-100">
+          <div className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 shadow-sm border border-[#E8E3DB]">
             <Loader2 className="size-4 animate-spin text-emerald-600" />
             <span className="text-sm text-stone-600">Loading map&hellip;</span>
           </div>
@@ -345,7 +345,7 @@ export function Map() {
 
       {isSegmenting && (
         <div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2">
-          <div className="flex items-center gap-2 rounded-full bg-stone-900/80 px-4 py-1.5 text-xs text-white shadow-lg backdrop-blur-sm">
+          <div className="flex items-center gap-2 rounded-full bg-neutral-900 px-4 py-1.5 text-xs text-white shadow-lg">
             <Loader2 className="size-3 animate-spin" />
             Analyzing terrain&hellip;
           </div>

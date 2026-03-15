@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Mountain,
@@ -15,6 +15,9 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  MapPin,
+  Droplets,
+  Flag,
 } from 'lucide-react';
 import {
   Area,
@@ -60,7 +63,7 @@ const PLANNING_ACTIVITIES: Record<string, string> = {
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: 'bg-green-100 text-green-700',
   moderate: 'bg-amber-100 text-amber-700',
-  strenuous: 'bg-orange-100 text-orange-700',
+  strenuous: 'bg-amber-100 text-amber-700',
   expert: 'bg-red-100 text-red-700',
 };
 
@@ -69,15 +72,17 @@ const MONTH_NAMES = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
-const WAYPOINT_ICONS: Record<string, string> = {
-  start: '🟢',
-  end: '🔴',
-  camp: '⛺',
-  pass: '🏔️',
-  water: '💧',
-  summit: '🏔️',
-  waypoint: '📍',
-};
+function getWaypointIcon(type: string): React.ReactNode {
+  switch (type) {
+    case 'start': return <Flag className="size-3.5 text-[#2d5016]" />;
+    case 'end': return <MapPin className="size-3.5 text-red-500" />;
+    case 'camp': return <Mountain className="size-3.5 text-[#6b6b5a]" />;
+    case 'pass': return <Mountain className="size-3.5 text-[#6b6b5a]" />;
+    case 'summit': return <Mountain className="size-3.5 text-[#1a1a1a]" />;
+    case 'water': return <Droplets className="size-3.5 text-[#6b6b5a]" />;
+    default: return <MapPin className="size-3.5 text-[#6b6b5a]" />;
+  }
+}
 
 function metersToMiles(m: number): string {
   return (m * 0.000621371).toFixed(1);
@@ -477,8 +482,8 @@ export function PopularRouteDetail({ slug, onBack }: PopularRouteDetailProps) {
                     key={wp.id}
                     className="flex items-start gap-2 rounded-md border border-stone-100 bg-stone-50 px-2.5 py-2"
                   >
-                    <span className="mt-0.5 text-sm">
-                      {WAYPOINT_ICONS[wp.waypointType] ?? '📍'}
+                    <span className="mt-0.5 flex items-center">
+                      {getWaypointIcon(wp.waypointType)}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-stone-700">

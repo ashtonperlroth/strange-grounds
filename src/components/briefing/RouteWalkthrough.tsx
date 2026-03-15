@@ -48,9 +48,9 @@ const READINESS_CONFIG: Record<
   },
   orange: {
     label: 'SIGNIFICANT CONCERNS',
-    bg: 'bg-orange-50',
-    border: 'border-orange-200',
-    text: 'text-orange-800',
+    bg: 'bg-amber-50',
+    border: 'border-amber-200',
+    text: 'text-amber-800',
   },
   red: {
     label: 'RECOMMEND POSTPONING',

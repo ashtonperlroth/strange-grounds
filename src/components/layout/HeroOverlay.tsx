@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, type ChangeEvent } from 'react';
-import { Compass, Download, Mountain } from 'lucide-react';
+import { Compass, Download, Mountain, Footprints, Backpack, Zap, Snowflake, type LucideIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { LocationSearch } from '@/components/planning/LocationSearch';
 import { usePlanningStore, type Activity } from '@/stores/planning-store';
@@ -16,12 +16,12 @@ const QUICK_TRY_LOCATIONS = [
   { name: 'Tahoe Rim Trail', slug: 'tahoe-rim-trail', lat: 39.0968, lng: -120.0324 },
 ] as const;
 
-const ACTIVITY_PILLS: { label: Activity; emoji: string }[] = [
-  { label: 'Day Hike', emoji: '🌲' },
-  { label: 'Backpacking', emoji: '🥾' },
-  { label: 'Trail Running', emoji: '🏃' },
-  { label: 'Mountaineering', emoji: '⛰️' },
-  { label: 'Ski Touring', emoji: '🎿' },
+const ACTIVITY_PILLS: { label: Activity; icon: LucideIcon }[] = [
+  { label: 'Day Hike', icon: Footprints },
+  { label: 'Backpacking', icon: Backpack },
+  { label: 'Trail Running', icon: Zap },
+  { label: 'Mountaineering', icon: Mountain },
+  { label: 'Ski Touring', icon: Snowflake },
 ];
 
 export function HeroOverlay() {
@@ -156,13 +156,13 @@ export function HeroOverlay() {
       aria-label="Get started"
     >
       <div
-        className={`relative flex w-full max-w-[520px] flex-col items-center gap-5 rounded-2xl backdrop-blur-md bg-white/85 px-8 py-8 shadow-xl ring-1 ring-white/40 sm:px-10 ${
+        className={`relative flex w-full max-w-[520px] flex-col items-center gap-5 rounded-lg bg-white px-8 py-8 shadow-md border border-[#E8E3DB] sm:px-10 ${
           isVisible ? 'pointer-events-auto' : 'pointer-events-none'
         }`}
       >
         {/* Icon + tagline */}
         <div className="flex flex-col items-center gap-3">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-emerald-50/80">
+          <div className="flex size-14 items-center justify-center rounded-lg bg-[#F5F0E8]">
             <Mountain className="size-8 text-emerald-600 drop-shadow-sm" aria-hidden="true" />
           </div>
           <div className="flex flex-col items-center gap-1.5">
@@ -202,7 +202,7 @@ export function HeroOverlay() {
 
         {/* Activity pills */}
         <div className="flex flex-wrap justify-center gap-2">
-          {ACTIVITY_PILLS.map(({ label, emoji }) => (
+          {ACTIVITY_PILLS.map(({ label, icon: Icon }) => (
             <button
               key={label}
               data-testid={`activity-pill-${label.toLowerCase().replace(/\s+/g, '-')}`}
@@ -210,11 +210,11 @@ export function HeroOverlay() {
               onClick={() => setActivity(label)}
               className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                 activity === label
-                  ? 'border-emerald-500 bg-emerald-50 text-emerald-800'
-                  : 'border-stone-200 bg-white/70 text-stone-600 hover:border-stone-300 hover:bg-white/90'
+                  ? 'border-[#2d5016] bg-[#F5F0E8] text-[#2d5016]'
+                  : 'border-[#E8E3DB] bg-white text-[#4a4a3a] hover:border-[#1a1a1a] hover:bg-[#FFFBF5]'
               }`}
             >
-              <span aria-hidden="true">{emoji}</span>
+              <Icon className="size-3" aria-hidden="true" />
               {label}
             </button>
           ))}
@@ -225,7 +225,7 @@ export function HeroOverlay() {
           <Button
             size="sm"
             variant="outline"
-            className="h-9 gap-1.5 border-stone-300/60 bg-white/60 px-4 text-xs font-medium text-stone-700 backdrop-blur-sm hover:bg-white/80"
+            className="h-9 gap-1.5 border-[#E8E3DB] bg-[#FFFBF5] px-4 text-xs font-medium text-stone-700 hover:bg-[#FFF8F0]"
             onClick={handleImportClick}
           >
             <Download className="size-3.5" />
@@ -241,7 +241,7 @@ export function HeroOverlay() {
           <Button
             size="sm"
             variant="outline"
-            className="h-9 gap-1.5 border-stone-300/60 bg-white/60 px-4 text-xs font-medium text-stone-700 backdrop-blur-sm hover:bg-white/80"
+            className="h-9 gap-1.5 border-[#E8E3DB] bg-[#FFFBF5] px-4 text-xs font-medium text-stone-700 hover:bg-[#FFF8F0]"
             onClick={handleBrowseRoutes}
           >
             <Compass className="size-3.5" />

@@ -65,7 +65,7 @@ import { BriefingPDF } from './BriefingPDF';
 function BriefingEmptyState() {
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center" role="status">
-      <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-stone-100">
+      <div className="mb-4 flex size-16 items-center justify-center rounded-lg bg-stone-100">
         <Compass className="size-8 text-stone-400" aria-hidden="true" />
       </div>
       <h3 className="mb-2 text-base font-semibold text-stone-800">
@@ -204,7 +204,7 @@ function BriefingErrorState({
 
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-      <div className={`mb-4 flex size-16 items-center justify-center rounded-2xl ${bgColor}`}>
+      <div className={`mb-4 flex size-16 items-center justify-center rounded-lg ${bgColor}`}>
         {icon}
       </div>
       <h3 className="mb-2 text-base font-semibold text-stone-800">
@@ -675,7 +675,7 @@ function BriefingFullView({
             >
               <ConditionCard
                 category="Fires"
-                icon={<Flame className="size-4 text-orange-500" />}
+                icon={<Flame className="size-4 text-red-500" />}
                 status={
                   !fireData && isSourceUnavailable('Fires')
                     ? 'unavailable'

@@ -129,11 +129,11 @@ export function SnotelChart({ readings, stationName }: SnotelChartProps) {
       </div>
       <div className="flex items-center gap-4 text-[10px] text-stone-400">
         <span className="flex items-center gap-1">
-          <span className="inline-block size-2 rounded-full bg-blue-500" />
+          <span className="inline-block size-2 rounded-full bg-[#2d5016]" />
           Snow Depth
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block size-2 rounded-full bg-cyan-500" />
+          <span className="inline-block size-2 rounded-full bg-[#6b6b5a]" />
           SWE
         </span>
       </div>

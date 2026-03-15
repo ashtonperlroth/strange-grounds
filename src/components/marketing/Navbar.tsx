@@ -3,7 +3,7 @@ import { Mountain } from 'lucide-react';
 
 export function Navbar() {
   return (
-    <nav className="sticky top-0 z-50 border-b border-[#E8E3DB] bg-[#FFFBF5]/95 backdrop-blur-sm">
+    <nav className="sticky top-0 z-50 border-b border-[#E8E3DB] bg-[#FFFBF5]">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-2 font-semibold text-[#1a1a1a]">
           <Mountain className="size-5 text-[#2d5016]" />

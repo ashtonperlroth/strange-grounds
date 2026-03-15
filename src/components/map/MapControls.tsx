@@ -117,7 +117,7 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
             <button
               type="button"
               onClick={handleStartDrawing}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-black/80"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-neutral-900 text-white shadow-lg transition-colors hover:bg-neutral-800"
               aria-label="Draw Route"
             >
               <Pencil className="size-4" />
@@ -126,7 +126,7 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
           <button
             type="button"
             onClick={() => setMobileLayersOpen((v) => !v)}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-black/80"
+            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-neutral-900 text-white shadow-lg transition-colors hover:bg-neutral-800"
             aria-label="Toggle map layers"
             aria-expanded={mobileLayersOpen}
           >
@@ -140,7 +140,7 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
         </div>
 
         {mobileLayersOpen && (
-          <div className="absolute bottom-28 right-16 z-20 w-52 rounded-lg border border-white/20 bg-black/80 p-1 shadow-xl backdrop-blur-sm">
+          <div className="absolute bottom-28 right-16 z-20 w-52 rounded-lg border border-white/20 bg-neutral-900 p-1 shadow-lg">
             <div role="radiogroup" aria-label="Map style">
               {MAP_STYLES.map((style) => (
                 <button
@@ -207,13 +207,13 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
         <button
           type="button"
           onClick={handleStartDrawing}
-          className="flex items-center gap-1.5 rounded-lg border border-white/20 bg-black/70 px-3 py-2 text-xs font-medium text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-black/80"
+          className="flex items-center gap-1.5 rounded-lg border border-white/20 bg-neutral-900 px-3 py-2 text-xs font-medium text-white shadow-lg transition-colors hover:bg-neutral-800"
         >
           <Pencil className="size-3.5" />
           Draw Route
         </button>
       )}
-      <div className="rounded-lg border border-white/20 bg-black/70 p-1 shadow-lg backdrop-blur-sm" role="radiogroup" aria-label="Map style">
+      <div className="rounded-lg border border-white/20 bg-neutral-900 p-1 shadow-lg" role="radiogroup" aria-label="Map style">
         {MAP_STYLES.map((style) => (
           <button
             key={style.id}
@@ -232,7 +232,7 @@ export function MapControls({ onStyleChange }: MapControlsProps) {
         ))}
       </div>
 
-      <div className="rounded-lg border border-white/20 bg-black/70 p-1 shadow-lg backdrop-blur-sm" role="group" aria-label="Map layers">
+      <div className="rounded-lg border border-white/20 bg-neutral-900 p-1 shadow-lg" role="group" aria-label="Map layers">
         <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/50" aria-hidden="true">
           Layers
         </div>

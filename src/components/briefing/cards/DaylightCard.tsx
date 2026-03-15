@@ -88,7 +88,7 @@ export function DaylightCard({ data, unavailable }: DaylightCardProps) {
           value={data.goldenHourStart}
         />
         <TimeRow
-          icon={<Sunset className="size-3 text-orange-400" />}
+          icon={<Sunset className="size-3 text-amber-500" />}
           label="Sunset"
           value={data.sunset}
         />

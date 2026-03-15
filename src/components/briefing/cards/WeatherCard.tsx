@@ -102,7 +102,7 @@ function PeriodRow({ period }: { period: NWSForecastPeriod }) {
         </span>
         {precip > 0 && (
           <span className="flex items-center gap-1">
-            <Droplets className="size-3 text-blue-400" />
+            <Droplets className="size-3 text-[#6b6b5a]" />
             {precip}%
           </span>
         )}

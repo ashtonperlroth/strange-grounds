@@ -153,7 +153,7 @@ export function AvalancheCard({ data, unavailable }: AvalancheCardProps) {
             href={data.centerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
+            className="inline-flex items-center gap-1 text-xs font-medium text-[#2d5016] hover:text-[#1a1a1a] hover:underline"
           >
             Full forecast
             <ExternalLink className="size-3" />
