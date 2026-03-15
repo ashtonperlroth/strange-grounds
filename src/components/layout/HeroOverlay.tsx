@@ -11,17 +11,17 @@ import { usePopularRoutesStore } from '@/stores/popular-routes-store';
 import { Button } from '@/components/ui/button';
 
 const QUICK_TRY_LOCATIONS = [
-  { name: 'Teton Pass', slug: 'teton-pass', lat: 43.4888, lng: -110.9478 },
-  { name: 'Mt Rainier', slug: 'mt-rainier', lat: 46.8523, lng: -121.7603 },
+  { name: 'Mount Whitney', slug: 'mount-whitney', lat: 36.5785, lng: -118.2923 },
+  { name: 'Half Dome', slug: 'half-dome', lat: 37.7459, lng: -119.5332 },
   { name: 'Tahoe Rim Trail', slug: 'tahoe-rim-trail', lat: 39.0968, lng: -120.0324 },
 ] as const;
 
 const ACTIVITY_PILLS: { label: Activity; emoji: string }[] = [
-  { label: 'Ski Touring', emoji: '🎿' },
-  { label: 'Backpacking', emoji: '🥾' },
-  { label: 'Mountaineering', emoji: '⛰️' },
   { label: 'Day Hike', emoji: '🌲' },
+  { label: 'Backpacking', emoji: '🥾' },
   { label: 'Trail Running', emoji: '🏃' },
+  { label: 'Mountaineering', emoji: '⛰️' },
+  { label: 'Ski Touring', emoji: '🎿' },
 ];
 
 export function HeroOverlay() {
