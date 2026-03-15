@@ -22,7 +22,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { usePlanningStore } from '@/stores/planning-store';
 import { useRealtimeBriefing } from '@/hooks/useRealtimeBriefing';
-import { useNarrativeStream } from '@/hooks/useNarrativeStream';
 import { useBriefingStore, type ConditionStatus, type ConditionCardData } from '@/stores/briefing-store';
 import { trpc } from '@/lib/trpc/client';
 import { trackGenerateBriefing, trackSaveTrip } from '@/lib/analytics';
@@ -396,8 +395,6 @@ interface BriefingProgressiveViewProps {
   activity: string;
   warningCount: number;
   criticalCount: number;
-  streamedText?: string;
-  isStreaming?: boolean;
 }
 
 function BriefingProgressiveView({
@@ -410,16 +407,12 @@ function BriefingProgressiveView({
   activity,
   warningCount,
   criticalCount,
-  streamedText,
-  isStreaming,
 }: BriefingProgressiveViewProps) {
   const readiness = briefing.readiness as 'green' | 'yellow' | 'red' | null;
   const conditionsObj = briefing.conditions as Record<string, unknown> | undefined;
   const routeAnalysis = (conditionsObj?.routeAnalysis as RouteAnalysis | undefined) ?? null;
   const hasConditions = !!progress.pointConditionsComplete;
   const hasHazards = !!progress.hazardsComplete;
-  const isSynthesisReady = !!progress.synthesisReady;
-  const showStreamingNarrative = isStreaming || (isSynthesisReady && !!streamedText);
 
   return (
     <ScrollArea className="h-full">
@@ -447,22 +440,15 @@ function BriefingProgressiveView({
           </div>
         )}
 
-        {showStreamingNarrative ? (
-          <BriefingSummary
-            bottomLine={null}
-            narrative={null}
-            streamedText={streamedText}
-            isStreaming={isStreaming}
-          />
-        ) : isSynthesisReady ? (
+        {hasConditions ? (
           <NarrativeSkeleton />
-        ) : !hasConditions ? (
+        ) : (
           <div className="space-y-2.5">
             <Skeleton className="h-3.5 w-full bg-stone-200" />
             <Skeleton className="h-3.5 w-[92%] bg-stone-200" />
             <Skeleton className="h-3.5 w-[78%] bg-stone-200" />
           </div>
-        ) : null}
+        )}
 
         <Separator className="bg-stone-200" />
 
@@ -748,8 +734,6 @@ export function BriefingPanel() {
   const hasRoute = !!usePlanningStore.getState().routeContext;
   const { briefing, isLoading, error, elapsedSeconds, pipelineStatus, progress, reset } =
     useRealtimeBriefing(activeBriefingId, { isRoute: hasRoute });
-  const { streamedText, isStreaming, reset: resetStream } =
-    useNarrativeStream(activeBriefingId, pipelineStatus);
   const { setBriefing, setConditionCards, getWarningCount, getCriticalCount } = useBriefingStore();
 
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -767,7 +751,6 @@ export function BriefingPanel() {
     setGenerationError(null);
     setIsGenerating(true);
     reset();
-    resetStream();
 
     try {
       const briefingResult = await generateBriefing.mutateAsync({
@@ -804,7 +787,6 @@ export function BriefingPanel() {
     setIsGenerating,
     setGenerationError,
     reset,
-    resetStream,
   ]);
 
   useEffect(() => {
@@ -967,8 +949,6 @@ export function BriefingPanel() {
         activity={activity}
         warningCount={getWarningCount()}
         criticalCount={getCriticalCount()}
-        streamedText={streamedText}
-        isStreaming={isStreaming}
       />
     );
   }
