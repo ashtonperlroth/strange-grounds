@@ -5,6 +5,7 @@ import { fetchAvalanche } from "@/lib/data-sources/avalanche";
 import { fetchUsgs } from "@/lib/data-sources/usgs";
 import { fetchFires } from "@/lib/data-sources/fires";
 import { detectMaterialChanges } from "@/lib/monitoring/change-detection";
+import { sendConditionAlert } from "@/lib/email/condition-alert";
 import type { NWSForecastData } from "@/lib/data-sources/nws";
 import type { AvalancheData } from "@/lib/data-sources/avalanche";
 import type { UsgsData } from "@/lib/data-sources/usgs";
@@ -143,9 +144,57 @@ export const monitorTrips = inngest.createFunction(
         const { error } = await supabase.from("alerts").insert(alertRows);
         if (error) {
           console.error(`[monitor-trips] Failed to insert alerts for trip ${trip.id}:`, error);
-        } else {
-          console.log(`[monitor-trips] Created ${alertRows.length} alerts for trip ${trip.id}`);
-          alertsCreated += alertRows.length;
+          return;
+        }
+        console.log(`[monitor-trips] Created ${alertRows.length} alerts for trip ${trip.id}`);
+        alertsCreated += alertRows.length;
+
+        // Send email notifications — fire-and-forget, non-blocking
+        if (process.env.RESEND_API_KEY) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("email_alerts_enabled")
+            .eq("id", trip.user_id)
+            .single();
+
+          if (profile?.email_alerts_enabled !== false) {
+            const { data: userRecord } = await supabase.auth.admin.getUserById(trip.user_id);
+            const email = userRecord?.user?.email;
+            if (email) {
+              // Get most critical alert to lead with
+              const critical = detected.find((a) => a.severity === "critical") ?? detected[0];
+
+              // Get latest briefing share_token for deeplink
+              const { data: latestBriefing } = await supabase
+                .from("briefings")
+                .select("share_token")
+                .eq("trip_id", trip.id)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .single();
+
+              const briefingUrl = latestBriefing?.share_token
+                ? `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://strange-grounds.vercel.app"}/briefing/${latestBriefing.share_token}`
+                : null;
+
+              await sendConditionAlert({
+                to: email,
+                tripName: trip.location_name,
+                alertTitle: critical.title,
+                alertDescription:
+                  detected.length > 1
+                    ? `${critical.description} (+ ${detected.length - 1} other change${detected.length > 2 ? "s" : ""})`
+                    : critical.description,
+                severity: critical.severity,
+                previousValue: critical.previousValue,
+                currentValue: critical.currentValue,
+                segmentInfo: critical.segmentOrder != null ? `Segment ${critical.segmentOrder}` : null,
+                briefingUrl,
+              }).catch((err) => {
+                console.error(`[monitor-trips] Failed to send email for trip ${trip.id}:`, err);
+              });
+            }
+          }
         }
       });
     }

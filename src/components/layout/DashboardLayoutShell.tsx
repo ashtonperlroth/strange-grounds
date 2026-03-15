@@ -3,6 +3,7 @@
 import { type ReactNode } from 'react';
 import { usePlanningStore } from '@/stores/planning-store';
 import { useRouteStore } from '@/stores/route-store';
+import { useUnacknowledgedAlerts } from '@/hooks/useUnacknowledgedAlerts';
 import { TopBar } from './TopBar';
 import { Footer } from './Footer';
 import { HeroOverlay } from './HeroOverlay';
@@ -11,6 +12,8 @@ export function DashboardLayoutShell({ children }: { children: ReactNode }) {
   const location = usePlanningStore((s) => s.location);
   const hasRoute = useRouteStore((s) => s.currentRoute !== null);
   const isActive = location !== null || hasRoute;
+
+  useUnacknowledgedAlerts();
 
   return (
     <div className="flex h-screen flex-col bg-[#FAF7F2] text-stone-800">
