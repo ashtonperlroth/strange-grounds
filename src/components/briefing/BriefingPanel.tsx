@@ -11,6 +11,7 @@ import {
   Clock,
   Loader2,
   WifiOff,
+  Download,
 } from 'lucide-react';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
@@ -59,6 +60,7 @@ import type {
 import { PipelineStatusBar } from './PipelineStatusBar';
 import { ConditionCardsSection } from './ConditionCardsSection';
 import { NarrativeSkeleton } from './NarrativeSkeleton';
+import { BriefingPDF } from './BriefingPDF';
 
 function BriefingEmptyState() {
   return (
@@ -279,9 +281,11 @@ interface PanelFooterProps {
   isSaving?: boolean;
   isSaved?: boolean;
   onShare?: () => void;
+  onDownloadPDF?: () => void;
+  isDownloadingPDF?: boolean;
 }
 
-function PanelFooter({ onRegenerate, isRegenerating, onSave, isSaving, isSaved, onShare }: PanelFooterProps) {
+function PanelFooter({ onRegenerate, isRegenerating, onSave, isSaving, isSaved, onShare, onDownloadPDF, isDownloadingPDF }: PanelFooterProps) {
   return (
     <div className="space-y-2 pt-2">
       <Button
@@ -329,6 +333,22 @@ function PanelFooter({ onRegenerate, isRegenerating, onSave, isSaving, isSaved, 
           Share
         </Button>
       </div>
+      {onDownloadPDF && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-800 focus-visible:ring-emerald-500"
+          onClick={onDownloadPDF}
+          disabled={isDownloadingPDF}
+        >
+          {isDownloadingPDF ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Download className="size-3.5" />
+          )}
+          {isDownloadingPDF ? 'Generating PDF...' : 'Download PDF'}
+        </Button>
+      )}
     </div>
   );
 }
@@ -362,6 +382,8 @@ interface BriefingFullViewProps {
   isSaving?: boolean;
   isSaved?: boolean;
   onShare?: () => void;
+  onDownloadPDF?: () => void;
+  isDownloadingPDF?: boolean;
 }
 
 interface BriefingProgressiveViewProps {
@@ -500,6 +522,8 @@ function BriefingFullView({
   isSaving,
   isSaved,
   onShare,
+  onDownloadPDF,
+  isDownloadingPDF,
 }: BriefingFullViewProps) {
   const snotelData = conditions?.snowpack as SnotelData | undefined;
   const avalancheData = conditions?.avalanche as AvalancheData | undefined;
@@ -700,6 +724,8 @@ function BriefingFullView({
           isSaving={isSaving}
           isSaved={isSaved}
           onShare={onShare}
+          onDownloadPDF={onDownloadPDF}
+          isDownloadingPDF={isDownloadingPDF}
         />
       </div>
     </ScrollArea>
@@ -729,6 +755,7 @@ export function BriefingPanel() {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const generateBriefing = trpc.briefings.generate.useMutation();
   const saveTrip = trpc.trips.save.useMutation();
 
@@ -848,6 +875,47 @@ export function BriefingPanel() {
     });
   }, [briefing?.share_token]);
 
+  const handleDownloadPDF = useCallback(async () => {
+    if (!briefing?.narrative) return;
+    setIsDownloadingPDF(true);
+    try {
+      const { pdf } = await import('@react-pdf/renderer');
+      const conditionsObj = briefing.conditions as Record<string, unknown> | undefined;
+      const cards = (conditionsObj?.conditionCards as ConditionCardData[] | undefined) ?? [];
+      const walkthrough = (conditionsObj?.routeWalkthrough as import('@/lib/types/route-briefing').RouteWalkthroughSegment[] | undefined) ?? null;
+      const criticals = (conditionsObj?.criticalSections as import('@/lib/types/route-briefing').CriticalSection[] | undefined) ?? null;
+      const altRoutes = (conditionsObj?.alternativeRoutes as import('@/lib/types/route-briefing').AlternativeRoute[] | undefined) ?? null;
+      const gear = (conditionsObj?.gearChecklist as string[] | undefined) ?? null;
+      const blob = await pdf(
+        <BriefingPDF
+          locationName={location?.name ?? null}
+          activity={activity}
+          dateRange={dateRange}
+          readiness={(briefing.readiness as 'green' | 'yellow' | 'red' | null) ?? null}
+          bottomLine={(briefing.bottom_line as string | null) ?? null}
+          narrative={briefing.narrative}
+          conditionCards={cards}
+          routeWalkthrough={walkthrough}
+          criticalSections={criticals}
+          alternativeRoutes={altRoutes}
+          gearChecklist={gear}
+        />,
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${location?.name ?? 'briefing'}-conditions.pdf`.toLowerCase().replace(/\s+/g, '-');
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('PDF downloaded');
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      toast.error('Failed to generate PDF');
+    } finally {
+      setIsDownloadingPDF(false);
+    }
+  }, [briefing, location, activity, dateRange]);
+
   useEffect(() => {
     setIsSaved(false);
     setIsSaving(false);
@@ -942,6 +1010,8 @@ export function BriefingPanel() {
       isSaving={isSaving}
       isSaved={isSaved}
       onShare={handleShare}
+      onDownloadPDF={isComplete ? handleDownloadPDF : undefined}
+      isDownloadingPDF={isDownloadingPDF}
     />
   );
 }
