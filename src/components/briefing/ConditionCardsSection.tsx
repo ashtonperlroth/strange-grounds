@@ -18,6 +18,8 @@ import { SatelliteCard, type SatelliteCardData } from './cards/SatelliteCard';
 import { TempChart } from '@/components/charts/TempChart';
 import { WindChart } from '@/components/charts/WindChart';
 import { PrecipChart } from '@/components/charts/PrecipChart';
+import { ElevationWeatherSection } from './ElevationWeatherSection';
+import type { ElevationWeatherData } from '@/lib/utils/elevation-weather';
 import { SnotelChart } from '@/components/charts/SnotelChart';
 import { HydrographChart } from '@/components/charts/HydrographChart';
 import type { NWSForecastData } from '@/lib/data-sources/nws';
@@ -59,6 +61,7 @@ export function ConditionCardsSection({
   const daylightData = conditions?.daylight as DaylightData | undefined;
   const fireData = conditions?.fires as FireData | undefined;
   const satelliteData = conditions?.satellite as SatelliteCardData | undefined;
+  const elevationWeather = conditions?.elevationWeather as ElevationWeatherData | undefined;
   const unavailableSources = (conditions?.unavailableSources as string[] | undefined) ?? [];
   const sortAvyToTop = getAvalancheSortPriority(avalancheData ?? null) > 0;
 
@@ -121,6 +124,9 @@ export function ConditionCardsSection({
           <WindChart hourly={hourly} />
           <PrecipChart hourly={hourly} />
         </>
+      )}
+      {elevationWeather && (
+        <ElevationWeatherSection data={elevationWeather} />
       )}
     </WeatherCard>,
   );

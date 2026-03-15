@@ -27,6 +27,10 @@ import {
 } from "@/lib/routes/segment-conditions";
 import type { RouteAnalysis } from "@/lib/types/briefing";
 import type { RouteSegment } from "@/lib/types/route";
+import {
+  computeLapseRateEstimates,
+} from "@/lib/utils/elevation-weather";
+import type { ElevationWeatherData } from "@/lib/utils/elevation-weather";
 
 const DEFAULT_TIMEOUT_MS = 8_000;
 const AVALANCHE_TIMEOUT_MS = 10_000;
@@ -277,6 +281,7 @@ export const generateBriefing = inngest.createFunction(
 
     let routeAnalysis: RouteAnalysis | null = null;
     let routeSegments: RouteSegment[] = [];
+    let elevationWeatherData: ElevationWeatherData | null = null;
     let routeName: string | null = null;
     let routeTotalDistanceM = 0;
     let routeElevationGainM = 0;
@@ -296,7 +301,7 @@ export const generateBriefing = inngest.createFunction(
 
           const { data: routes } = await supabase
             .from("routes")
-            .select("id, name, total_distance_m, elevation_gain_m")
+            .select("id, name, total_distance_m, elevation_gain_m, max_elevation_m, min_elevation_m")
             .eq("trip_id", tripId)
             .order("created_at", { ascending: false })
             .limit(1);
@@ -305,7 +310,7 @@ export const generateBriefing = inngest.createFunction(
             console.warn(
               `[briefing] No route found for trip=${tripId}, skipping segment conditions`,
             );
-            return { analysis: null, meta: null, _elapsedMs: Date.now() - stepStart };
+            return { analysis: null, meta: null, elevationWeather: null, _elapsedMs: Date.now() - stepStart };
           }
 
           const routeRow = routes[0];
@@ -316,7 +321,7 @@ export const generateBriefing = inngest.createFunction(
             console.warn(
               `[briefing] No segments found for route=${routeId}, skipping segment conditions`,
             );
-            return { analysis: null, meta: null, _elapsedMs: Date.now() - stepStart };
+            return { analysis: null, meta: null, elevationWeather: null, _elapsedMs: Date.now() - stepStart };
           }
 
           console.log(
@@ -378,6 +383,48 @@ export const generateBriefing = inngest.createFunction(
             segments: slimSegmentConditions(analysis.segments),
           };
 
+          // ── Lapse rate estimates ──────────────────────────────────────
+          let elevationWeather: ElevationWeatherData | null = null;
+          const minElevM = routeRow.min_elevation_m as number | null;
+          const maxElevM = routeRow.max_elevation_m as number | null;
+          const nws = fullConditions.weather;
+          if (minElevM != null && maxElevM != null && nws && nws.periods.length > 0) {
+            const baseElevFt = Math.round(minElevM * 3.281);
+            const highPointFt = Math.round(maxElevM * 3.281);
+
+            // High/low from next ~24h of forecast periods
+            const slice = nws.periods.slice(0, 6);
+            const temps = slice.map((p) => p.temperature);
+            const baseHighF = Math.max(...temps);
+            const baseLowF = Math.min(...temps);
+
+            // Max wind from same slice
+            const maxWind = Math.max(
+              ...slice.map((p) => {
+                const m = p.windSpeed.match(/(\d+)/);
+                return m ? parseInt(m[1], 10) : 0;
+              }),
+            );
+            const baseWindMph = maxWind > 0 ? maxWind : null;
+
+            const elevDiffFt = highPointFt - baseElevFt;
+            const targets: Array<{ ft: number; label: string }> = [
+              { ft: baseElevFt, label: "Trailhead" },
+            ];
+            if (elevDiffFt > 2000) {
+              targets.push({ ft: Math.round(baseElevFt + elevDiffFt / 2), label: "Mid-route" });
+            }
+            targets.push({ ft: highPointFt, label: "High point" });
+
+            elevationWeather = computeLapseRateEstimates(
+              baseElevFt,
+              baseHighF,
+              baseLowF,
+              baseWindMph,
+              targets,
+            );
+          }
+
           const elapsed = Date.now() - stepStart;
           console.log(
             `[briefing] fetch-route-conditions completed in ${elapsed}ms (${segments.length} segments, overall hazard: ${analysis.overallHazardLevel})`,
@@ -391,6 +438,7 @@ export const generateBriefing = inngest.createFunction(
               elevationGainM: (routeRow.elevation_gain_m as number) ?? 0,
               segments,
             },
+            elevationWeather,
             _elapsedMs: elapsed,
           };
         }),
@@ -430,6 +478,13 @@ export const generateBriefing = inngest.createFunction(
         routeName = routeResult.meta.name;
         routeTotalDistanceM = routeResult.meta.totalDistanceM;
         routeElevationGainM = routeResult.meta.elevationGainM;
+      }
+      if (routeResult.elevationWeather) {
+        elevationWeatherData = routeResult.elevationWeather;
+        // Write elevation weather to conditions immediately so it shows in UI
+        updateBriefingProgress(briefingId, "conditions_complete", {}, {
+          elevationWeather: elevationWeatherData,
+        }).catch(() => {});
       }
       stepTimings["fetch-route-conditions"] = routeResult._elapsedMs;
 
