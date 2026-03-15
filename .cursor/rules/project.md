@@ -1,7 +1,7 @@
 # Project: Backcountry Conditions Intelligence Platform
 
 ## Stack
-- Next.js 15 (App Router) with TypeScript
+- Next.js 16 (App Router) with TypeScript
 - MapLibre GL JS for maps, MapTiler for tiles, AWS Terrain Tiles for DEM
 - shadcn/ui + Tailwind CSS + Radix UI for components
 - Supabase for database (Postgres + PostGIS), auth, storage
@@ -46,7 +46,7 @@ export async function fetch[Source](options: [Source]Options): Promise<[Source]D
 ## Styling
 - Tailwind utility classes only. No CSS modules, no styled-components.
 - Color system: green (#22c55e), yellow (#eab308), red (#ef4444) for condition status.
-- Dark theme preferred (dark map background, light text).
+- Modern theme preferred (beige map background, modern text).
 - Responsive: design for 1440px+ desktop first, then adapt for 1024px.
 
 ## Naming
