@@ -16,6 +16,8 @@ import { StreamCard } from './cards/StreamCard';
 import { DaylightCard } from './cards/DaylightCard';
 import { SatelliteCard, type SatelliteCardData } from './cards/SatelliteCard';
 import { TempChart } from '@/components/charts/TempChart';
+import { WindChart } from '@/components/charts/WindChart';
+import { PrecipChart } from '@/components/charts/PrecipChart';
 import { SnotelChart } from '@/components/charts/SnotelChart';
 import { HydrographChart } from '@/components/charts/HydrographChart';
 import type { NWSForecastData } from '@/lib/data-sources/nws';
@@ -103,6 +105,8 @@ export function ConditionCardsSection({
     />,
   );
 
+  const hourly = weatherData?.hourly ?? [];
+
   const weatherElement = wrapCard(
     'weather',
     weatherFetched,
@@ -111,8 +115,12 @@ export function ConditionCardsSection({
       data={weatherData ?? null}
       unavailable={isSourceUnavailable('NWS')}
     >
-      {weatherData?.hourly && weatherData.hourly.length > 0 && (
-        <TempChart hourly={weatherData.hourly} />
+      {hourly.length > 0 && (
+        <>
+          <TempChart hourly={hourly} />
+          <WindChart hourly={hourly} />
+          <PrecipChart hourly={hourly} />
+        </>
       )}
     </WeatherCard>,
   );
