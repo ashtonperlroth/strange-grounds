@@ -1,6 +1,7 @@
 You are running in daemon mode. Your job is to continuously process open Linear issues until none remain.
 
-## Loop
+<!-- HUMAN-ONLY: Do not modify this section autonomously -->
+## Core Loop
 
 Repeat the following until there are no more actionable issues:
 
@@ -60,12 +61,12 @@ PLAYWRIGHT_BASE_URL=https://strange-grounds.vercel.app npx playwright test tests
    - Label: Bug
 2. This new issue will be picked up in the NEXT iteration of the loop (it's now the highest priority)
 3. Continue to Step 1
+<!-- END HUMAN-ONLY -->
 
 ### Safety rails
 - Maximum 10 issues per daemon session (prevents runaway cost)
 - If the same issue fails twice in the same session, skip it permanently and label "HUMAN"
 - Never modify test files (tests/*)
-- Never modify .claude/ configuration files
 - Never modify supabase/migrations/ files that have already been applied
 - If you encounter a permissions error, network timeout, or API rate limit, wait 60 seconds and retry once. If it fails again, stop the daemon and report what happened.
 
@@ -85,3 +86,58 @@ Issues failed (labeled HUMAN): Y
 Regressions detected and filed: Z
 Remaining open issues: N
 ```
+
+## Self-modification rules
+
+The daemon has FULL write access to all files in the repository, including `.claude/`.
+
+### What the daemon CAN do with .claude/ files:
+- Create new commands in `.claude/commands/`
+- Create new skills in `.claude/skills/`
+- Create new agent definitions in `.claude/agents/`
+- Append new sections to existing commands, skills, and agent files
+- Update `.claude/settings.json` to register new tools or env vars
+- Add new entries to `design-system/` files
+- Create new `.claude/` subdirectories as needed
+
+### Commit convention for self-modification:
+When modifying any file in `.claude/`, commit the change SEPARATELY from other code changes, using the prefix `meta:` in the commit message. Examples:
+- `meta: add debug-production step to daemon.md`
+- `meta: register new skill for PDF generation`
+- `meta: update settings.json with VERCEL_TOKEN env var`
+
+This ensures self-modifications are easy to find, review, and revert in git history.
+
+### What the daemon MUST NOT do:
+- Delete existing behavioral rules or safety checks from any `.claude/` file
+- Remove or weaken existing instructions (only ADD or AMEND)
+- Modify content inside `<!-- HUMAN-ONLY -->` / `<!-- END HUMAN-ONLY -->` markers
+- Modify git hooks or CI/CD configs that gate deployments
+
+### Learning log:
+When the daemon modifies `.claude/` files, it MUST append a one-line entry to `.claude/CHANGELOG.md`:
+```
+YYYY-MM-DD | [file modified] | [what changed] | [why / which issue triggered it]
+```
+
+## Self-improvement
+
+After completing each issue, the daemon should consider:
+
+1. **Did I encounter a pattern that should be documented?**
+   - If yes, add it to the relevant skill or create a new one
+   - Example: "Every time I touch Inngest functions, I need to check the model string" → add to a debugging checklist
+
+2. **Did I waste time on something that could have been avoided with better instructions?**
+   - If yes, update the relevant command or agent file with the missing context
+   - Example: "I didn't know to check MASTER.md before UI changes" → add reminder to implementer.md
+
+3. **Did I create a new tool or command that other commands should reference?**
+   - If yes, wire it into the relevant existing commands
+   - Example: Created debug-production.md → add reference to daemon.md and fix-issue.md
+
+4. **Did I discover a new anti-pattern or best practice?**
+   - If yes, add it to the relevant design system or skill file
+   - Example: "Hardcoded model strings cause silent failures" → add to a common pitfalls doc
+
+When self-modifying, always commit with `meta:` prefix and log the change in `.claude/CHANGELOG.md`.
