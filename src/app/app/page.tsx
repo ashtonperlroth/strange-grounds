@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   MapPin,
-  Map as MapIcon,
   AlertTriangle,
   Cloud,
   Mountain,
@@ -12,6 +11,7 @@ import {
   Flame,
   Sun,
 } from "lucide-react";
+import { MapContainer } from "@/components/map/map-container";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -81,16 +81,8 @@ export default function NewTripPage() {
         </div>
       </div>
 
-      {/* Map placeholder */}
-      <div
-        data-testid="map-container"
-        className="w-full bg-muted rounded-lg flex items-center justify-center text-muted-foreground border border-border h-[50vh] lg:h-[70vh]"
-      >
-        <div className="text-center">
-          <MapIcon className="mx-auto h-12 w-12 mb-2 text-muted-foreground" />
-          <p className="text-sm">Map loads here (MapLibre GL JS — next issue)</p>
-        </div>
-      </div>
+      {/* Map */}
+      <MapContainer className="w-full h-[50vh] lg:h-[70vh]" />
 
       {/* Route stats bar */}
       <div className="rounded-md bg-secondary border border-border px-4 py-2.5">
