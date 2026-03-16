@@ -26,7 +26,7 @@ export default function Home() {
   }
 
   return (
-    <main data-testid="marketing-landing" className="bg-[#FFFBF5]">
+    <main data-testid="marketing-landing" className="bg-background">
       {/* Hero Section */}
       <section className="relative flex min-h-[80vh] flex-col items-center justify-center overflow-hidden">
         {/* Background — watercolor image when available, warm gradient fallback */}
@@ -36,12 +36,12 @@ export default function Home() {
           className="absolute inset-0 -z-10"
           style={{
             background:
-              "linear-gradient(180deg, #e8dfd0 0%, #d4c9b5 40%, #FFFBF5 100%)",
+              "linear-gradient(180deg, #e8dfd0 0%, #d4c9b5 40%, hsl(var(--background)) 100%)",
           }}
         />
 
         {/* Bottom fade to page background */}
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#FFFBF5] to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent" />
 
         <div className="relative z-10 flex flex-col items-center gap-8 px-6 text-center">
           {/* Headline */}
