@@ -7,11 +7,11 @@ Diagnose production issues by checking all observability endpoints.
 ### API Health Checks
 1. curl the tRPC health endpoint:
    ```bash
-   curl -s -o /dev/null -w "%{http_code}" https://strangegrounds.com/api/trpc
+   curl -s -o /dev/null -w "%{http_code}" https://strange-ground.vercel.app/api/trpc
    ```
 2. curl the Inngest serve endpoint:
    ```bash
-   curl -s -o /dev/null -w "%{http_code}" https://strangegrounds.com/api/inngest
+   curl -s -o /dev/null -w "%{http_code}" https://strange-ground.vercel.app/api/inngest
    ```
 3. Report any non-200 responses
 
@@ -27,7 +27,7 @@ Diagnose production issues by checking all observability endpoints.
 ### Vercel Deployment Logs
 7. If VERCEL_TOKEN is available:
    ```bash
-   npx vercel logs https://strangegrounds.com --token $VERCEL_TOKEN --limit 50 2>&1 | grep -i "error\|500\|404\|timeout"
+   npx vercel logs https://strange-ground.vercel.app --token $VERCEL_TOKEN --limit 50 2>&1 | grep -i "error\|500\|404\|timeout"
    ```
 8. Report any errors in recent function invocations
 
@@ -47,7 +47,7 @@ Diagnose production issues by checking all observability endpoints.
 ### Playwright Network Check
 11. Run the debug network spec:
     ```bash
-    PLAYWRIGHT_BASE_URL=https://strangegrounds.com npx playwright test tests/debug-network.spec.ts --reporter=list
+    PLAYWRIGHT_BASE_URL=https://strange-ground.vercel.app npx playwright test tests/debug-network.spec.ts --reporter=list
     ```
 12. This test navigates to /app, triggers a briefing, and captures all failed API requests
 
