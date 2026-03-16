@@ -10,3 +10,4 @@ All daemon self-modifications to `.claude/` files are logged here.
 | 2026-03-15 | commands/fix-issue.md | Added debug-first step for Bug-labeled issues | STR-111 |
 | 2026-03-15 | agents/implementer.md | Added debugging production issues workflow | STR-111 |
 | 2026-03-15 | settings.json | Documented VERCEL_TOKEN, INNGEST_EVENT_KEY, PRODUCTION_URL env vars | STR-111 |
+| 2026-03-15 | commands/daemon.md, commands/debug-production.md, settings.json | Fixed production URL from strange-grounds.vercel.app (404) to strangegrounds.com | STR-115 post-push monitoring |
