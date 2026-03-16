@@ -52,7 +52,7 @@ export default function NewTripPage() {
 
         <div className="flex items-center justify-between gap-4">
           <Tabs value={activeActivity} onValueChange={setActiveActivity}>
-            <TabsList className="bg-secondary">
+            <TabsList className="bg-secondary overflow-x-auto whitespace-nowrap max-w-full">
               {ACTIVITY_TYPES.map((type) => (
                 <TabsTrigger
                   key={type}
@@ -84,8 +84,7 @@ export default function NewTripPage() {
       {/* Map placeholder */}
       <div
         data-testid="map-container"
-        className="w-full bg-muted rounded-lg flex items-center justify-center text-muted-foreground border border-border"
-        style={{ height: "70vh" }}
+        className="w-full bg-muted rounded-lg flex items-center justify-center text-muted-foreground border border-border h-[50vh] lg:h-[70vh]"
       >
         <div className="text-center">
           <MapIcon className="mx-auto h-12 w-12 mb-2 text-muted-foreground" />
@@ -119,7 +118,7 @@ export default function NewTripPage() {
         </h2>
         <div
           data-testid="safety-cards-grid"
-          className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
         >
           {DATA_SOURCES.map((source) => {
             const Icon = DATA_SOURCE_ICONS[source.id] ?? Mountain;

@@ -31,7 +31,7 @@ export default async function TripPage({ params }: TripPageProps) {
       </div>
 
       {/* Route stats bar */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { icon: TrendingUp, label: "Distance", value: "--" },
           { icon: Mountain, label: "Elevation Gain", value: "--" },
@@ -79,7 +79,7 @@ export default async function TripPage({ params }: TripPageProps) {
         <h2 className="text-sm font-semibold text-foreground mb-3">
           Conditions
         </h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {["Weather", "Snowpack", "Avalanche", "Streamflow", "Fire", "Solar", "Satellite"].map(
             (source) => (
               <Card key={source} className="bg-card border-border">

@@ -136,7 +136,7 @@ export default function Home() {
       {/* Product Screenshot */}
       <section className="py-20">
         <div className="mx-auto max-w-5xl px-6">
-          <div className="overflow-hidden rounded-lg border border-border bg-card shadow-lg">
+          <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
             {/* Browser chrome */}
             <div className="flex items-center gap-2 border-b border-border bg-secondary px-4 py-3">
               <div className="flex gap-1.5">
