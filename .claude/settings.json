@@ -11,6 +11,6 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "VERCEL_TOKEN": "required for Vercel log access (debug-production command)",
     "INNGEST_EVENT_KEY": "required for Inngest API access (debug-production command)",
-    "PRODUCTION_URL": "https://strange-grounds.vercel.app"
+    "PRODUCTION_URL": "https://strangegrounds.com"
   }
 }

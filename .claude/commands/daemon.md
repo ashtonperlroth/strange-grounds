@@ -51,7 +51,7 @@ Follow the /fix-issue workflow:
 ### Step 5: Post-push monitoring
 After pushing, wait 90 seconds for Vercel to deploy. Then run:
 ```bash
-PLAYWRIGHT_BASE_URL=https://strange-grounds.vercel.app npx playwright test tests/smoke.spec.ts
+PLAYWRIGHT_BASE_URL=https://strangegrounds.com npx playwright test tests/smoke.spec.ts
 ```
 **If production tests fail:**
 1. Create a NEW Linear issue via MCP:
