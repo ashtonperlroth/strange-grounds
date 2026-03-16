@@ -47,17 +47,15 @@ const POPULAR_ROUTES = [
   },
 ] as const;
 
+import { PageHeader } from "@/components/layout/page-header";
+
 export default function PopularRoutesPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">
-          Popular Routes
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Classic backcountry routes with real-time conditions intelligence
-        </p>
-      </div>
+      <PageHeader
+        title="Popular Routes"
+        description="Classic backcountry routes with real-time conditions intelligence"
+      />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {POPULAR_ROUTES.map((route) => (

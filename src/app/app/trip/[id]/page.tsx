@@ -2,6 +2,7 @@ import { Map, ShieldAlert, Thermometer, Mountain, Clock, TrendingUp } from "luci
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/layout/page-header";
 
 interface TripPageProps {
   params: Promise<{ id: string }>;
@@ -12,18 +13,11 @@ export default async function TripPage({ params }: TripPageProps) {
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">
-            Trip briefing for {id}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Conditions intelligence and safety assessment
-          </p>
-        </div>
-        <Badge variant="secondary">Draft</Badge>
-      </div>
+      <PageHeader
+        title={`Trip briefing for ${id}`}
+        description="Conditions intelligence and safety assessment"
+        actions={<Badge variant="secondary">Draft</Badge>}
+      />
 
       {/* Map area placeholder */}
       <div

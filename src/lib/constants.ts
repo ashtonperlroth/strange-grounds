@@ -9,7 +9,7 @@ import {
 
 export const NAV_ITEMS = [
   { href: "/app", label: "Home", icon: House },
-  { href: "/app/new", label: "New Trip", icon: PlusCircle },
+  { href: "/app?new=true", label: "New Trip", icon: PlusCircle },
   { href: "/app/saved", label: "Saved Trips", icon: Bookmark },
   { href: "/app/routes", label: "Popular Routes", icon: Map },
 ] as const;

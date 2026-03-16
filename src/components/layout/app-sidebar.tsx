@@ -49,7 +49,11 @@ export function AppSidebar() {
             <SidebarMenu>
               {NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const hrefPath = item.href.split("?")[0];
+                const isActive =
+                  hrefPath === "/app"
+                    ? pathname === "/app"
+                    : pathname.startsWith(hrefPath);
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
@@ -73,7 +77,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {RESOURCE_ITEMS.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive = pathname.startsWith(item.href);
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>

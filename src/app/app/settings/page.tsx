@@ -1,15 +1,14 @@
 import { User, SlidersHorizontal, Info } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage your account and application preferences
-        </p>
-      </div>
+      <PageHeader
+        title="Settings"
+        description="Manage your account and application preferences"
+      />
 
       {/* Account */}
       <Card className="bg-card border-border">
