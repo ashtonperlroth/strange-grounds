@@ -31,12 +31,14 @@ export function RouteCard({
 }: RouteCardProps) {
   const content = (
     <div
+      data-skeleton
       className={cn(
         "flex flex-col rounded-lg border border-border bg-card transition-all hover:border-accent/30 hover:shadow-sm",
         href && "cursor-pointer",
         className
       )}
     >
+      {/* SKELETON — Ashton will source final route card design */}
       {/* Header */}
       <div className="px-4 pb-2 pt-4">
         <div className="flex items-start justify-between">

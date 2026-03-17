@@ -6,7 +6,8 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, actions }: PageHeaderProps) {
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div data-skeleton className="flex items-start justify-between gap-4">
+      {/* SKELETON — Ashton will source final page header design */}
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
         {description && (

@@ -45,12 +45,14 @@ export function SafetyCard({
 
   return (
     <div
+      data-skeleton
       data-testid={`safety-card-${source}`}
       className={cn(
         "rounded-lg border border-border bg-card transition-shadow hover:shadow-sm",
         className
       )}
     >
+      {/* SKELETON — Ashton will source final safety card design */}
       {/* Header */}
       <div className="px-4 pb-2 pt-4">
         <div className="flex items-center justify-between">

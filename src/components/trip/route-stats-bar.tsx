@@ -18,11 +18,13 @@ interface RouteStatsBarProps {
 export function RouteStatsBar({ stats, className }: RouteStatsBarProps) {
   return (
     <div
+      data-skeleton
       className={cn(
         "rounded-md border border-border bg-secondary px-4 py-2.5",
         className
       )}
     >
+      {/* SKELETON — Ashton will source final route stats bar design */}
       <p className="font-mono text-sm text-muted-foreground">
         {stats.map((stat, i) => (
           <span key={stat.label}>

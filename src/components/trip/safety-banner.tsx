@@ -21,10 +21,12 @@ export function SafetyBanner({
 }: SafetyBannerProps) {
   return (
     <Card
+      data-skeleton
       data-testid="ai-headline-card"
       className={cn("bg-card border-border", className)}
     >
       <CardContent className="pb-4 pt-4">
+        {/* SKELETON — Ashton will source final safety banner design */}
         <p className="text-sm italic text-muted-foreground">
           {headline || "Safety headline appears here after conditions are checked"}
         </p>

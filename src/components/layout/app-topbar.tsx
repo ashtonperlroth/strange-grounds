@@ -8,9 +8,11 @@ import { Separator } from "@/components/ui/separator";
 export function AppTopbar() {
   return (
     <header
+      data-skeleton
       data-testid="app-topbar"
       className="flex h-12 items-center gap-2 border-b border-border bg-background px-4"
     >
+      {/* SKELETON — Ashton will source final app topbar design */}
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="h-4" />
 
