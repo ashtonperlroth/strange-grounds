@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ACTIVITY_TYPES, DATA_SOURCES } from "@/lib/constants";
+import { RouteStatsBar } from "@/components/trip/route-stats-bar";
+import { SafetyBanner } from "@/components/trip/safety-banner";
 
 const DATA_SOURCE_ICONS: Record<string, React.ElementType> = {
   "sentinel-2": Mountain,
@@ -85,23 +87,16 @@ export default function NewTripPage() {
       <MapContainer className="w-full h-[50vh] lg:h-[70vh]" />
 
       {/* Route stats bar */}
-      <div className="rounded-md bg-secondary border border-border px-4 py-2.5">
-        <p className="font-mono text-sm text-muted-foreground">
-          2.5 mi &nbsp;·&nbsp; 3,950 ft gain &nbsp;·&nbsp; Est. 3h 14m
-        </p>
-      </div>
+      <RouteStatsBar
+        stats={[
+          { label: "distance", value: "2.5 mi" },
+          { label: "gain", value: "3,950 ft gain" },
+          { label: "time", value: "Est. 3h 14m" },
+        ]}
+      />
 
       {/* AI headline placeholder */}
-      <Card data-testid="ai-headline-card" className="bg-card border-border">
-        <CardContent className="pt-4 pb-4">
-          <p className="text-sm text-muted-foreground italic">
-            Safety headline appears here after conditions are checked
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            0 concerns · 0 sources checked
-          </p>
-        </CardContent>
-      </Card>
+      <SafetyBanner concerns={0} sourcesChecked={0} />
 
       {/* Safety cards grid */}
       <div>
