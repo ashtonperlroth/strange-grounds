@@ -3,14 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  MapPin,
-  ArrowRight,
   Mountain,
   Shield,
   FileDown,
+  MapPin,
 } from "lucide-react";
 import Link from "next/link";
 import { ACTIVITY_TYPES } from "@/lib/constants";
+import { HeroSearchInput } from "@/components/landing/hero-search-input";
+import { ActivityToggle } from "@/components/ui/activity-toggle";
 
 export default function Home() {
   const router = useRouter();
@@ -60,46 +61,20 @@ export default function Home() {
             onSubmit={handleSubmit}
             className="flex w-full max-w-lg flex-col gap-3"
           >
-            <div className="relative">
-              <MapPin
-                size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-              />
-              <input
-                data-testid="hero-search-input"
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Describe your trip — e.g., 3-day loop from Whitney Portal..."
-                className="h-12 w-full rounded-lg border border-border bg-white pl-11 pr-14 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/50"
-              />
-              <button
-                type="submit"
-                data-testid="hero-cta"
-                className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-md bg-foreground text-primary-foreground transition-colors hover:bg-foreground/90"
-              >
-                <ArrowRight size={16} />
-              </button>
-            </div>
+            <HeroSearchInput
+              data-testid="hero-search-input"
+              submitTestId="hero-cta"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Describe your trip — e.g., 3-day loop from Whitney Portal..."
+            />
 
-            {/* Activity tabs */}
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {ACTIVITY_TYPES.map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  data-testid={`hero-activity-${type.toLowerCase().replace(/\s+/g, "-")}`}
-                  onClick={() => setActivity(type)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                    activity === type
-                      ? "bg-accent text-white"
-                      : "bg-white/80 text-muted-foreground hover:bg-white"
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
+            <ActivityToggle
+              items={ACTIVITY_TYPES}
+              value={activity}
+              onChange={setActivity}
+              testIdPrefix="hero-activity-"
+            />
           </form>
 
           {/* Subtext */}
