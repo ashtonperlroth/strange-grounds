@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import maplibregl from "maplibre-gl";
 import { cn } from "@/lib/utils";
+import { LayerSwitcher } from "@/components/map/layer-switcher";
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY;
 
@@ -112,23 +113,12 @@ export function MapContainer({
       <div ref={containerRef} data-testid="map-container" className="absolute inset-0" />
 
       {/* Layer switcher */}
-      <div className="absolute top-3 right-3 z-10 flex gap-1 rounded-md border border-border bg-card/95 p-1">
-        {MAP_STYLES.map((style) => (
-          <button
-            key={style.id}
-            type="button"
-            onClick={() => handleStyleChange(style.id)}
-            className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-              activeStyle === style.id
-                ? "bg-accent text-white"
-                : "text-muted-foreground hover:bg-secondary"
-            )}
-          >
-            {style.label}
-          </button>
-        ))}
-      </div>
+      <LayerSwitcher
+        options={MAP_STYLES.map((s) => ({ id: s.id, label: s.label }))}
+        activeId={activeStyle}
+        onChange={handleStyleChange}
+        className="absolute top-3 right-3 z-10"
+      />
     </div>
   );
 }
