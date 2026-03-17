@@ -15,13 +15,15 @@ import { MapContainer } from "@/components/map/map-container";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ACTIVITY_TYPES, DATA_SOURCES } from "@/lib/constants";
 import { RouteStatsBar } from "@/components/trip/route-stats-bar";
 import { SafetyBanner } from "@/components/trip/safety-banner";
+import { SafetyCard } from "@/components/cards/safety-card";
+import { ConditionsGrid } from "@/components/cards/conditions-grid";
 
-const DATA_SOURCE_ICONS: Record<string, React.ElementType> = {
+import type { LucideIcon } from "lucide-react";
+
+const DATA_SOURCE_ICONS: Record<string, LucideIcon> = {
   "sentinel-2": Mountain,
   nws: Cloud,
   "avalanche-org": AlertTriangle,
@@ -99,47 +101,22 @@ export default function NewTripPage() {
       <SafetyBanner concerns={0} sourcesChecked={0} />
 
       {/* Safety cards grid */}
-      <div>
-        <h2 className="text-sm font-semibold text-foreground mb-3">
-          Conditions
-        </h2>
-        <div
-          data-testid="safety-cards-grid"
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
-        >
-          {DATA_SOURCES.map((source) => {
-            const Icon = DATA_SOURCE_ICONS[source.id] ?? Mountain;
-            return (
-              <Card
-                key={source.id}
-                data-testid={`safety-card-${source.id}`}
-                className="bg-card border-border"
-              >
-                <CardHeader className="pb-2 pt-4 px-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="size-7 rounded-full bg-muted flex items-center justify-center">
-                        <Icon size={14} className="text-muted-foreground" />
-                      </div>
-                      <span className="text-xs font-medium text-foreground">
-                        {source.name}
-                      </span>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      —
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="px-4 pb-4">
-                  <p className="text-xs text-muted-foreground">
-                    {source.label} data loads here
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
+      <ConditionsGrid>
+        {DATA_SOURCES.map((source) => {
+          const Icon = DATA_SOURCE_ICONS[source.id] ?? Mountain;
+          return (
+            <SafetyCard
+              key={source.id}
+              source={source.id}
+              title={source.name}
+              icon={Icon}
+              badge="info"
+              badgeLabel="—"
+              subtitle={`${source.label} data loads here`}
+            />
+          );
+        })}
+      </ConditionsGrid>
 
       {/* Recent trips */}
       <div data-testid="recent-trips-section">
