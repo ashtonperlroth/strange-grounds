@@ -37,37 +37,43 @@ export function MapContainer({
     map.setTerrain({ source: "terrain-dem", exaggeration: 1.2 });
   }, []);
 
+  const [webglError, setWebglError] = useState(false);
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     if (!MAPTILER_KEY) return;
 
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: MAP_STYLES[0].url,
-      center,
-      zoom,
-    });
+    try {
+      const map = new maplibregl.Map({
+        container: containerRef.current,
+        style: MAP_STYLES[0].url,
+        center,
+        zoom,
+      });
 
-    // Controls
-    map.addControl(new maplibregl.NavigationControl(), "bottom-right");
-    map.addControl(new maplibregl.ScaleControl(), "bottom-left");
-    map.addControl(
-      new maplibregl.GeolocateControl({
-        positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: true,
-      }),
-      "bottom-right"
-    );
+      // Controls
+      map.addControl(new maplibregl.NavigationControl(), "bottom-right");
+      map.addControl(new maplibregl.ScaleControl(), "bottom-left");
+      map.addControl(
+        new maplibregl.GeolocateControl({
+          positionOptions: { enableHighAccuracy: true },
+          trackUserLocation: true,
+        }),
+        "bottom-right"
+      );
 
-    // 3D terrain
-    map.on("load", () => addTerrain(map));
+      // 3D terrain
+      map.on("load", () => addTerrain(map));
 
-    mapRef.current = map;
+      mapRef.current = map;
 
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
+      return () => {
+        map.remove();
+        mapRef.current = null;
+      };
+    } catch {
+      setWebglError(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -85,7 +91,7 @@ export function MapContainer({
     }
   }
 
-  if (!MAPTILER_KEY) {
+  if (!MAPTILER_KEY || webglError) {
     return (
       <div
         data-testid="map-container"
@@ -94,7 +100,9 @@ export function MapContainer({
           className
         )}
       >
-        <p className="text-sm">Map requires NEXT_PUBLIC_MAPTILER_KEY</p>
+        <p className="text-sm">
+          {webglError ? "WebGL is not available" : "Map requires NEXT_PUBLIC_MAPTILER_KEY"}
+        </p>
       </div>
     );
   }
