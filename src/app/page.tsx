@@ -8,7 +8,7 @@ import { HeroSearchInput } from "@/components/landing/hero-search-input";
 import { ActivityToggle } from "@/components/ui/activity-toggle";
 import { TrustBar } from "@/components/landing/trust-bar";
 import { BrowserMockup } from "@/components/landing/browser-mockup";
-import { HowItWorks } from "@/components/landing/how-it-works";
+import { FeatureShowcase } from "@/components/landing/feature-showcase";
 import { Footer } from "@/components/landing/footer";
 
 export default function Home() {
@@ -26,11 +26,9 @@ export default function Home() {
 
   return (
     <main data-testid="marketing-landing" className="bg-background">
-      {/* Hero Section */}
-      <section className="relative flex min-h-[80vh] flex-col items-center justify-center overflow-hidden">
-        {/* Background — watercolor image when available, warm gradient fallback */}
-        {/* TODO: Add watercolor hero image to public/hero-watercolor.jpg and uncomment */}
-        {/* <Image src="/hero-watercolor.jpg" alt="" fill className="object-cover" priority /> */}
+      {/* Hero Section — adapted from tailark/hero-section-9 */}
+      <section className="relative flex min-h-[80vh] flex-col items-center justify-center overflow-hidden px-4 py-12 sm:py-24 md:py-32">
+        {/* Background gradient */}
         <div
           className="absolute inset-0 -z-10"
           style={{
@@ -42,7 +40,7 @@ export default function Home() {
         {/* Bottom fade to page background */}
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent" />
 
-        <div className="relative z-10 flex flex-col items-center gap-8 px-6 text-center">
+        <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center gap-6 text-center sm:gap-10">
           {/* Headline */}
           <h1 className="font-serif text-5xl font-bold leading-tight text-foreground sm:text-6xl md:text-7xl">
             See your route before you go.
@@ -54,7 +52,7 @@ export default function Home() {
             data — synthesized into safety cards for every backcountry trip.
           </p>
 
-          {/* Search input + activity tabs */}
+          {/* AI Search input + activity tabs — adapted from kokonutd/animated-ai-input */}
           <form
             onSubmit={handleSubmit}
             className="flex w-full max-w-lg flex-col gap-3"
@@ -64,7 +62,6 @@ export default function Home() {
               submitTestId="hero-cta"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Describe your trip — e.g., 3-day loop from Whitney Portal..."
             />
 
             <ActivityToggle
@@ -82,10 +79,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Trust Bar */}
+      {/* Trust Bar (SKELETON) */}
       <TrustBar />
 
-      {/* Product Screenshot */}
+      {/* Product Screenshot (SKELETON) */}
       <section className="py-20">
         <div className="mx-auto max-w-5xl px-6">
           <BrowserMockup>
@@ -105,10 +102,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How it Works */}
-      <HowItWorks />
+      {/* Feature Showcase — adapted from kokonutd/hero-fashion, swipeable */}
+      <FeatureShowcase />
 
-      {/* Footer */}
+      {/* Footer (SKELETON) */}
       <Footer />
     </main>
   );
