@@ -1,11 +1,20 @@
 "use client";
 
-import { Bell, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Bell } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { ColorfulButton } from "@/components/ui/colorful-button";
+import { SelectDropdown } from "@/components/ui/select-dropdown";
+
+const WORKSPACE_OPTIONS = [
+  { value: "personal", label: "Personal" },
+  { value: "team", label: "Team" },
+];
 
 export function AppTopbar() {
+  const [workspace, setWorkspace] = useState<string>("personal");
+
   return (
     <header
       data-skeleton
@@ -17,10 +26,14 @@ export function AppTopbar() {
       <Separator orientation="vertical" className="h-4" />
 
       {/* Workspace selector */}
-      <button className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-foreground hover:bg-secondary transition-colors">
-        Personal
-        <ChevronDown size={14} className="text-muted-foreground" />
-      </button>
+      <SelectDropdown
+        options={WORKSPACE_OPTIONS}
+        value={workspace}
+        onValueChange={setWorkspace}
+        placeholder="Workspace"
+        className="min-w-[130px]"
+        triggerClassName="h-8 border-0 shadow-none hover:bg-secondary"
+      />
 
       <div className="flex-1" />
 
@@ -41,12 +54,9 @@ export function AppTopbar() {
         >
           Docs
         </a>
-        <Button
-          size="sm"
-          className="bg-accent text-white hover:bg-accent/90 rounded-md"
-        >
+        <ColorfulButton size="sm" glowColor="#2D5016">
           Upgrade
-        </Button>
+        </ColorfulButton>
       </nav>
     </header>
   );
