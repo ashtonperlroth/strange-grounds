@@ -1,5 +1,9 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { RouteCard } from "@/components/cards/route-card";
+import {
+  BentoGrid,
+  BentoCard,
+} from "@/components/21st-raw/bento-grid";
 
 const POPULAR_ROUTES = [
   {
@@ -54,19 +58,24 @@ export default function PopularRoutesPage() {
         description="Classic backcountry routes with real-time conditions intelligence"
       />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <BentoGrid className="rounded-2xl border-border">
         {POPULAR_ROUTES.map((route) => (
-          <RouteCard
+          <BentoCard
             key={route.name}
-            name={route.name}
-            location={route.location}
-            distance={route.distance}
-            elevationGain={route.elevationGain}
-            season={route.season}
-            status="coming-soon"
-          />
+            className="border-b border-r border-border last:border-b-0 md:col-span-3 sm:[&:nth-last-child(-n+2)]:border-b-0"
+          >
+            <RouteCard
+              name={route.name}
+              location={route.location}
+              distance={route.distance}
+              elevationGain={route.elevationGain}
+              season={route.season}
+              status="coming-soon"
+              className="border-0"
+            />
+          </BentoCard>
         ))}
-      </div>
+      </BentoGrid>
     </div>
   );
 }
