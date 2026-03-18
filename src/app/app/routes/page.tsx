@@ -3,7 +3,7 @@ import { RouteCard } from "@/components/cards/route-card";
 import {
   BentoGrid,
   BentoCard,
-} from "@/components/21st-raw/bento-grid";
+} from "@/components/ui/bento-grid";
 
 const POPULAR_ROUTES = [
   {
